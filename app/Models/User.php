@@ -127,4 +127,13 @@ class User extends Authenticatable implements FilamentUser
             return false;
         }
     }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::created(function (User $user) {
+            $user->assignRole('user');
+        });
+    }
 }
