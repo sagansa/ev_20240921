@@ -19,6 +19,7 @@ use Filament\Forms\Components\FileUpload;
 use App\Filament\Resources\Panel\ChargeResource\Pages;
 use App\Models\Charger;
 use App\Models\Vehicle;
+use App\Models\ChargerLocation;
 use Filament\Forms\Components\Toggle;
 use Filament\Support\RawJs;
 use Filament\Tables\Columns\Summarizers\Sum;
@@ -100,9 +101,14 @@ class ChargeResource extends Resource
                             ->required(),
 
                         Select::make('charger_location_id')
-                            ->label('Location')
+                            ->label('Charger Location')
                             ->required()
-                            ->relationship('chargerLocation', 'name')
+                            // ->relationship('chargerLocation', 'name')
+                            ->relationship(
+                                name: 'chargerLocation',
+                                modifyQueryUsing: fn (Builder $query) => $query->where('status','<>', '3')->orderBy('name', 'asc'),
+                            )
+                            ->getOptionLabelFromRecordUsing(fn (ChargerLocation $record) => "{$record->charger_location_name}")
                             ->searchable()
                             ->preload()
                             ->native(false)

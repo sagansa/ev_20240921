@@ -121,4 +121,9 @@ class ChargerLocation extends Model
     {
         return 'location';
     }
+
+    public function getChargerLocationNameAttribute()
+    {
+        return $this->provider->name . ' - ' . $this->name;
+    }
 }
