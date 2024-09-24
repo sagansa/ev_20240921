@@ -95,7 +95,6 @@ class ChargeResource extends Resource
                             }),
 
                         DatePicker::make('date')
-                            ->rules(['date'])
                             ->default('today')
                             ->native(false)
                             ->required(),
