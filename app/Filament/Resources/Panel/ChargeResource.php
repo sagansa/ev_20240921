@@ -263,7 +263,10 @@ class ChargeResource extends Resource
             ->poll('60s')
             ->columns([
 
-                ImageColumn::make('image')->visibility('public'),
+                ImageColumn::make('image')->visibility('public')
+                    ->openUrlInNewTab() // Membuka URL di tab baru
+                    ->tooltip('Klik untuk membuka gambar di tab baru') // Tooltip untuk pengguna,
+                    ->url(fn($record) => asset('storage/' . $record->image)),
 
                 TextColumn::make('vehicle.license_plate'),
 
