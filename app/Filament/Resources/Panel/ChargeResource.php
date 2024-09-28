@@ -2,6 +2,10 @@
 
 namespace App\Filament\Resources\Panel;
 
+use App\Filament\Forms\CurrencyTextInput;
+use App\Filament\Forms\DecimalTextInput;
+use App\Filament\Forms\NominalTextInput;
+use App\Filament\Forms\PercentTextInput;
 use Filament\Tables;
 use App\Models\Charge;
 use Filament\Forms\Form;
@@ -28,6 +32,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Columns\ToggleColumn;
 use App\Filament\Widgets\ChargeResource\ChargeStats;
+use Filament\Forms\Components\Group;
 
 class ChargeResource extends Resource
 {
@@ -65,189 +70,147 @@ class ChargeResource extends Resource
     {
 
         return $form->schema([
-            Section::make('Start Charging')->schema([
-                Grid::make(['default' => 1])->schema([
-                    FileUpload::make('image')
-                        ->rules(['image'])
-                        ->nullable()
-                        ->maxSize(1024)
-                        ->image()
-                        ->imageEditor()
-                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
 
-                    Grid::make(['default' => 1])->schema([
-                        Select::make('vehicle_id')
-                            ->label('Vehicle')
-                            ->required()
-                            ->options(function () {
-                                return Vehicle::where('user_id', Auth::id())
-                                    ->where('status', 1)
-                                    ->pluck('license_plate', 'id');
-                            })
-                            ->searchable()
-                            ->preload()
-                            ->native(false)
-                            ->reactive()
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                if ($state) {
-                                    $set('km_before', ChargeResource::getLatestKmNowForVehicle($state));
-                                    $set('finish_charging_before', ChargeResource::getLatestChargingNowForVehicle($state));
-                                }
-                            }),
+            Group::make()->schema([
+                Section::make('Start Charging')->schema([
 
-                        DatePicker::make('date')
-                            ->default('today')
-                            ->native(false)
-                            ->required(),
+                        // FileUpload::make('image')
+                        //     ->rules(['image'])
+                        //     ->nullable()
+                        //     ->maxSize(1024)
+                        //     ->image()
+                        //     ->imageEditor()
+                        //     ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
 
-                        Select::make('charger_location_id')
-                            ->label('Charger Location')
-                            ->required()
-                            // ->relationship('chargerLocation', 'name')
-                            ->relationship(
-                                name: 'chargerLocation',
-                                modifyQueryUsing: fn (Builder $query) => $query->where('status','<>', '3')->orderBy('name', 'asc'),
-                            )
-                            ->getOptionLabelFromRecordUsing(fn (ChargerLocation $record) => "{$record->charger_location_name}")
-                            ->searchable()
-                            ->preload()
-                            ->native(false)
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                $set('charger_id', null);
-                            }),
+                    Select::make('vehicle_id')
+                        ->label('Vehicle')
+                        ->inlineLabel()
+                        ->required()
+                        ->options(function () {
+                            return Vehicle::where('user_id', Auth::id())
+                                ->where('status', 1)
+                                ->pluck('license_plate', 'id');
+                        })
+                        ->preload()
+                        ->native(false)
+                        ->reactive()
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            if ($state) {
+                                $set('km_before', ChargeResource::getLatestKmNowForVehicle($state));
+                                $set('finish_charging_before', ChargeResource::getLatestChargingNowForVehicle($state));
+                            }
+                        }),
 
-                        Select::make('charger_id')
-                            ->label('Charger')
-                            ->reactive()
-                            ->options(function (callable $get) {
-                                $chargerLocationId = $get('charger_location_id');
-                                return Charger::all()->where('charger_location_id', $chargerLocationId)->pluck('charger_name', 'id')->toArray();
-                            })
-                            ->required()
-                            ->searchable()
-                            ->preload()
-                            ->native(false),
+                    DatePicker::make('date')
+                        ->rules(['date'])
+                        ->default('today')
+                        ->inlineLabel()
+                        ->native(false)
+                        ->required(),
 
-                        TextInput::make('km_now')
-                            ->label('km start charging')
-                            ->mask(RawJs::make('$money($input)'))
-                            ->required()
-                            ->minValue(0)
-                            ->numeric()
-                            ->suffix('km')
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                $set('km_now', preg_replace('/[^\d\.]/', '', $state));
-                            }),
+                    Select::make('charger_location_id')
+                        ->label('Charger Location')
+                        ->required()
+                        ->inlineLabel()
+                        // ->relationship('chargerLocation', 'name')
+                        ->relationship(
+                            name: 'chargerLocation',
+                            modifyQueryUsing: fn (Builder $query) => $query->where('status','<>', '3')->orderBy('name', 'asc'),
+                        )
+                        ->getOptionLabelFromRecordUsing(fn (ChargerLocation $record) => "{$record->charger_location_name}")
+                        ->searchable()
+                        ->preload()
+                        ->native(false)
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            $set('charger_id', null);
+                        }),
 
-                        TextInput::make('km_before')
-                            ->label('km data before')
-                            ->mask(RawJs::make('$money($input)'))
-                            ->required()
-                            ->minValue(0)
-                            ->numeric()
-                            ->suffix('km')
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                $set('km_before', preg_replace('/[^\d\.]/', '', $state));
-                            }),
+                    Select::make('charger_id')
+                        ->label('Charger')
+                        ->reactive()
+                        ->inlineLabel()
+                        ->options(function (callable $get) {
+                            $chargerLocationId = $get('charger_location_id');
+                            return Charger::all()->where('charger_location_id', $chargerLocationId)->pluck('charger_name', 'id')->toArray();
+                        })
+                        ->required()
+                        ->searchable()
+                        ->preload()
+                        ->native(false),
 
-                        TextInput::make('start_charging_now')
-                            ->label('Percentage battery start')
-                            ->required()
-                            ->minValue(0)
-                            ->numeric()
-                            ->suffix('%'),
+                    NominalTextInput::make('km_now')
+                        ->label('start charging')
+                        ->suffix('km'),
 
+                    PercentTextInput::make('start_charging_now')
+                        ->label('Battery start'),
 
-                    ])
-                    ->columns(3)
-                ]),
-            ]),
+                    ])->columns(2),
 
-            Toggle::make('is_finish_charging')
-                ->label('Is the charging finish?')
-                ->default(false)
-                ->reactive()
-                ->afterStateUpdated(function ($state, callable $set) {
-                    $set('finish_charging_section', $state);
-                }),
+                Toggle::make('is_finish_charging')
+                    ->label('Is the charging finish?')
+                    ->default(false)
+                    ->inlineLabel()
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        $set('finish_charging_section', $state);
+                    }),
 
-            Section::make('Finish Charging')
-                ->visible(fn ($get) => $get('is_finish_charging'))
-                ->schema([
-                    Grid::make(['default' => 1])->schema([
-                        TextInput::make('finish_charging_now')
-                            ->label('Percentage battery finish')
-                            ->requiredWith('is_finish_charging')
-                            ->minValue(0)
-                            ->numeric()
-                            ->maxValue(100)
-                            ->suffix('%'),
+                Section::make('Finish Charging')
+                    ->visible(fn ($get) => $get('is_finish_charging'))
+                    ->schema([
+                        Grid::make(['default' => 1])->schema([
+                            PercentTextInput::make('finish_charging_now')
+                                ->label('Battery finish now')
+                                ->requiredWith('is_finish_charging'),
 
-                        TextInput::make('finish_charging_before')
-                            ->label('Percentage battery finish before')
-                            ->requiredWith('is_finish_charging')
-                            ->minValue(0)
-                            ->numeric()
-                            ->maxValue(100)
-                            ->suffix('%'),
+                            CurrencyTextInput::make('parking')
+                                ->requiredWith('is_finish_charging'),
 
-                        TextInput::make('parking')
-                            ->requiredWith('is_finish_charging')
-                            // ->mask(RawJs::make('$money($input)'))
-                            ->default(0)
-                            ->minValue(0)
-                            ->numeric()
-                            ->prefix('Rp'),
+                            Toggle::make('is_kwh_measured')
+                                ->label('Is kWh measured?')
+                                ->inlineLabel()
+                                ->default(false),
 
-                        Toggle::make('is_kwh_measured')
-                            ->label('Is kWh measured?')
-                            ->default(false),
+                            DecimalTextInput::make('kWh')
+                                ->label('kWh')
+                                ->requiredWith('is_finish_charging')
+                                ->suffix('kWh'),
 
-                        TextInput::make('kWh')
-                            ->label('kWh')
-                            ->requiredWith('is_finish_charging')
-                            ->minValue(0)
-                            ->numeric()
-                            ->reactive()
-                            ->suffix('kWh'),
+                            CurrencyTextInput::make('street_lighting_tax')
+                                ->label('PPJ'),
 
-                        TextInput::make('street_lighting_tax')
-                            ->label('PPJ')
-                            ->requiredWith('is_finish_charging')
-                            // ->mask(RawJs::make('$money($input)'))
-                            ->default(0)
-                            ->minValue(0)
-                            ->numeric()
-                            ->prefix('Rp'),
+                            CurrencyTextInput::make('value_added_tax')
+                                ->label('VAT')
+                                ->requiredWith('is_finish_charging'),
 
-                        TextInput::make('value_added_tax')
-                            ->label('VAT')
-                            ->requiredWith('is_finish_charging')
-                            // ->mask(RawJs::make('$money($input)'))
-                            ->default(0)
-                            ->minValue(0)
-                            ->numeric()
-                            ->prefix('Rp'),
+                            CurrencyTextInput::make('admin_cost')
+                                ->requiredWith('is_finish_charging'),
 
-                        TextInput::make('admin_cost')
-                            ->requiredWith('is_finish_charging')
-                            // ->mask(RawJs::make('$money($input)'))
-                            ->default(0)
-                            ->minValue(0)
-                            ->numeric()
-                            ->prefix('Rp'),
+                            CurrencyTextInput::make('total_cost')
+                                ->requiredWith('is_finish_charging'),
+                        ])
+                        ->columns(2),
+                    ]),
+                ])->columnSpan(['lg' => 2]),
 
-                        TextInput::make('total_cost')
-                            ->requiredWith('is_finish_charging')
-                            // ->mask(RawJs::make('$money($input)'))
-                            ->default(0)
-                            ->minValue(0)
-                            ->numeric()
-                            ->prefix('Rp'),
-                    ])
-                    ->columns(3),
-                ]),
-            ]);
+            Section::make()->schema([
+
+                TextInput::make('km_before')
+                    ->readOnly()
+                    ->label('Data before')
+                    ->suffix('km')
+                    ->currencyMask(thousandSeparator: '.',decimalSeparator: ',',precision: 0),
+
+                TextInput::make('finish_charging_before')
+                    ->readOnly()
+                    ->label('Battery finish before')
+                    ->requiredWith('is_finish_charging')
+                    ->suffix('%'),
+
+            ])->columnSpan(['lg' => 1]),
+        ])
+        ->columns(3);
     }
 
     public static function table(Table $table): Table
@@ -263,10 +226,10 @@ class ChargeResource extends Resource
             ->poll('60s')
             ->columns([
 
-                ImageColumn::make('image')->visibility('public')
-                    ->openUrlInNewTab() // Membuka URL di tab baru
-                    ->tooltip('Klik untuk membuka gambar di tab baru') // Tooltip untuk pengguna,
-                    ->url(fn($record) => asset('storage/' . $record->image)),
+                // ImageColumn::make('image')->visibility('public')
+                //     ->openUrlInNewTab() // Membuka URL di tab baru
+                //     ->tooltip('Klik untuk membuka gambar di tab baru') // Tooltip untuk pengguna,
+                //     ->url(fn($record) => asset('storage/' . $record->image)),
 
                 TextColumn::make('vehicle.license_plate'),
 
@@ -502,7 +465,7 @@ class ChargeResource extends Resource
     public static function getLatestKmNowForVehicle($vehicleId)
     {
         $latestKm = Charge::where('vehicle_id', $vehicleId)
-            ->latest('date')
+            ->latest('created_at')
             ->first();
 
         return $latestKm ? $latestKm->km_now : 0;
@@ -511,7 +474,7 @@ class ChargeResource extends Resource
     public static function getLatestChargingNowForVehicle($vehicleId)
     {
         $latestCharge = Charge::where('vehicle_id', $vehicleId)
-            ->latest('date')
+            ->latest('created_at')
             ->first();
 
         return $latestCharge ? $latestCharge->finish_charging_now : 0;
