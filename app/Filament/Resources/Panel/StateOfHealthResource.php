@@ -2,6 +2,10 @@
 
 namespace App\Filament\Resources\Panel;
 
+use App\Filament\Forms\BaseSelect;
+use App\Filament\Forms\DecimalTextInput;
+use App\Filament\Forms\NominalTextInput;
+use App\Filament\Forms\TodayDatePicker;
 use Filament\Forms;
 use Filament\Tables;
 use Livewire\Component;
@@ -52,16 +56,16 @@ class StateOfHealthResource extends Resource
     {
         return $form->schema([
             Section::make()->schema([
-                Grid::make(['default' => 1])->schema([
-                    FileUpload::make('image')
-                        ->rules(['image'])
-                        ->nullable()
-                        ->maxSize(1024)
-                        ->image()
-                        ->imageEditor()
-                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+                Grid::make(['default' => 2])->schema([
+                    // FileUpload::make('image')
+                    //     ->rules(['image'])
+                    //     ->nullable()
+                    //     ->maxSize(1024)
+                    //     ->image()
+                    //     ->imageEditor()
+                    //     ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
 
-                    Select::make('vehicle_id')
+                    BaseSelect::make('vehicle_id')
                         ->label('Vehicle')
                         ->required()
                         ->options(function () {
@@ -71,28 +75,19 @@ class StateOfHealthResource extends Resource
                         })
                         ->searchable(),
 
-                    DatePicker::make('date')
-                        ->rules(['date'])
-                        ->default(today())
-                        ->required()
-                        ->native(false),
+                    TodayDatePicker::make('date'),
 
-                    TextInput::make('km')
+                    NominalTextInput::make('km')
                         ->label('km')
-                        ->required()
-                        ->numeric()
-                        ->step(1)
-                        ->suffix('km')
-                        ->inputMode('numeric'),
+                        ->suffix('km'),
 
-                    TextInput::make('percentage')
-                        ->required()
-                        ->numeric()
+                    DecimalTextInput::make('percentage')
                         ->suffix('%')
                         ->inputMode('decimal'),
 
                     TextInput::make('remaining_battery')
                         ->nullable()
+                        ->inlineLabel()
                         ->numeric()
                         ->suffix('kWh')
                         ->inputMode('decimal'),
@@ -113,7 +108,7 @@ class StateOfHealthResource extends Resource
             })
             ->poll('60s')
             ->columns([
-                ImageColumn::make('image')->visibility('public'),
+                // ImageColumn::make('image')->visibility('public'),
 
                 TextColumn::make('date'),
 

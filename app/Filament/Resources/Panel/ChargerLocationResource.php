@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Panel;
 
+use App\Filament\Forms\BaseSelect;
 use App\Filament\Forms\NominalTextInput;
 use Filament\Forms;
 use Filament\Tables;
@@ -64,17 +65,22 @@ class ChargerLocationResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Section::make()
-                ->schema(static::getDetailsFormHeadSchema())
-                ->columns(2),
+            Group::make()->schema([
+                Section::make()
+                    ->schema(static::getDetailsFormHeadSchema())
+                    ->columns(2),
+            ])->columnSpan(['lg' => 1]),
 
-            Section::make()->schema([
-                self::getItemsRepeater(),
-            ]),
+            Group::make()->schema([
+                Section::make()->schema([
+                    self::getItemsRepeater(),
+                ]),
 
-            Section::make()
-                ->schema(static::getDetailsFormBottomSchema()),
-        ]);
+                Section::make()
+                    ->schema(static::getDetailsFormBottomSchema()),
+            ])->columnSpan(['lg' => 1]),
+
+        ])->columns(2);
     }
 
     public static function table(Table $table): Table
@@ -94,7 +100,10 @@ class ChargerLocationResource extends Resource
             ->poll('60s')
             ->columns([
 
-                ImageColumn::make('image')->visibility('public'),
+                ImageColumn::make('image')
+                    ->visibility('public')
+                    ->openUrlInNewTab()
+                    ->url(fn($record) => asset('storage/' . $record->image)),
 
                 TextColumn::make('name')
                     ->searchable()
@@ -168,23 +177,6 @@ class ChargerLocationResource extends Resource
     {
         return [
             Grid::make(['default' => 1])->schema([
-                FileUpload::make('image')
-                    ->rules(['image'])
-                    ->nullable()
-                    ->maxSize(1024)
-                    ->image()
-                    ->imageEditor()
-                    ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
-
-                TextInput::make('name')
-                    ->required()
-                    ->string(),
-
-                Select::make('provider_id')
-                    ->required()
-                    ->relationship('provider', 'name')
-                    ->searchable(),
-
                 OSMMap::make('location')
                     ->label('Location')
                     ->showMarker()
@@ -216,24 +208,48 @@ class ChargerLocationResource extends Resource
                     ->schema([
                         TextInput::make('latitude')
                             ->required()
+                            ->inlineLabel()
                             ->readOnly()
                             ->numeric(),
                         TextInput::make('longitude')
                             ->required()
+                            ->inlineLabel()
                             ->readOnly()
                             ->numeric(),
                     ])->columns(2),
 
+                FileUpload::make('image')
+                    ->rules(['image'])
+                    ->nullable()
+                    ->maxSize(1024)
+                    ->image()
+                    ->imageEditor()
+                    ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+
+                ]),
+
+            Grid::make(['default' => 2])->schema([
+
+                TextInput::make('name')
+                    ->required()
+                    ->inlineLabel()
+                    ->string(),
+
+                BaseSelect::make('provider_id')
+                    ->required()
+                    ->relationship('provider', 'name')
+                    ->searchable(),
+
                 Checkbox::make('parking')
                     ->rules(['boolean'])
-                    ->inline(),
+                    ->inlineLabel(),
 
                 TextInput::make('address')
                     ->nullable()
+                    ->inlineLabel()
                     ->string(),
 
-                Select::make('province_id')
-                    ->required()
+                BaseSelect::make('province_id')
                     ->relationship('province', 'name')
                     ->searchable()
                     ->reactive()
@@ -244,8 +260,7 @@ class ChargerLocationResource extends Resource
                         $set('postal_code_id', null);
                     }),
 
-                Select::make('city_id')
-                    ->required()
+                BaseSelect::make('city_id')
                     ->relationship('city', 'name')
                     ->searchable()
                     ->reactive()
@@ -259,8 +274,7 @@ class ChargerLocationResource extends Resource
                         $set('postal_code_id', null);
                     }),
 
-                Select::make('district_id')
-                    ->nullable()
+                BaseSelect::make('district_id')
                     ->relationship('district', 'name')
                     ->searchable()
                     ->reactive()
@@ -273,8 +287,7 @@ class ChargerLocationResource extends Resource
                         $set('postal_code_id', null);
                     }),
 
-                Select::make('subdistrict_id')
-                    ->nullable()
+                BaseSelect::make('subdistrict_id')
                     ->relationship('subdistrict', 'name')
                     ->searchable()
                     ->reactive()
@@ -286,8 +299,7 @@ class ChargerLocationResource extends Resource
                         $set('postal_code_id', null);
                     }),
 
-                Select::make('postal_code_id')
-                    ->nullable()
+                BaseSelect::make('postal_code_id')
                     ->relationship('postalCode', 'name')
                     ->searchable()
                     ->reactive()
@@ -303,10 +315,7 @@ class ChargerLocationResource extends Resource
                             ->pluck('name', 'id');
                     }),
 
-                Select::make('status')
-                    ->required()
-                    ->default(1)
-                    ->searchable()
+                BaseSelect::make('status')
                     ->visible(fn () => Auth::user()->hasRole('super_admin'))
                     ->options([
                         '1' => 'not verified',
@@ -314,10 +323,9 @@ class ChargerLocationResource extends Resource
                         '3' => 'closed',
                     ]),
 
-                Select::make('location_on')
+                BaseSelect::make('location_on')
                     ->required()
                     ->default('1')
-                    ->searchable()
                     ->options([
                         '1' => 'public',
                         '2' => 'private',
@@ -335,14 +343,13 @@ class ChargerLocationResource extends Resource
             ->minItems(1)
             ->schema([
                 Select::make('current_charger_id')
-                    ->label('Current ')
+                    ->placeholder('Current ')
+                    ->hiddenLabel()
                     ->options(CurrentCharger::query()->pluck('name', 'id'))
-                    ->required()
                     ->reactive()
                     ->columnSpan([
                         'md' => 4,
                     ])
-                    ->searchable()
                     ->afterStateUpdated(function ($state, callable $set) {
                         $set('type_charger_id', null);
                         $set('power_charger_id', null);
@@ -350,14 +357,13 @@ class ChargerLocationResource extends Resource
                     }),
 
                 Select::make('type_charger_id')
-                    ->label('Type')
+                    ->placeholder('Type')
+                    ->hiddenLabel()
                     ->options(function (callable $get) {
                         $currentChargerId = $get('current_charger_id');
                         return TypeCharger::where('current_charger_id', $currentChargerId)->pluck('name', 'id')->toArray();
                     })
-                    ->required()
                     ->reactive()
-                    ->distinct()
                     ->disableOptionsWhenSelectedInSiblingRepeaterItems()
                     ->afterStateUpdated(function ($state, callable $set) {
                         $set('power_charger_id', null);
@@ -365,25 +371,24 @@ class ChargerLocationResource extends Resource
                     })
                     ->columnSpan([
                         'md' => 4,
-                    ])
-                    ->searchable(),
+                    ]),
 
                 Select::make('power_charger_id')
-                    ->label('Power')
+                    ->placeholder('Power')
+                    ->hiddenLabel()
                     ->options(function (callable $get) {
                         $typeChargerId = $get('type_charger_id');
                         return PowerCharger::where('type_charger_id', $typeChargerId)->pluck('name', 'id')->toArray();
                     })
-                    ->required()
                     ->reactive()
-                    ->distinct()
                     ->disableOptionsWhenSelectedInSiblingRepeaterItems()
                     ->columnSpan([
                         'md' => 4,
-                    ])
-                    ->searchable(),
+                    ]),
 
                 NominalTextInput::make('unit')
+                    ->placeholder('Unit')
+                    ->hiddenLabel()
                     ->integer()
                     ->columnSpan([
                         'md' => 2,

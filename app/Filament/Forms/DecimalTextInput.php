@@ -16,6 +16,6 @@ class DecimalTextInput extends TextInput
             ->numeric()
             ->minValue(0)
             ->default(0)
-            ->currencyMask(thousandSeparator: '.',decimalSeparator: ',',precision: 2);
+            ->currencyMask(thousandSeparator: '.',decimalSeparator: ',',precision: 3);
     }
 }

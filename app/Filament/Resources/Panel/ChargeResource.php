@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\Panel;
 
+use App\Filament\Forms\BaseSelect;
 use App\Filament\Forms\CurrencyTextInput;
 use App\Filament\Forms\DecimalTextInput;
 use App\Filament\Forms\NominalTextInput;
 use App\Filament\Forms\PercentTextInput;
+use App\Filament\Forms\TodayDatePicker;
 use Filament\Tables;
 use App\Models\Charge;
 use Filament\Forms\Form;
@@ -82,9 +84,8 @@ class ChargeResource extends Resource
                         //     ->imageEditor()
                         //     ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
 
-                    Select::make('vehicle_id')
+                    BaseSelect::make('vehicle_id')
                         ->label('Vehicle')
-                        ->required()
                         ->options(function () {
                             return Vehicle::where('user_id', Auth::id())
                                 ->where('status', 1)
@@ -98,15 +99,10 @@ class ChargeResource extends Resource
                             }
                         }),
 
-                    DatePicker::make('date')
-                        ->rules(['date'])
-                        ->default('today')
-                        ->native(false)
-                        ->required(),
+                    TodayDatePicker::make('date'),
 
-                    Select::make('charger_location_id')
+                    BaseSelect::make('charger_location_id')
                         ->label('Charger Location')
-                        ->required()
                         ->relationship(
                             name: 'chargerLocation',
                             modifyQueryUsing: fn (Builder $query) => $query->where('status','<>', '3')->orderBy('name', 'asc'),
@@ -117,14 +113,13 @@ class ChargeResource extends Resource
                             $set('charger_id', null);
                         }),
 
-                    Select::make('charger_id')
+                    BaseSelect::make('charger_id')
                         ->label('Charger')
                         ->reactive()
                         ->options(function (callable $get) {
                             $chargerLocationId = $get('charger_location_id');
                             return Charger::all()->where('charger_location_id', $chargerLocationId)->pluck('charger_name', 'id')->toArray();
                         })
-                        ->required()
                         ->searchable(),
 
                     NominalTextInput::make('km_now')

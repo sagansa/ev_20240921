@@ -14,7 +14,7 @@ use Filament\Forms\Form;
 
 class CreateChargerLocation extends CreateRecord
 {
-    use HasWizard;
+    // use HasWizard;
 
     protected static string $resource = ChargerLocationResource::class;
 
@@ -43,20 +43,20 @@ class CreateChargerLocation extends CreateRecord
         return $data;
     }
 
-    protected function getSteps(): array
-    {
-        return [
-            Step::make('Location')
-                ->schema([
-                    Section::make()->schema(ChargerLocationResource::getDetailsFormHeadSchema())->columns(),
-                ]),
+    // protected function getSteps(): array
+    // {
+    //     return [
+    //         Step::make('Location')
+    //             ->schema([
+    //                 Section::make()->schema(ChargerLocationResource::getDetailsFormHeadSchema())->columns(),
+    //             ]),
 
-            Step::make('Charger')
-                ->schema([
-                    Section::make()->schema([
-                        ChargerLocationResource::getItemsRepeater(),
-                    ]),
-                ]),
-        ];
-    }
+    //         Step::make('Charger')
+    //             ->schema([
+    //                 Section::make()->schema([
+    //                     ChargerLocationResource::getItemsRepeater(),
+    //                 ]),
+    //             ]),
+    //     ];
+    // }
 }

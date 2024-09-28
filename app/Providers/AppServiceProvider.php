@@ -25,7 +25,7 @@ class AppServiceProvider extends ServiceProvider
     {
 
         Select::configureUsing(function (Select $select) {
-            $select->preload()->native(false)->inlineLabel();
+            $select->preload()->native(false);
         });
 
         DatePicker::configureUsing(function(DatePicker $datePicker) {
@@ -36,9 +36,9 @@ class AppServiceProvider extends ServiceProvider
             $toggle->inlineLabel();
         });
 
-        Section::configureUsing(function(Section $section) {
-            $section->columns()->compact();
-        });
+        // Section::configureUsing(function(Section $section) {
+        //     $section->columns()->compact();
+        // });
 
     }
 }

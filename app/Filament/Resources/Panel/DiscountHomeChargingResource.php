@@ -2,6 +2,12 @@
 
 namespace App\Filament\Resources\Panel;
 
+use App\Filament\Columns\CurrencyTextColumn;
+use App\Filament\Columns\DecimalTextColumn;
+use App\Filament\Forms\BaseSelect;
+use App\Filament\Forms\CurrencyTextInput;
+use App\Filament\Forms\DecimalTextInput;
+use App\Filament\Forms\TodayDatePicker;
 use Filament\Forms;
 use Filament\Tables;
 use Livewire\Component;
@@ -19,7 +25,9 @@ use Filament\Forms\Components\DatePicker;
 use App\Filament\Resources\Panel\DiscountHomeChargingResource\Pages;
 use App\Filament\Resources\Panel\DiscountHomeChargingResource\RelationManagers;
 use App\Models\ChargerLocation;
+use Filament\Tables\Actions\ActionGroup;
 use Illuminate\Support\Facades\Auth;
+use Ramsey\Uuid\Type\Decimal;
 
 class DiscountHomeChargingResource extends Resource
 {
@@ -50,9 +58,8 @@ class DiscountHomeChargingResource extends Resource
     {
         return $form->schema([
             Section::make()->schema([
-                Grid::make(['default' => 1])->schema([
-                    Select::make('charger_location_id')
-                        ->required()
+                Grid::make(['default' => 2])->schema([
+                    BaseSelect::make('charger_location_id')
                         ->label('Charger Location')
                         ->searchable()
                         ->options(function () {
@@ -61,25 +68,16 @@ class DiscountHomeChargingResource extends Resource
                                 ->pluck('name', 'id');
                         }),
 
-                    DatePicker::make('month')
-                        // ->rules(['month'])
-                        ->required()
-                        ->native(false),
+                    TodayDatePicker::make('month'),
 
-                    TextInput::make('total_kwh')
-                        ->required()
-                        ->suffix('kWh')
-                        ->numeric(),
+                    DecimalTextInput::make('total_kwh')
+                        ->suffix('kWh'),
 
-                    TextInput::make('discount_kwh')
-                        ->required()
-                        ->suffix('kWh')
-                        ->numeric(),
+                    DecimalTextInput::make('discount_kwh')
+                        ->suffix('kWh'),
 
-                    TextInput::make('discount_total')
-                        ->required()
-                        ->prefix('Rp')
-                        ->numeric(),
+                    CurrencyTextInput::make('discount_total')
+                        ->prefix('Rp'),
 
                 ]),
             ]),
@@ -88,25 +86,34 @@ class DiscountHomeChargingResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $query = DiscountHomeCharging::query();
+
+        if (!Auth::user()->hasRole('super-admin')) {
+            $query->where('user_id', Auth::id());
+        }
+
         return $table
+            ->query($query)
             ->poll('60s')
             ->columns([
                 TextColumn::make('chargerLocation.name'),
 
-                TextColumn::make('month'),
+                TextColumn::make('month')->since(),
 
-                TextColumn::make('total_kwh'),
+                DecimalTextColumn::make('total_kwh'),
 
-                TextColumn::make('discount_kwh'),
+                DecimalTextColumn::make('discount_kwh'),
 
-                TextColumn::make('discount_total'),
+                CurrencyTextColumn::make('discount_total'),
 
-                TextColumn::make('user.name'),
+                TextColumn::make('user.name')->hidden(fn () => Auth::user()->hasRole('user'))
             ])
             ->filters([])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\ViewAction::make(),
+                ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\ViewAction::make(),
+                ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
