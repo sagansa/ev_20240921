@@ -72,7 +72,6 @@ class VehicleResource extends Resource
                         ->relationship('brandVehicle', 'name')
                         ->searchable()
                         ->reactive()
-                        ->()
                         ->afterStateUpdated(function ($state, callable $set) {
                             $set('model_vehicle_id', null);
                             $set('type_vehicle_id', null);
