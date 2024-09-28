@@ -54,9 +54,7 @@ class PowerChargerResource extends Resource
                     // Select::make('type_charger_id')
                     //     ->required()
                     //     ->relationship('typeCharger', 'name')
-                    //     ->searchable()
-                    //     ->preload()
-                    //     ->native(false),
+                    //     ->searchable(),
 
                     Radio::make('type_charger_id')
                         ->label('Type')

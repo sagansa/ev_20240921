@@ -62,9 +62,7 @@ class ModelVehicleResource extends Resource
                     Select::make('brand_vehicle_id')
                         ->required()
                         ->relationship('brandVehicle', 'name')
-                        ->searchable()
-                        ->preload()
-                        ->native(false),
+                        ->searchable(),
 
                     TextInput::make('name')
                         ->required()

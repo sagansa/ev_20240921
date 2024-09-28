@@ -51,8 +51,7 @@ class TypeVehicleResource extends Resource
                     Select::make('model_vehicle_id')
                         ->required()
                         ->relationship('modelVehicle', 'name')
-                        ->searchable()
-                        ->preload(),
+                        ->searchable(),
 
                     TextInput::make('name')
                         ->required()
@@ -69,7 +68,6 @@ class TypeVehicleResource extends Resource
                         ->required()
                         ->multiple()
                         ->searchable()
-                        ->preload()
                         ->options([
                             '1' => 'CCS2',
                             '2' => 'Chademo',

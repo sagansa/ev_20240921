@@ -55,8 +55,6 @@ class DiscountHomeChargingResource extends Resource
                         ->required()
                         ->label('Charger Location')
                         ->searchable()
-                        ->preload()
-                        ->native(false)
                         ->options(function () {
                             return ChargerLocation::where('user_id', Auth::id())
                                 ->where('provider_id', 'd89fa3a2-00c6-4d13-b4db-5066b33ebd17')

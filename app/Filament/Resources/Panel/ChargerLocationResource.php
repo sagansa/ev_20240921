@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Panel;
 
+use App\Filament\Forms\NominalTextInput;
 use Filament\Forms;
 use Filament\Tables;
 use Filament\Forms\Form;
@@ -182,9 +183,7 @@ class ChargerLocationResource extends Resource
                 Select::make('provider_id')
                     ->required()
                     ->relationship('provider', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->native(false),
+                    ->searchable(),
 
                 OSMMap::make('location')
                     ->label('Location')
@@ -237,8 +236,6 @@ class ChargerLocationResource extends Resource
                     ->required()
                     ->relationship('province', 'name')
                     ->searchable()
-                    ->preload()
-                    ->native(false)
                     ->reactive()
                     ->afterStateUpdated(function ($state, callable $set) {
                         $set('city_id', null);
@@ -251,8 +248,6 @@ class ChargerLocationResource extends Resource
                     ->required()
                     ->relationship('city', 'name')
                     ->searchable()
-                    ->preload()
-                    ->native(false)
                     ->reactive()
                     ->options(function (callable $get) {
                         $provinceId = $get('province_id');
@@ -268,8 +263,6 @@ class ChargerLocationResource extends Resource
                     ->nullable()
                     ->relationship('district', 'name')
                     ->searchable()
-                    ->preload()
-                    ->native(false)
                     ->reactive()
                     ->options(function (callable $get) {
                         $cityId = $get('city_id');
@@ -284,8 +277,6 @@ class ChargerLocationResource extends Resource
                     ->nullable()
                     ->relationship('subdistrict', 'name')
                     ->searchable()
-                    ->preload()
-                    ->native(false)
                     ->reactive()
                     ->options(function (callable $get) {
                         $districtId = $get('district_id');
@@ -299,8 +290,6 @@ class ChargerLocationResource extends Resource
                     ->nullable()
                     ->relationship('postalCode', 'name')
                     ->searchable()
-                    ->preload()
-                    ->native(false)
                     ->reactive()
                     ->options(function (callable $get) {
                         $provinceId = $get('province_id');
@@ -318,8 +307,6 @@ class ChargerLocationResource extends Resource
                     ->required()
                     ->default(1)
                     ->searchable()
-                    ->preload()
-                    ->native(false)
                     ->visible(fn () => Auth::user()->hasRole('super_admin'))
                     ->options([
                         '1' => 'not verified',
@@ -331,8 +318,6 @@ class ChargerLocationResource extends Resource
                     ->required()
                     ->default('1')
                     ->searchable()
-                    ->preload()
-                    ->native(false)
                     ->options([
                         '1' => 'public',
                         '2' => 'private',
@@ -398,11 +383,8 @@ class ChargerLocationResource extends Resource
                     ])
                     ->searchable(),
 
-                TextInput::make('unit')
+                NominalTextInput::make('unit')
                     ->integer()
-                    ->default(1)
-                    ->minValue(1)
-                    ->required()
                     ->columnSpan([
                         'md' => 2,
                     ]),
@@ -417,9 +399,9 @@ class ChargerLocationResource extends Resource
     {
         return [
             RichEditor::make('description')
-                    ->nullable()
-                    ->string()
-                    ->fileAttachmentsVisibility('public'),
+                ->nullable()
+                ->string()
+                ->fileAttachmentsVisibility('public'),
         ];
     }
 }

@@ -79,8 +79,6 @@ class ProviderResource extends Resource
                         ->required()
                         ->relationship('province', 'name')
                         ->searchable()
-                        ->preload()
-                        ->native(false)
                         ->reactive()
                         ->afterStateUpdated(function ($state, callable $set) {
                             $set('city_id', null);
@@ -93,8 +91,6 @@ class ProviderResource extends Resource
                     ->required()
                     ->relationship('city', 'name')
                     ->searchable()
-                    ->preload()
-                    ->native(false)
                     ->reactive()
                     ->options(function (callable $get) {
                         $provinceId = $get('province_id');
@@ -110,8 +106,6 @@ class ProviderResource extends Resource
                     ->nullable()
                     ->relationship('district', 'name')
                     ->searchable()
-                    ->preload()
-                    ->native(false)
                     ->reactive()
                     ->options(function (callable $get) {
                         $cityId = $get('city_id');
@@ -126,8 +120,6 @@ class ProviderResource extends Resource
                     ->nullable()
                     ->relationship('subdistrict', 'name')
                     ->searchable()
-                    ->preload()
-                    ->native(false)
                     ->reactive()
                     ->options(function (callable $get) {
                         $districtId = $get('district_id');
@@ -141,8 +133,6 @@ class ProviderResource extends Resource
                     ->nullable()
                     ->relationship('postalCode', 'name')
                     ->searchable()
-                    ->preload()
-                    ->native(false)
                     ->reactive()
                     ->options(function (callable $get) {
                         $provinceId = $get('province_id');
@@ -159,8 +149,6 @@ class ProviderResource extends Resource
                 Select::make('status')
                     ->required()
                     ->searchable()
-                    ->preload()
-                    ->native(false)
                     ->options([
                         '1' => 'active',
                         '2' => 'inactive',

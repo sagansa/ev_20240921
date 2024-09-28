@@ -84,15 +84,12 @@ class ChargeResource extends Resource
 
                     Select::make('vehicle_id')
                         ->label('Vehicle')
-                        ->inlineLabel()
                         ->required()
                         ->options(function () {
                             return Vehicle::where('user_id', Auth::id())
                                 ->where('status', 1)
                                 ->pluck('license_plate', 'id');
                         })
-                        ->preload()
-                        ->native(false)
                         ->reactive()
                         ->afterStateUpdated(function ($state, callable $set) {
                             if ($state) {
@@ -104,23 +101,18 @@ class ChargeResource extends Resource
                     DatePicker::make('date')
                         ->rules(['date'])
                         ->default('today')
-                        ->inlineLabel()
                         ->native(false)
                         ->required(),
 
                     Select::make('charger_location_id')
                         ->label('Charger Location')
                         ->required()
-                        ->inlineLabel()
-                        // ->relationship('chargerLocation', 'name')
                         ->relationship(
                             name: 'chargerLocation',
                             modifyQueryUsing: fn (Builder $query) => $query->where('status','<>', '3')->orderBy('name', 'asc'),
                         )
                         ->getOptionLabelFromRecordUsing(fn (ChargerLocation $record) => "{$record->charger_location_name}")
                         ->searchable()
-                        ->preload()
-                        ->native(false)
                         ->afterStateUpdated(function ($state, callable $set) {
                             $set('charger_id', null);
                         }),
@@ -128,15 +120,12 @@ class ChargeResource extends Resource
                     Select::make('charger_id')
                         ->label('Charger')
                         ->reactive()
-                        ->inlineLabel()
                         ->options(function (callable $get) {
                             $chargerLocationId = $get('charger_location_id');
                             return Charger::all()->where('charger_location_id', $chargerLocationId)->pluck('charger_name', 'id')->toArray();
                         })
                         ->required()
-                        ->searchable()
-                        ->preload()
-                        ->native(false),
+                        ->searchable(),
 
                     NominalTextInput::make('km_now')
                         ->label('start charging')
@@ -150,7 +139,6 @@ class ChargeResource extends Resource
                 Toggle::make('is_finish_charging')
                     ->label('Is the charging finish?')
                     ->default(false)
-                    ->inlineLabel()
                     ->reactive()
                     ->afterStateUpdated(function ($state, callable $set) {
                         $set('finish_charging_section', $state);
@@ -169,7 +157,6 @@ class ChargeResource extends Resource
 
                             Toggle::make('is_kwh_measured')
                                 ->label('Is kWh measured?')
-                                ->inlineLabel()
                                 ->default(false),
 
                             DecimalTextInput::make('kWh')
@@ -231,7 +218,7 @@ class ChargeResource extends Resource
                 //     ->tooltip('Klik untuk membuka gambar di tab baru') // Tooltip untuk pengguna,
                 //     ->url(fn($record) => asset('storage/' . $record->image)),
 
-                TextColumn::make('vehicle.license_plate'),
+                TextColumn::make('vehicle.license_plate')->sortable(),
 
                 TextColumn::make('date')
                     ->sortable()
@@ -444,7 +431,7 @@ class ChargeResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('date', 'desc');
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getRelations(): array

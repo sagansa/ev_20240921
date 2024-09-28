@@ -72,7 +72,7 @@ class VehicleResource extends Resource
                         ->relationship('brandVehicle', 'name')
                         ->searchable()
                         ->reactive()
-                        ->preload()
+                        ->()
                         ->afterStateUpdated(function ($state, callable $set) {
                             $set('model_vehicle_id', null);
                             $set('type_vehicle_id', null);
@@ -110,8 +110,6 @@ class VehicleResource extends Resource
                         ->required()
                         ->default('1')
                         ->searchable()
-                        ->preload()
-                        ->native(false)
                         ->options([
                             '1' => 'active',
                             '2' => 'inactive',

@@ -69,9 +69,7 @@ class StateOfHealthResource extends Resource
                                 ->where('status', 1)
                                 ->pluck('license_plate', 'id');
                         })
-                        ->searchable()
-                        ->preload()
-                        ->native(false),
+                        ->searchable(),
 
                     DatePicker::make('date')
                         ->rules(['date'])
