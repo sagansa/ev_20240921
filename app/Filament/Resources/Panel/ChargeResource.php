@@ -76,13 +76,15 @@ class ChargeResource extends Resource
             Group::make()->schema([
                 Section::make('Start Charging')->schema([
 
-                        FileUpload::make('image')
-                            ->rules(['image'])
-                            ->nullable()
-                            ->maxSize(1024)
-                            ->image()
-                            ->imageEditor()
-                            ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+                    FileUpload::make('image')
+                        ->rules(['image'])
+                        ->nullable()
+                        ->openable()
+                        ->maxSize(1024)
+                        ->image()
+                        ->imageEditor()
+                        ->disk('public')
+                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
 
                     BaseSelect::make('vehicle_id')
                         ->label('Vehicle')
@@ -208,7 +210,7 @@ class ChargeResource extends Resource
             ->poll('60s')
             ->columns([
 
-                ImageColumn::make('image')->visibility('public')
+                ImageColumn::make('image')
                     ->openUrlInNewTab() // Membuka URL di tab baru
                     ->tooltip('Klik untuk membuka gambar di tab baru') // Tooltip untuk pengguna,
                     ->url(fn($record) => asset('storage/' . $record->image)),
