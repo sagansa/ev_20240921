@@ -67,11 +67,14 @@ class ChargerLocationResource extends Resource
         return $form->schema([
             Group::make()->schema([
                 Section::make()
-                    ->schema(static::getDetailsFormHeadSchema())
+                    ->schema(static::getAddressFormHeadSchema())
                     ->columns(2),
             ])->columnSpan(['lg' => 1]),
 
             Group::make()->schema([
+                Section::make()
+                    ->schema(static::getDataFormHeadSchema()),
+
                 Section::make()->schema([
                     self::getItemsRepeater(),
                 ]),
@@ -173,7 +176,7 @@ class ChargerLocationResource extends Resource
         ];
     }
 
-    public static function getDetailsFormHeadSchema(): array
+    public static function getAddressFormHeadSchema(): array
     {
         return [
             Grid::make(['default' => 1])->schema([
@@ -208,41 +211,21 @@ class ChargerLocationResource extends Resource
                     ->schema([
                         TextInput::make('latitude')
                             ->required()
-                            ->inlineLabel()
+                            ->hiddenLabel()
                             ->readOnly()
                             ->numeric(),
                         TextInput::make('longitude')
                             ->required()
-                            ->inlineLabel()
+                            ->hiddenLabel()
                             ->readOnly()
                             ->numeric(),
                     ])->columns(2),
 
-                FileUpload::make('image')
-                    ->rules(['image'])
-                    ->nullable()
-                    ->maxSize(1024)
-                    ->image()
-                    ->imageEditor()
-                    ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+
 
                 ]),
 
-            Grid::make(['default' => 2])->schema([
-
-                TextInput::make('name')
-                    ->required()
-                    ->inlineLabel()
-                    ->string(),
-
-                BaseSelect::make('provider_id')
-                    ->required()
-                    ->relationship('provider', 'name')
-                    ->searchable(),
-
-                Checkbox::make('parking')
-                    ->rules(['boolean'])
-                    ->inlineLabel(),
+            Grid::make(['default' => 1])->schema([
 
                 TextInput::make('address')
                     ->nullable()
@@ -251,6 +234,7 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('province_id')
                     ->relationship('province', 'name')
+                    ->required()
                     ->searchable()
                     ->reactive()
                     ->afterStateUpdated(function ($state, callable $set) {
@@ -262,6 +246,7 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('city_id')
                     ->relationship('city', 'name')
+                    ->required()
                     ->searchable()
                     ->reactive()
                     ->options(function (callable $get) {
@@ -276,6 +261,7 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('district_id')
                     ->relationship('district', 'name')
+                    ->required()
                     ->searchable()
                     ->reactive()
                     ->options(function (callable $get) {
@@ -289,6 +275,7 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('subdistrict_id')
                     ->relationship('subdistrict', 'name')
+                    ->required()
                     ->searchable()
                     ->reactive()
                     ->options(function (callable $get) {
@@ -301,6 +288,7 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('postal_code_id')
                     ->relationship('postalCode', 'name')
+                    ->required()
                     ->searchable()
                     ->reactive()
                     ->options(function (callable $get) {
@@ -314,6 +302,36 @@ class ChargerLocationResource extends Resource
                             ->where('subdistrict_id', $subdistrictId)
                             ->pluck('name', 'id');
                     }),
+
+            ]),
+        ];
+    }
+
+    public static function getDataFormHeadSchema(): array
+    {
+        return [
+            Grid::make(['default' => 1])->schema([
+                FileUpload::make('image')
+                    ->rules(['image'])
+                    ->nullable()
+                    ->maxSize(1024)
+                    ->image()
+                    ->imageEditor()
+                    ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+
+                TextInput::make('name')
+                    ->required()
+                    ->inlineLabel()
+                    ->string(),
+
+                BaseSelect::make('provider_id')
+                    ->required()
+                    ->relationship('provider', 'name')
+                    ->searchable(),
+
+                Checkbox::make('parking')
+                    ->rules(['boolean'])
+                    ->inlineLabel(),
 
                 BaseSelect::make('status')
                     ->visible(fn () => Auth::user()->hasRole('super_admin'))
@@ -332,7 +350,9 @@ class ChargerLocationResource extends Resource
                         '3' => 'dealer',
                         '4' => 'closed',
                     ]),
-            ]),
+
+
+            ])
         ];
     }
 
@@ -389,6 +409,8 @@ class ChargerLocationResource extends Resource
                 NominalTextInput::make('unit')
                     ->placeholder('Unit')
                     ->hiddenLabel()
+                    ->minValue(1)
+                    ->default(1)
                     ->integer()
                     ->columnSpan([
                         'md' => 2,
