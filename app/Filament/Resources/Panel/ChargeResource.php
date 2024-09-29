@@ -83,7 +83,7 @@ class ChargeResource extends Resource
                         ->maxSize(1024)
                         ->image()
                         ->imageEditor()
-                        ->disk('public')
+                        // ->disk('public')
                         ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
 
                     BaseSelect::make('vehicle_id')
