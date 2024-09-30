@@ -14,7 +14,6 @@ use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
@@ -27,7 +26,6 @@ use App\Models\Charger;
 use App\Models\Vehicle;
 use App\Models\ChargerLocation;
 use Filament\Forms\Components\Toggle;
-use Filament\Support\RawJs;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Filters\Filter;
@@ -76,16 +74,18 @@ class ChargeResource extends Resource
             Group::make()->schema([
                 Section::make('Start Charging')->schema([
 
-                    FileUpload::make('image')
+                    Grid::make(['default' => 1])->schema([
+                        FileUpload::make('image_start')
                         ->rules(['image'])
                         ->nullable()
                         ->openable()
                         ->maxSize(1024)
                         ->image()
                         ->imageEditor()
-                        // ->disk('public')
-                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1'])
-                        ->columnSpan(2),
+                        ->disk('public')
+                        ->directory('images/charge')
+                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+                    ]),
 
                     BaseSelect::make('vehicle_id')
                         ->label('Vehicle')
@@ -146,6 +146,19 @@ class ChargeResource extends Resource
                     ->visible(fn ($get) => $get('is_finish_charging'))
                     ->schema([
                         Grid::make(['default' => 1])->schema([
+                            FileUpload::make('image_finish')
+                            ->rules(['image'])
+                            ->nullable()
+                            ->openable()
+                            ->maxSize(1024)
+                            ->image()
+                            ->imageEditor()
+                            ->disk('public')
+                            ->directory('images/charge')
+                            ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+                        ]),
+
+                        Grid::make(['default' => 1])->schema([
                             PercentTextInput::make('finish_charging_now')
                                 ->label('Battery finish now')
                                 ->requiredWith('is_finish_charging'),
@@ -177,7 +190,7 @@ class ChargeResource extends Resource
                         ])
                         ->columns(2),
                     ]),
-                ])->columnSpan(['lg' => 2]),
+                ])->columnSpan(['md' => 3]),
 
             Section::make()->schema([
 
@@ -193,9 +206,9 @@ class ChargeResource extends Resource
                     ->requiredWith('is_finish_charging')
                     ->suffix('%'),
 
-            ])->columnSpan(['lg' => 1]),
+            ])->columnSpan(['md' => 1]),
         ])
-        ->columns(3);
+        ->columns(4);
     }
 
     public static function table(Table $table): Table
@@ -211,10 +224,17 @@ class ChargeResource extends Resource
             ->poll('60s')
             ->columns([
 
-                ImageColumn::make('image')
+                ImageColumn::make('image_start')
                     ->openUrlInNewTab() // Membuka URL di tab baru
                     ->tooltip('Klik untuk membuka gambar di tab baru') // Tooltip untuk pengguna,
-                    ->url(fn($record) => asset('storage/' . $record->image)),
+                    ->url(fn($record) => asset('storage/' . $record->image))
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                ImageColumn::make('image_finish')
+                    ->openUrlInNewTab() // Membuka URL di tab baru
+                    ->tooltip('Klik untuk membuka gambar di tab baru') // Tooltip untuk pengguna,
+                    ->url(fn($record) => asset('storage/' . $record->image))
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('vehicle.license_plate')->sortable(),
 
