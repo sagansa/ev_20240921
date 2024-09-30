@@ -84,7 +84,8 @@ class ChargeResource extends Resource
                         ->image()
                         ->imageEditor()
                         // ->disk('public')
-                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1'])
+                        ->columnSpan(2),
 
                     BaseSelect::make('vehicle_id')
                         ->label('Vehicle')

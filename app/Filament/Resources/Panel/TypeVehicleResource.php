@@ -14,7 +14,9 @@ use Filament\Forms\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use App\Filament\Resources\Panel\TypeVehicleResource\Pages;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Columns\Layout\Panel;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Termwind\Components\Span;
 
@@ -119,13 +121,17 @@ class TypeVehicleResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('brand_vehicle')
-                    ->relationship('modelVehicle.brandVehicle','name'),
+                    ->relationship('modelVehicle.brandVehicle','name')
+                    ->label('Brand'),
                 SelectFilter::make('model_vehicle')
-                    ->relationship('modelVehicle','name'),
-            ])
+                    ->relationship('modelVehicle','name')
+                    ->label('Model'),
+            ], layout: FiltersLayout::AboveContent)
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\ViewAction::make(),
+                ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\ViewAction::make(),
+                ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
