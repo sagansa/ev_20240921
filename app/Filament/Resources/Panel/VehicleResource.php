@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Panel;
 
+use App\Filament\Forms\ImageFileUpload;
 use Filament\Tables;
 use App\Models\Vehicle;
 use Filament\Forms\Form;
@@ -53,13 +54,7 @@ class VehicleResource extends Resource
         return $form->schema([
             Section::make()->schema([
                 Grid::make(['default' => 1])->schema([
-                    FileUpload::make('image')
-                        ->rules(['image'])
-                        ->nullable()
-                        ->maxSize(1024)
-                        ->image()
-                        ->imageEditor()
-                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+                    ImageFileUpload::make('image')->directory('images/vehicle'),
 
                     TextInput::make('license_plate')
                         ->label('License Plate/Name Your Vehicle')

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Panel;
 
 use App\Filament\Forms\BaseSelect;
 use App\Filament\Forms\DecimalTextInput;
+use App\Filament\Forms\ImageFileUpload;
 use App\Filament\Forms\NominalTextInput;
 use App\Filament\Forms\TodayDatePicker;
 use Filament\Forms;
@@ -57,13 +58,8 @@ class StateOfHealthResource extends Resource
         return $form->schema([
             Section::make()->schema([
                 Grid::make(['default' => 2])->schema([
-                    // FileUpload::make('image')
-                    //     ->rules(['image'])
-                    //     ->nullable()
-                    //     ->maxSize(1024)
-                    //     ->image()
-                    //     ->imageEditor()
-                    //     ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+                    ImageFileUpload::make('image')
+                        ->directory('images/soh'),
 
                     BaseSelect::make('vehicle_id')
                         ->label('Vehicle')

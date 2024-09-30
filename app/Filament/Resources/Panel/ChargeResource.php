@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Panel;
 use App\Filament\Forms\BaseSelect;
 use App\Filament\Forms\CurrencyTextInput;
 use App\Filament\Forms\DecimalTextInput;
+use App\Filament\Forms\ImageFileUpload;
 use App\Filament\Forms\NominalTextInput;
 use App\Filament\Forms\PercentTextInput;
 use App\Filament\Forms\TodayDatePicker;
@@ -75,16 +76,8 @@ class ChargeResource extends Resource
                 Section::make('Start Charging')->schema([
 
                     Grid::make(['default' => 1])->schema([
-                        FileUpload::make('image_start')
-                        ->rules(['image'])
-                        ->nullable()
-                        ->openable()
-                        ->maxSize(1024)
-                        ->image()
-                        ->imageEditor()
-                        ->disk('public')
-                        ->directory('images/charge')
-                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+                        ImageFileUpload::make('image_start')
+                            ->directory('images/charge'),
                     ]),
 
                     BaseSelect::make('vehicle_id')
@@ -146,16 +139,8 @@ class ChargeResource extends Resource
                     ->visible(fn ($get) => $get('is_finish_charging'))
                     ->schema([
                         Grid::make(['default' => 1])->schema([
-                            FileUpload::make('image_finish')
-                            ->rules(['image'])
-                            ->nullable()
-                            ->openable()
-                            ->maxSize(1024)
-                            ->image()
-                            ->imageEditor()
-                            ->disk('public')
-                            ->directory('images/charge')
-                            ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+                            ImageFileUpload::make('image_finish')
+                            ->directory('images/charge'),
                         ]),
 
                         Grid::make(['default' => 1])->schema([

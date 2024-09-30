@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Panel;
 
+use App\Filament\Forms\ImageFileUpload;
 use Filament\Forms;
 use Filament\Tables;
 use Livewire\Component;
@@ -51,13 +52,8 @@ class ModelVehicleResource extends Resource
             Section::make()->schema([
                 Grid::make(['default' => 1])->schema([
 
-                    FileUpload::make('image')
-                        ->rules(['image'])
-                        ->nullable()
-                        ->maxSize(1024)
-                        ->image()
-                        ->imageEditor()
-                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+                    ImageFileUpload::make('image')
+                        ->directory('images/model'),
 
                     Select::make('brand_vehicle_id')
                         ->required()

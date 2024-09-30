@@ -13,13 +13,16 @@ class CurrencyTextColumn extends TextColumn
 
         $this
             ->sortable()
-            ->currency('IDR')
+            ->prefix('Rp ')
+            ->numeric(
+                    thousandsSeparator: '.'
+                )
             ->summarize(Sum::make()
                 ->numeric(
                     thousandsSeparator: '.'
                 )
                 ->label('')
-                ->currency('IDR')
+                ->prefix('Rp ')
 
             );
     }

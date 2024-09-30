@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Panel\BrandVehicleResource\RelationManagers;
 
+use App\Filament\Forms\ImageFileUpload;
 use Filament\Forms;
 use Filament\Tables;
 use Filament\Forms\Form;
@@ -25,13 +26,7 @@ class ModelVehiclesRelationManager extends RelationManager
     {
         return $form->schema([
             Grid::make(['default' => 1])->schema([
-                FileUpload::make('image')
-                    ->rules(['image'])
-                    ->nullable()
-                    ->maxSize(1024)
-                    ->image()
-                    ->imageEditor()
-                    ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+                ImageFileUpload::make('image')->directory('images/model'),
 
                 TextInput::make('name')
                     ->required()

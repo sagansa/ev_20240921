@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Panel;
 
 use App\Filament\Forms\BaseSelect;
+use App\Filament\Forms\ImageFileUpload;
 use App\Filament\Forms\NominalTextInput;
 use Filament\Forms;
 use Filament\Tables;
@@ -310,13 +311,8 @@ class ChargerLocationResource extends Resource
     {
         return [
             Grid::make(['default' => 1])->schema([
-                FileUpload::make('image')
-                    ->rules(['image'])
-                    ->nullable()
-                    ->maxSize(1024)
-                    ->image()
-                    ->imageEditor()
-                    ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
+                ImageFileUpload::make('image')
+                    ->directory('images/charge_location'),
 
                 TextInput::make('name')
                     ->required()
