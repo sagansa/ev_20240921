@@ -129,7 +129,8 @@ class ChargerLocationResource extends Resource
 
                 TextColumn::make('city.name'),
 
-                StatusLocationColumn::make('status'),
+                StatusLocationColumn::make('status')
+                    ->visible(fn () => Auth::user()->hasRole('super_admin')),
 
                 LocationOnColumn::make('location_on'),
 
@@ -156,9 +157,7 @@ class ChargerLocationResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort(function ($query) {
-                $query->orderByRaw('RAND()');
-            });
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getRelations(): array
