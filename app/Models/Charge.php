@@ -16,7 +16,8 @@ class Charge extends Model
     // protected $guarded = [];
 
     protected $fillable = [
-        'image',
+        'image_start',
+        'image_finish',
         'vehicle_id',
         'date',
         'charger_location_id',
