@@ -35,7 +35,6 @@ class ChargeUpdateRequest extends FormRequest
             'value_added_tax' => ['required'],
             'admin_cost' => ['required'],
             'total_cost' => ['required'],
-            'image' => ['nullable', 'image', 'max:1024'],
         ];
     }
 }

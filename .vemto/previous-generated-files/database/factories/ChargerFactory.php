@@ -29,6 +29,7 @@ class ChargerFactory extends Factory
             'type_charger_id' => \App\Models\TypeCharger::factory(),
             'power_charger_id' => \App\Models\PowerCharger::factory(),
             'charger_location_id' => \App\Models\ChargerLocation::factory(),
+            'merk_charger_id' => \App\Models\MerkCharger::factory(),
         ];
     }
 }

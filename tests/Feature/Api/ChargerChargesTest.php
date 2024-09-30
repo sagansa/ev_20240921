@@ -46,6 +46,8 @@ test('it stores the charger charges', function () {
     unset($data['created_at']);
     unset($data['updated_at']);
     unset($data['deleted_at']);
+    unset($data['image_start']);
+    unset($data['image_finish']);
 
     $this->assertDatabaseHas('charges', $data);
 

@@ -1,0 +1,9 @@
+{
+    "conflicts": [
+        {
+            "id": "5f1a7c4c-61a7-49c6-95f8-49e0ff31fc2a",
+            "currentContent": "<?php\n\nnamespace App\\Filament\\Resources\\Panel\\DiscountHomeChargingResource\\Pages;\n\nuse Filament\\Actions;\nuse Filament\\Resources\\Pages\\CreateRecord;\nuse App\\Filament\\Resources\\Panel\\DiscountHomeChargingResource;\nuse Illuminate\\Support\\Facades\\Auth;\n\nclass CreateDiscountHomeCharging extends CreateRecord\n{\n    protected static string $resource = DiscountHomeChargingResource::class;\n\n    protected function mutateFormDataBeforeCreate(array $data): array\n    {\n        $data['user_id'] = Auth::id();\n\n        return $data;\n    }\n}\n",
+            "newContent": "<?php\n\nnamespace App\\Filament\\Resources\\Panel\\DiscountHomeChargingResource\\Pages;\n\nuse Filament\\Actions;\nuse Filament\\Resources\\Pages\\CreateRecord;\nuse App\\Filament\\Resources\\Panel\\DiscountHomeChargingResource;\n\nclass CreateDiscountHomeCharging extends CreateRecord\n{\n    protected static string $resource = DiscountHomeChargingResource::class;\n}\n"
+        }
+    ]
+}

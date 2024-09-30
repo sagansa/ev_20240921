@@ -45,6 +45,7 @@ test('it stores the charger_location chargers', function () {
         $data
     );
 
+    unset($data['merk_charger_id']);
     unset($data['created_at']);
     unset($data['updated_at']);
     unset($data['deleted_at']);

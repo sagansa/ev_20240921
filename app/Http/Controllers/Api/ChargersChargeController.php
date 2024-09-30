@@ -39,14 +39,9 @@ class ChargersChargeController extends Controller
             'value_added_tax' => ['required'],
             'admin_cost' => ['required'],
             'total_cost' => ['required'],
-            'image' => ['nullable', 'image', 'max:1024'],
             'user_id' => ['required'],
             'charger_id' => ['required'],
         ]);
-
-        if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('public');
-        }
 
         $charge = $charger->charge()->create($validated);
 

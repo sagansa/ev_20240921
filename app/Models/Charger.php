@@ -17,7 +17,7 @@ class Charger extends Model
 
     public function currentCharger()
     {
-        return $this->belongsTo(CurrentCharger::class, 'current_charger_id');
+        return $this->belongsTo(CurrentCharger::class);
     }
 
     public function typeCharger()
@@ -37,7 +37,12 @@ class Charger extends Model
 
     public function charge()
     {
-        return $this->hasMany(Charge::class);
+        return $this->hasMany(Charge::class, 'charger_id');
+    }
+
+    public function merkCharger()
+    {
+        return $this->belongsTo(MerkCharger::class);
     }
 
     public function getChargerNameAttribute()

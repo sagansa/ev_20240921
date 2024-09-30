@@ -39,6 +39,8 @@ test('it stores the charge', function () {
     unset($data['created_at']);
     unset($data['updated_at']);
     unset($data['deleted_at']);
+    unset($data['image_start']);
+    unset($data['image_finish']);
 
     $this->assertDatabaseHas('charges', $data);
 
@@ -66,7 +68,8 @@ test('it updates the charge', function () {
         'value_added_tax' => fake()->randomNumber(),
         'admin_cost' => fake()->randomNumber(),
         'total_cost' => fake()->randomNumber(),
-        'image' => fake()->optional(),
+        'image_start' => fake()->text(255),
+        'image_finish' => fake()->word(),
         'vehicle_id' => $vehicle->id,
         'charger_location_id' => $chargerLocation->id,
         'user_id' => $user->id,
@@ -78,6 +81,8 @@ test('it updates the charge', function () {
     unset($data['created_at']);
     unset($data['updated_at']);
     unset($data['deleted_at']);
+    unset($data['image_start']);
+    unset($data['image_finish']);
 
     $data['id'] = $charge->id;
 

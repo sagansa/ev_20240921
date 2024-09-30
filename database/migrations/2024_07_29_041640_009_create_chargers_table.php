@@ -28,6 +28,9 @@ return new class extends Migration {
                 ->unsigned()
                 ->index();
             $table->tinyInteger('unit')->default(1);
+            $table->bigInteger('merk_charger_id')
+                ->unsigned()
+                ->index();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
             $table->timestamp('deleted_at')->nullable();
@@ -57,6 +60,12 @@ return new class extends Migration {
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
             $table->primary('id');
+            $table
+                ->foreign('merk_charger_id')
+                ->references('id')
+                ->on('merk_chargers')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
         });
     }
 

@@ -35,6 +35,16 @@ class Charger extends Model
         return $this->belongsTo(ChargerLocation::class);
     }
 
+    public function charge()
+    {
+        return $this->hasMany(Charge::class, 'charger_id');
+    }
+
+    public function merkCharger()
+    {
+        return $this->belongsTo(MerkCharger::class);
+    }
+
     public function getChargerNameAttribute()
     {
         return $this->currentCharger->name .

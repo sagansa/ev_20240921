@@ -14,10 +14,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
-use Filament\Tables\Columns\ImageColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\Panel\ChargeResource\Pages;
 use App\Filament\Resources\Panel\ChargeResource\RelationManagers;
@@ -52,14 +50,6 @@ class ChargeResource extends Resource
         return $form->schema([
             Section::make()->schema([
                 Grid::make(['default' => 1])->schema([
-                    FileUpload::make('image')
-                        ->rules(['image'])
-                        ->nullable()
-                        ->maxSize(1024)
-                        ->image()
-                        ->imageEditor()
-                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']),
-
                     Select::make('vehicle_id')
                         ->required()
                         ->relationship('vehicle', 'id')
@@ -160,8 +150,6 @@ class ChargeResource extends Resource
         return $table
             ->poll('60s')
             ->columns([
-                ImageColumn::make('image')->visibility('public'),
-
                 TextColumn::make('vehicle.id'),
 
                 TextColumn::make('date')->since(),

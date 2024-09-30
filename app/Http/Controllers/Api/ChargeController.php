@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ChargeResource;
-use Illuminate\Support\Facades\Storage;
 use App\Http\Resources\ChargeCollection;
 use App\Http\Requests\ChargeStoreRequest;
 use App\Http\Requests\ChargeUpdateRequest;
@@ -29,10 +28,6 @@ class ChargeController extends Controller
     {
         $validated = $request->validated();
 
-        if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('public');
-        }
-
         $charge = Charge::create($validated);
 
         return new ChargeResource($charge);
@@ -49,14 +44,6 @@ class ChargeController extends Controller
     ): ChargeResource {
         $validated = $request->validated();
 
-        if ($request->hasFile('image')) {
-            if ($charge->image) {
-                Storage::delete($charge->image);
-            }
-
-            $validated['image'] = $request->file('image')->store('public');
-        }
-
         $charge->update($validated);
 
         return new ChargeResource($charge);
@@ -64,10 +51,6 @@ class ChargeController extends Controller
 
     public function destroy(Request $request, Charge $charge): Response
     {
-        if ($charge->image) {
-            Storage::delete($charge->image);
-        }
-
         $charge->delete();
 
         return response()->noContent();

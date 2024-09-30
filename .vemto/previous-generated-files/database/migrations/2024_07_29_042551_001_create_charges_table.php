@@ -44,7 +44,8 @@ return new class extends Migration {
                 ->bigInteger('total_cost')
                 ->default(0)
                 ->nullable();
-            $table->string('image', 255)->nullable();
+            $table->string('image_start', 255)->nullable();
+            $table->string('image_finish')->nullable();
             $table
                 ->bigInteger('user_id')
                 ->unsigned()

@@ -1048,4 +1048,21 @@ return [
             ],
         ],
     ],
+    'merkChargers' => [
+        'itemTitle' => 'Merk Charger',
+        'collectionTitle' => 'Merk Chargers',
+        'inputs' => [
+            'name' => [
+                'label' => 'Name',
+                'placeholder' => 'Name',
+            ],
+        ],
+        'filament' => [
+            'name' => [
+                'helper_text' => '',
+                'label' => '',
+                'description' => '',
+            ],
+        ],
+    ],
 ];

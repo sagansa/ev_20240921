@@ -76,13 +76,15 @@ class ChargerLocationResource extends Resource
                 Section::make()
                     ->schema(static::getDataFormHeadSchema()),
 
-                Section::make()->schema([
-                    self::getItemsRepeater(),
-                ]),
+
 
                 Section::make()
                     ->schema(static::getDetailsFormBottomSchema()),
             ])->columnSpan(['lg' => 1]),
+
+            Section::make()->schema([
+                self::getItemsRepeater(),
+            ]),
 
         ])->columns(2);
     }
@@ -406,13 +408,23 @@ class ChargerLocationResource extends Resource
                     ->hiddenLabel()
                     ->minValue(1)
                     ->default(1)
+                    ->suffix('unit')
                     ->integer()
                     ->columnSpan([
-                        'md' => 2,
+                        'md' => 3,
+                    ]),
+
+                Select::make('merk_charger_id')
+                    ->placeholder('Merk')
+                    ->hiddenLabel()
+                    ->searchable()
+                    ->relationship('merkCharger', 'name')
+                    ->columnSpan([
+                        'md' => 4,
                     ]),
             ])
             ->columns([
-                'md' => 14,
+                'md' => 19,
             ])
             ->defaultItems(1);
     }

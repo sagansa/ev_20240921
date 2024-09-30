@@ -40,5 +40,6 @@ class DatabaseSeeder extends Seeder
         $this->call(ChargeSeeder::class);
         $this->call(StateOfHealthSeeder::class);
         $this->call(DiscountHomeChargingSeeder::class);
+        $this->call(MerkChargerSeeder::class);
     }
 }

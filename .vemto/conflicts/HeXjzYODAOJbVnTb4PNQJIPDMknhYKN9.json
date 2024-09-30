@@ -1,0 +1,9 @@
+{
+    "conflicts": [
+        {
+            "id": "feb78d99-ff47-40e6-9e61-13f1c77eb7a1",
+            "currentContent": "<?php\n\nnamespace App\\Filament\\Resources\\Panel\\ChargerLocationResource\\Pages;\n\nuse Filament\\Actions;\nuse Filament\\Resources\\Pages\\ListRecords;\nuse App\\Filament\\Resources\\Panel\\ChargerLocationResource;\nuse Filament\\Resources\\Components\\Tab;\n\nclass ListChargerLocations extends ListRecords\n{\n    protected static string $resource = ChargerLocationResource::class;\n\n    protected function getHeaderActions(): array\n    {\n        return [Actions\\CreateAction::make()];\n    }\n\n    public function getTabs(): array\n    {\n        return [\n            null => Tab::make('All'),\n            'public' => Tab::make()->query(fn ($query) => $query->where('location_on', '1')),\n            'private' => Tab::make()->query(fn ($query) => $query->where('location_on', '2')),\n            'dealer' => Tab::make()->query(fn ($query) => $query->where('location_on', '3')),\n            'closed' => Tab::make()->query(fn ($query) => $query->where('location_on', '4')),\n        ];\n    }\n}\n",
+            "newContent": "<?php\n\nnamespace App\\Filament\\Resources\\Panel\\ChargerLocationResource\\Pages;\n\nuse Filament\\Actions;\nuse Filament\\Resources\\Pages\\ListRecords;\nuse App\\Filament\\Resources\\Panel\\ChargerLocationResource;\n\nclass ListChargerLocations extends ListRecords\n{\n    protected static string $resource = ChargerLocationResource::class;\n\n    protected function getHeaderActions(): array\n    {\n        return [Actions\\CreateAction::make()];\n    }\n}\n"
+        }
+    ]
+}

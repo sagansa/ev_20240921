@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Models\Charger;
 use App\Models\TypeCharger;
+use App\Models\MerkCharger;
 use App\Models\PowerCharger;
 use Laravel\Sanctum\Sanctum;
 use App\Models\CurrentCharger;
@@ -37,6 +38,7 @@ test('it stores the charger', function () {
 
     $response = $this->postJson(route('api.chargers.store'), $data);
 
+    unset($data['merk_charger_id']);
     unset($data['created_at']);
     unset($data['updated_at']);
     unset($data['deleted_at']);
@@ -53,6 +55,7 @@ test('it updates the charger', function () {
     $typeCharger = TypeCharger::factory()->create();
     $powerCharger = PowerCharger::factory()->create();
     $chargerLocation = ChargerLocation::factory()->create();
+    $merkCharger = MerkCharger::factory()->create();
 
     $data = [
         'unit' => fake()->numberBetween(1, 2),
@@ -63,10 +66,12 @@ test('it updates the charger', function () {
         'type_charger_id' => $typeCharger->id,
         'power_charger_id' => $powerCharger->id,
         'charger_location_id' => $chargerLocation->id,
+        'merk_charger_id' => $merkCharger->id,
     ];
 
     $response = $this->putJson(route('api.chargers.update', $charger), $data);
 
+    unset($data['merk_charger_id']);
     unset($data['created_at']);
     unset($data['updated_at']);
     unset($data['deleted_at']);

@@ -116,7 +116,10 @@ class ChargeResource extends Resource
                             $chargerLocationId = $get('charger_location_id');
                             return Charger::all()->where('charger_location_id', $chargerLocationId)->pluck('charger_name', 'id')->toArray();
                         })
-                        ->searchable(),
+                        ->searchable()
+                        ->createOptionForm([
+
+                        ]),
 
                     NominalTextInput::make('km_now')
                         ->label('start charging')
@@ -203,7 +206,7 @@ class ChargeResource extends Resource
                 $is_super_admin = Auth::user()->hasRole('super_admin');
 
                 if (!$is_super_admin) {
-                    $query->where('user_id', Auth::user()->id);
+                    $query->where('user_id', Auth::user()->id)->whereNotNull('charger_location_id');
                 }
             })
             ->poll('60s')

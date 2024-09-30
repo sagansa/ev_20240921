@@ -1,0 +1,9 @@
+{
+    "conflicts": [
+        {
+            "id": "309e3ffb-a427-457b-b544-628d2bfce3b7",
+            "currentContent": "<?php\n\nnamespace App\\Filament\\Resources\\Panel\\StateOfHealthResource\\Pages;\n\nuse Filament\\Actions;\nuse Filament\\Resources\\Pages\\CreateRecord;\nuse App\\Filament\\Resources\\Panel\\StateOfHealthResource;\n\nclass CreateStateOfHealth extends CreateRecord\n{\n    protected static string $resource = StateOfHealthResource::class;\n\n    protected function mutateFormDataBeforeCreate(array $data): array\n    {\n        $data['user_id'] = auth()->id();\n\n        return $data;\n    }\n}\n",
+            "newContent": "<?php\n\nnamespace App\\Filament\\Resources\\Panel\\StateOfHealthResource\\Pages;\n\nuse Filament\\Actions;\nuse Filament\\Resources\\Pages\\CreateRecord;\nuse App\\Filament\\Resources\\Panel\\StateOfHealthResource;\n\nclass CreateStateOfHealth extends CreateRecord\n{\n    protected static string $resource = StateOfHealthResource::class;\n}\n"
+        }
+    ]
+}

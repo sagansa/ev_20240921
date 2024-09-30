@@ -1,9 +1,0 @@
-{
-    "conflicts": [
-        {
-            "id": "05b5546e-54dd-4783-814e-9d326a2dc1d5",
-            "currentContent": "<?php\n\nnamespace App\\Filament\\Resources\\Panel\\ChargeResource\\Pages;\n\nuse Filament\\Actions;\nuse Filament\\Resources\\Pages\\EditRecord;\nuse App\\Filament\\Resources\\Panel\\ChargeResource;\nuse App\\Models\\Charge;\n\nclass EditCharge extends EditRecord\n{\n    protected static string $resource = ChargeResource::class;\n\n    protected function getHeaderActions(): array\n    {\n        return [Actions\\DeleteAction::make()];\n    }\n}\n",
-            "newContent": "<?php\n\nnamespace App\\Filament\\Resources\\Panel\\ChargeResource\\Pages;\n\nuse Filament\\Actions;\nuse Filament\\Resources\\Pages\\EditRecord;\nuse App\\Filament\\Resources\\Panel\\ChargeResource;\n\nclass EditCharge extends EditRecord\n{\n    protected static string $resource = ChargeResource::class;\n\n    protected function getHeaderActions(): array\n    {\n        return [Actions\\DeleteAction::make()];\n    }\n}\n"
-        }
-    ]
-}
