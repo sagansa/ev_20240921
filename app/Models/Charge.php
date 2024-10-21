@@ -13,6 +13,9 @@ class Charge extends Model
     use HasFactory;
     use SoftDeletes;
 
+    protected $connection = 'ev'; // Use the sagansa database connection
+    protected $table = 'charges';
+
     // protected $guarded = [];
 
     protected $fillable = [

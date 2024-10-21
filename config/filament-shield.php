@@ -70,7 +70,8 @@ return [
         ],
 
         'widgets' => [
-            'AccountWidget', 'FilamentInfoWidget',
+            'AccountWidget',
+            'FilamentInfoWidget',
         ],
 
         'resources' => [],

@@ -28,6 +28,7 @@ class UserPanelProvider extends PanelProvider
             ->registration()
             ->passwordReset()
             ->topNavigation()
+            ->emailVerification()
             ->colors([
                 'primary' => Color::Sky,
             ])
@@ -56,7 +57,7 @@ class UserPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->plugins([
-                \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make()
-        ]);
+                \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make('user')
+            ]);
     }
 }

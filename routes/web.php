@@ -1,14 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
-
-Route::get('/', function () {
-    return redirect('https://ev.sagansa.id/user');
-});
+use App\Http\Controllers\EvController;
+use Filament\Http\Controllers\Auth\LoginController;
+use Filament\Http\Controllers\Auth\RegisterController;
 
 // Route::get('/', function () {
-//     return view('welcome');
+//     return view('ev
+//     ');
 // });
 
 Route::middleware([
@@ -20,3 +19,13 @@ Route::middleware([
         return view('dashboard');
     })->name('dashboard');
 });
+
+Route::get('/', [EvController::class, 'index'])->name('home');
+Route::get('/map', [EvController::class, 'map'])->name('map');
+Route::get('/providers', [EvController::class, 'providers'])->name('providers');
+Route::get('/products', [EvController::class, 'products'])->name('products');
+Route::get('/contact', [EvController::class, 'contact'])->name('contact');
+Route::get('/chargers', [EvController::class, 'chargers'])->name('chargers');
+Route::get('/get-cities/{province}', [EvController::class, 'getCities'])->name('get.cities');
+Route::get('/get-type-chargers/{current}', [EvController::class, 'getTypeChargers'])->name('get.type.chargers');
+Route::get('/get-power-chargers/{type}', [EvController::class, 'getPowerChargers'])->name('get.power.chargers');

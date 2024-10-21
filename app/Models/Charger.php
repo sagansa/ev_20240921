@@ -13,6 +13,8 @@ class Charger extends Model
     use HasFactory;
     use SoftDeletes;
 
+    protected $connection = 'ev'; // Use the sagansa database connection
+
     protected $guarded = [];
 
     public function currentCharger()

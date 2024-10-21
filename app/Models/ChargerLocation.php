@@ -13,6 +13,8 @@ class ChargerLocation extends Model
     use HasFactory;
     use SoftDeletes;
 
+    protected $connection = 'ev'; // Use the sagansa database connection
+
     protected $fillable = [
         'image',
         'name',
@@ -104,8 +106,7 @@ class ChargerLocation extends Model
 
     public function setLocationAttribute(?array $location): void
     {
-        if (is_array($location))
-        {
+        if (is_array($location)) {
             $this->attributes['latitude'] = $location['lat'];
             $this->attributes['longitude'] = $location['lng'];
             unset($this->attributes['location']);

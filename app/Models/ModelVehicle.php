@@ -9,6 +9,8 @@ class ModelVehicle extends Model
 {
     use HasFactory;
 
+    protected $connection = 'ev'; // Use the sagansa database connection
+
     protected $guarded = [];
 
     public function brandVehicle()

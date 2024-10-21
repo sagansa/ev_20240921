@@ -15,7 +15,7 @@ use BezhanSalleh\FilamentShield\Traits\HasPanelShield;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable // implements FilamentUser
 {
     use HasRoles;
     use HasFactory;
@@ -24,6 +24,9 @@ class User extends Authenticatable implements FilamentUser
     use HasPanelShield;
     use HasProfilePhoto;
     use TwoFactorAuthenticatable;
+
+    // protected $connection = 'sagansa'; // Use the sagansa database connection
+    // protected $table = 'users'; // Table name in the sagansa database
 
     /**
      * The attributes that are mass assignable.
@@ -116,16 +119,13 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        $user = Auth::user();
-        $roles = $user->getRoleNames();
-
-        if ($panel->getId() === 'admin' && $roles->contains('admin')) {
-            return true;
-        } elseif ($panel->getId() === 'user' && $roles->contains('user')) {
-            return true;
-        } else {
-            return false;
+        if ($panel->getId() === 'admin') {
+            return $this->hasRole('super_admin');
+        } elseif ($panel->getId() === 'user') {
+            return $this->hasRole('user');
         }
+
+        return false;
     }
 
     protected static function boot()

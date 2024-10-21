@@ -82,9 +82,10 @@ class UserResource extends Resource
     {
         return $table
             ->poll('60s')
-            ->columns([TextColumn::make('name'),
+            ->columns([
+                TextColumn::make('name')->searchable(),
 
-                TextColumn::make('email'),
+                TextColumn::make('email')->searchable(),
 
                 TextColumn::make('roles.name'),
 

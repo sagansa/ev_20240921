@@ -13,6 +13,8 @@ class Vehicle extends Model
     use HasFactory;
     use SoftDeletes;
 
+    protected $connection = 'ev'; // Use the sagansa database connection
+
     protected $guarded = [];
 
     public function brandVehicle()
@@ -46,7 +48,7 @@ class Vehicle extends Model
     }
 
     public function getMaxKmNowAttribute()
-{
-    return $this->charges->max('km_now');
-}
+    {
+        return $this->charges->max('km_now');
+    }
 }
