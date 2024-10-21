@@ -31,6 +31,8 @@ use Cheesegrits\FilamentGoogleMaps\Columns\MapColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Repeater;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Columns\ToggleColumn;
 use Humaidem\FilamentMapPicker\Fields\OSMMap;
 use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Enums\FiltersLayout;
@@ -75,8 +77,6 @@ class ChargerLocationResource extends Resource
             Group::make()->schema([
                 Section::make()
                     ->schema(static::getDataFormHeadSchema()),
-
-
 
                 Section::make()
                     ->schema(static::getDetailsFormBottomSchema()),
@@ -130,30 +130,36 @@ class ChargerLocationResource extends Resource
                 TextColumn::make('province.name')
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('city.name'),
+                TextColumn::make('city.name')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                ToggleColumn::make('is_rest_area'),
 
                 StatusLocationColumn::make('status')
-                    ->visible(fn () => Auth::user()->hasRole('super_admin')),
+                    ->visible(fn() => Auth::user()->hasRole('super_admin')),
 
                 LocationOnColumn::make('location_on'),
 
                 TextColumn::make('user.name')
-                    ->visible(fn ($record) => auth()->user()->hasRole('super_admin')), // Kondisi visibilitas,
+                    ->visible(fn($record) => auth()->user()->hasRole('super_admin')), // Kondisi visibilitas,
 
             ])
             ->filters([
                 SelectFilter::make('provider')
-                    ->relationship('provider','name'),
+                    ->relationship('provider', 'name'),
                 SelectFilter::make('province')
                     ->searchable()
-                    ->relationship('province','name'),
+                    ->relationship('province', 'name'),
                 SelectFilter::make('city')
                     ->searchable()
-                    ->relationship('city','name'),
+                    ->relationship('city', 'name'),
             ], layout: FiltersLayout::AboveContent)
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->visible(fn ($record) => ($record->status === 1 && $record->user_id === Auth::id()) || Auth::user()->hasRole('super_admin')),
+                ActionGroup::make([
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make()
+                        ->visible(fn($record) => ($record->status === 1 && $record->user_id === Auth::id()) || Auth::user()->hasRole('super_admin')),
+                ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -197,7 +203,7 @@ class ChargerLocationResource extends Resource
                             $longitude = $record->longitude;
 
                             if ($latitude && $longitude) {
-                                    $set('location', ['lat' => $latitude, 'lng' => $longitude]);
+                                $set('location', ['lat' => $latitude, 'lng' => $longitude]);
                             }
                         }
                     })
@@ -206,8 +212,9 @@ class ChargerLocationResource extends Resource
                         $set('longitude', $state['lng']);
                     })
                     // tiles url (refer to https://www.spatialbias.com/2018/02/qgis-3.0-xyz-tile-layers/)
-                    ->tilesUrl('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                ),
+                    ->tilesUrl(
+                        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    ),
 
                 Group::make()
                     ->schema([
@@ -225,7 +232,7 @@ class ChargerLocationResource extends Resource
 
 
 
-                ]),
+            ]),
 
             Grid::make(['default' => 1])->schema([
 
@@ -263,7 +270,6 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('district_id')
                     ->relationship('district', 'name')
-                    ->required()
                     ->searchable()
                     ->reactive()
                     ->options(function (callable $get) {
@@ -277,7 +283,6 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('subdistrict_id')
                     ->relationship('subdistrict', 'name')
-                    ->required()
                     ->searchable()
                     ->reactive()
                     ->options(function (callable $get) {
@@ -302,7 +307,7 @@ class ChargerLocationResource extends Resource
                             ->where('city_id', $cityId)
                             ->where('district_id', $districtId)
                             ->where('subdistrict_id', $subdistrictId)
-                            ->pluck('name', 'id');
+                            ->pluck('postal_code', 'id');
                     }),
 
             ]),
@@ -330,8 +335,12 @@ class ChargerLocationResource extends Resource
                     ->rules(['boolean'])
                     ->inlineLabel(),
 
+                Checkbox::make('is_rest_area')
+                    ->rules(['boolean'])
+                    ->inlineLabel(),
+
                 BaseSelect::make('status')
-                    ->visible(fn () => Auth::user()->hasRole('super_admin'))
+                    ->visible(fn() => Auth::user()->hasRole('super_admin'))
                     ->options([
                         '1' => 'not verified',
                         '2' => 'verified',
