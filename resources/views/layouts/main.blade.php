@@ -1,10 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'EV Charger')</title>
+    @production
+        <script type="module" src="https://unpkg.com/vite@latest/dist/vite.js"></script>
+        <script type="module">
+            import RefreshRuntime from 'https://unpkg.com/@vite/client'
+            RefreshRuntime.injectIntoGlobalHook(window)
+            window.$RefreshReg$ = () => {}
+            window.$RefreshSig$ = () => (type) => type
+            window.__vite_plugin_react_preamble_installed__ = true
+        </script>
+    @endproduction
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @yield('additional_head')
 </head>
