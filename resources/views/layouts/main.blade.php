@@ -5,7 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'EV Charger')</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <link href="{{ asset('build/assets/app-nJ2U37WV.css') }}" rel="stylesheet">
+    <link href="{{ asset('build/assets/app-z-Rg4TxU.js') }}" rel="stylesheet">
+    {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
     @yield('additional_head')
 </head>
 
