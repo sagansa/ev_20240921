@@ -29,3 +29,4 @@ Route::get('/chargers', [EvController::class, 'chargers'])->name('chargers');
 Route::get('/get-cities/{province}', [EvController::class, 'getCities'])->name('get.cities');
 Route::get('/get-type-chargers/{current}', [EvController::class, 'getTypeChargers'])->name('get.type.chargers');
 Route::get('/get-power-chargers/{type}', [EvController::class, 'getPowerChargers'])->name('get.power.chargers');
+Route::get('/get-provider-details/{provider}', [EvController::class, 'getProviderDetails']);

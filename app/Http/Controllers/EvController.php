@@ -235,4 +235,14 @@ class EvController extends Controller
 
         return response()->json($powerChargers);
     }
+
+    public function getProviderDetails(Provider $provider)
+    {
+        return response()->json([
+            'name' => $provider->name,
+            'contact' => $provider->contact,
+            'email' => $provider->email,
+            'web' => $provider->web,
+        ]);
+    }
 }

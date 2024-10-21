@@ -287,10 +287,10 @@
                                             @if ($charger->chargerLocation->provider && $charger->chargerLocation->provider->image)
                                                 <img src="{{ asset('storage/' . $charger->chargerLocation->provider->image) }}"
                                                     alt="{{ $charger->chargerLocation->provider->name }}"
-                                                    class="w-10 h-10 object-contain"
+                                                    class="object-contain w-10 h-10"
                                                     title="{{ $charger->chargerLocation->provider->name }}">
                                             @else
-                                                N/A
+                                                {{ $charger->chargerLocation->provider->name ?? 'N/A' }}
                                             @endif
                                         </td>
                                         <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
@@ -332,6 +332,37 @@
         @else
             <p class="text-gray-600">Tidak ada charger yang tersedia saat ini.</p>
         @endif
+    </div>
+
+    <!-- Modal -->
+    <div id="providerModal" class="fixed inset-0 z-10 hidden overflow-y-auto" aria-labelledby="modal-title"
+        role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+                class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="px-4 pt-5 pb-4 bg-white sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">
+                                Provider Details
+                            </h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500" id="providerDetails"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-4 py-3 bg-gray-50 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="button"
+                        class="inline-flex justify-center w-full px-4 py-2 mt-3 text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                        id="closeModal">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 @endsection
 
@@ -459,6 +490,44 @@
 
                 // Submit form untuk me-refresh halaman dengan filter yang sudah di-reset
                 submitForm();
+            });
+        });
+
+        // Tambahkan kode berikut di bagian bawah script
+        document.addEventListener('DOMContentLoaded', function() {
+            const providerModal = document.getElementById('providerModal');
+            const providerDetails = document.getElementById('providerDetails');
+            const closeModal = document.getElementById('closeModal');
+
+            // Fungsi untuk membuka modal
+            function openModal(providerId) {
+                fetch(`/get-provider-details/${providerId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        providerDetails.innerHTML = `
+                            <p><strong>Name:</strong> ${data.name}</p>
+                            <p><strong>Contact:</strong> ${data.contact}</p>
+                            <p><strong>Email:</strong> ${data.email}</p>
+                            <p><strong>Website:</strong> <a href="${data.web}" target="_blank">${data.web}</a></p>
+                        `;
+                        providerModal.classList.remove('hidden');
+                    });
+            }
+
+            // Fungsi untuk menutup modal
+            function closeModalFunction() {
+                providerModal.classList.add('hidden');
+            }
+
+            // Event listener untuk menutup modal
+            closeModal.addEventListener('click', closeModalFunction);
+
+            // Event listener untuk membuka modal saat provider diklik
+            document.querySelectorAll('.provider-info').forEach(element => {
+                element.addEventListener('click', function() {
+                    const providerId = this.dataset.providerId;
+                    openModal(providerId);
+                });
             });
         });
     </script>
