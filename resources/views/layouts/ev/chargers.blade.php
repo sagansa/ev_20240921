@@ -285,15 +285,18 @@
                                         </td>
                                         <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
                                             @if ($charger->chargerLocation->provider)
-                                                <div class="cursor-pointer provider-info"
-                                                    data-provider-id="{{ $charger->chargerLocation->provider->id }}">
-                                                    @if ($charger->chargerLocation->provider->image)
-                                                        <img src="{{ asset('storage/' . $charger->chargerLocation->provider->image) }}"
-                                                            alt="{{ $charger->chargerLocation->provider->name }}"
-                                                            class="object-contain w-10 h-10"
-                                                            title="{{ $charger->chargerLocation->provider->name }}">
+                                                @php
+                                                    $provider = $charger->chargerLocation->provider;
+                                                    $isClickable = $provider->status == 1 && $provider->public == 1;
+                                                @endphp
+                                                <div class="{{ $isClickable ? 'provider-info cursor-pointer' : '' }}"
+                                                    {{ $isClickable ? 'data-provider-id=' . $provider->id : '' }}>
+                                                    @if ($provider->image)
+                                                        <img src="{{ asset('storage/' . $provider->image) }}"
+                                                            alt="{{ $provider->name }}" class="object-contain w-10 h-10"
+                                                            title="{{ $provider->name }}">
                                                     @else
-                                                        <span>{{ $charger->chargerLocation->provider->name }}</span>
+                                                        <span>{{ $provider->name }}</span>
                                                     @endif
                                                 </div>
                                             @else
@@ -521,20 +524,6 @@
                                 </div>
                                 <p><strong>Contact:</strong> ${data.contact || 'N/A'}</p>
                                 <p><strong>Email:</strong> ${data.email || 'N/A'}</p>
-                                <div class="flex my-2 space-x-4">
-                                    ${data.web ? `
-                                                    <a href="${data.web}" target="_blank" title="Website">
-                                                        <img src="${asset('svg/website-ui-web-svgrepo-com.svg')}" alt="Website" class="w-6 h-6">
-                                                    </a>` : ''}
-                                    ${data.google ? `
-                                                    <a href="${data.google}" target="_blank" title="Google Play">
-                                                        <img src="${asset('svg/Google_Play_Store_badge_EN.svg')}" alt="Google Play" class="h-6">
-                                                    </a>` : ''}
-                                    ${data.ios ? `
-                                                    <a href="${data.ios}" target="_blank" title="App Store">
-                                                        <img src="${asset('svg/Download_on_the_App_Store_Badge.svg')}" alt="App Store" class="h-6">
-                                                    </a>` : ''}
-                                </div>
                                 <p><strong>Price:</strong> ${data.price || 'N/A'}</p>
                                 <p><strong>Tax:</strong> ${data.tax || 'N/A'}</p>
                                 <p><strong>Admin Fee:</strong> ${data.admin_fee || 'N/A'}</p>
