@@ -238,11 +238,21 @@ class EvController extends Controller
 
     public function getProviderDetails(Provider $provider)
     {
+        if ($provider->status != 1 || $provider->public != 1) {
+            return response()->json(['error' => 'Provider details are not available'], 403);
+        }
+
         return response()->json([
             'name' => $provider->name,
             'contact' => $provider->contact,
             'email' => $provider->email,
             'web' => $provider->web,
+            'google' => $provider->google,
+            'ios' => $provider->ios,
+            'image' => $provider->image ? asset('storage/' . $provider->image) : null,
+            'price' => $provider->price,
+            'tax' => $provider->tax,
+            'admin_fee' => $provider->admin_fee,
         ]);
     }
 }

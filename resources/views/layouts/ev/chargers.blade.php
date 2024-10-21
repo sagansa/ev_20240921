@@ -284,13 +284,20 @@
                                             {{ $charger->chargerLocation->name ?? 'N/A' }}
                                         </td>
                                         <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                            @if ($charger->chargerLocation->provider && $charger->chargerLocation->provider->image)
-                                                <img src="{{ asset('storage/' . $charger->chargerLocation->provider->image) }}"
-                                                    alt="{{ $charger->chargerLocation->provider->name }}"
-                                                    class="object-contain w-10 h-10"
-                                                    title="{{ $charger->chargerLocation->provider->name }}">
+                                            @if ($charger->chargerLocation->provider)
+                                                <div class="cursor-pointer provider-info"
+                                                    data-provider-id="{{ $charger->chargerLocation->provider->id }}">
+                                                    @if ($charger->chargerLocation->provider->image)
+                                                        <img src="{{ asset('storage/' . $charger->chargerLocation->provider->image) }}"
+                                                            alt="{{ $charger->chargerLocation->provider->name }}"
+                                                            class="object-contain w-10 h-10"
+                                                            title="{{ $charger->chargerLocation->provider->name }}">
+                                                    @else
+                                                        <span>{{ $charger->chargerLocation->provider->name }}</span>
+                                                    @endif
+                                                </div>
                                             @else
-                                                {{ $charger->chargerLocation->provider->name ?? 'N/A' }}
+                                                <span>N/A</span>
                                             @endif
                                         </td>
                                         <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
@@ -335,21 +342,21 @@
     </div>
 
     <!-- Modal -->
-    <div id="providerModal" class="fixed inset-0 z-10 hidden overflow-y-auto" aria-labelledby="modal-title"
+    <div id="providerModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title"
         role="dialog" aria-modal="true">
-        <div class="flex items-end justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"></div>
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
             <div
                 class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                 <div class="px-4 pt-5 pb-4 bg-white sm:p-6 sm:pb-4">
                     <div class="sm:flex sm:items-start">
-                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <div class="w-full mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                             <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">
                                 Provider Details
                             </h3>
                             <div class="mt-2">
-                                <p class="text-sm text-gray-500" id="providerDetails"></p>
+                                <div id="providerDetails" class="text-sm text-gray-500"></div>
                             </div>
                         </div>
                     </div>
@@ -504,13 +511,40 @@
                 fetch(`/get-provider-details/${providerId}`)
                     .then(response => response.json())
                     .then(data => {
-                        providerDetails.innerHTML = `
-                            <p><strong>Name:</strong> ${data.name}</p>
-                            <p><strong>Contact:</strong> ${data.contact}</p>
-                            <p><strong>Email:</strong> ${data.email}</p>
-                            <p><strong>Website:</strong> <a href="${data.web}" target="_blank">${data.web}</a></p>
-                        `;
-                        providerModal.classList.remove('hidden');
+                        if (data.error) {
+                            alert(data.error);
+                        } else {
+                            providerDetails.innerHTML = `
+                                <div class="flex items-center mb-4">
+                                    ${data.image ? `<img src="${data.image}" alt="${data.name}" class="object-contain w-16 h-16 mr-4">` : ''}
+                                    <h2 class="text-xl font-bold">${data.name}</h2>
+                                </div>
+                                <p><strong>Contact:</strong> ${data.contact || 'N/A'}</p>
+                                <p><strong>Email:</strong> ${data.email || 'N/A'}</p>
+                                <div class="flex my-2 space-x-4">
+                                    ${data.web ? `
+                                                    <a href="${data.web}" target="_blank" title="Website">
+                                                        <img src="${asset('svg/website-ui-web-svgrepo-com.svg')}" alt="Website" class="w-6 h-6">
+                                                    </a>` : ''}
+                                    ${data.google ? `
+                                                    <a href="${data.google}" target="_blank" title="Google Play">
+                                                        <img src="${asset('svg/Google_Play_Store_badge_EN.svg')}" alt="Google Play" class="h-6">
+                                                    </a>` : ''}
+                                    ${data.ios ? `
+                                                    <a href="${data.ios}" target="_blank" title="App Store">
+                                                        <img src="${asset('svg/Download_on_the_App_Store_Badge.svg')}" alt="App Store" class="h-6">
+                                                    </a>` : ''}
+                                </div>
+                                <p><strong>Price:</strong> ${data.price || 'N/A'}</p>
+                                <p><strong>Tax:</strong> ${data.tax || 'N/A'}</p>
+                                <p><strong>Admin Fee:</strong> ${data.admin_fee || 'N/A'}</p>
+                            `;
+                            providerModal.classList.remove('hidden');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while fetching provider details');
                     });
             }
 
