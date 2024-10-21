@@ -42,13 +42,15 @@ class EvController extends Controller
     public function providers(Request $request)
     {
         $providers = Provider::query()
+            ->where('status', 1)  // Hanya provider dengan status aktif
+            ->where('public', 1)  // Hanya provider yang bersifat publik
             ->when($request->search, function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%");
             })
             ->when($request->sort, function ($query, $sort) use ($request) {
                 $query->orderBy($sort, $request->direction ?? 'asc');
             })
-            ->get(); // Menggunakan get() alih-alih paginate()
+            ->get();
 
         return view('layouts.ev.providers', compact('providers'));
     }
