@@ -92,14 +92,11 @@ class ProviderResource extends Resource
                 TextColumn::make('email')
                     ->searchable(),
 
-                TextColumn::make('price')
-                    ->money('idr'),
+                TextColumn::make('price'),
 
-                TextColumn::make('admin_fee')
-                    ->money('idr'),
+                TextColumn::make('admin_fee'),
 
-                TextColumn::make('tax')
-                    ->money('idr'),
+                TextColumn::make('tax'),
 
                 Tables\Columns\IconColumn::make('public')
                     ->boolean(),
@@ -225,14 +222,11 @@ class ProviderResource extends Resource
     {
         return [
             Grid::make(['default' => 1])->schema([
-                TextInput::make('price')
-                    ->required(),
+                TextInput::make('price'),
 
-                TextInput::make('admin_fee')
-                    ->required(),
+                TextInput::make('admin_fee'),
 
-                TextInput::make('tax')
-                    ->required(),
+                TextInput::make('tax'),
             ])
         ];
     }
