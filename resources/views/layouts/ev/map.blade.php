@@ -48,7 +48,8 @@
         #mapContainer {
             position: relative;
             width: 100%;
-            height: calc(100vh - 64px);
+            height: calc(100vh - 64px - 2rem);
+            padding: 1rem;
         }
 
         #mapid {
@@ -56,45 +57,22 @@
             height: 100%;
         }
 
-        #mapControls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            z-index: 1000;
-            background-color: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        #mapControlsToggle {
-            display: none;
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 1001;
-            background-color: white;
-            padding: 10px;
-            border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
         #locateMe {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
+            bottom: 30px;
+            right: 30px;
             z-index: 1000;
         }
 
         @media (max-width: 767px) {
             #mapControls {
                 display: none;
-                flex-direction: column;
                 top: 70px;
+                right: 20px;
+                flex-direction: column;
+                width: 80%;
+                max-width: 300px;
+                background-color: rgba(255, 255, 255, 0.9);
             }
 
             #mapControls.show {
@@ -105,8 +83,19 @@
                 display: block;
             }
 
+            #mapContainer {
+                height: calc(100vh - 64px);
+                padding: 0;
+            }
+
             #mapid {
                 border-radius: 0;
+                height: 100%;
+            }
+
+            #locateMe {
+                bottom: 20px;
+                right: 20px;
             }
         }
     </style>
@@ -114,6 +103,11 @@
 
 @section('content')
     <div class="relative">
+        <button id="mapControlsToggle" class="md:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+        </button>
         <div id="mapControls" class="flex flex-wrap gap-1 mb-0">
             <div class="flex-1 min-w-[200px]">
                 <select id="providerSelect"
@@ -142,12 +136,6 @@
                 </select>
             </div>
         </div>
-        <button id="mapControlsToggle" class="md:hidden">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-            </svg>
-        </button>
         <div id="mapContainer">
             <div id="mapid" class="rounded-lg shadow-lg"></div>
             <button id="locateMe"
