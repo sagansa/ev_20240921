@@ -59,7 +59,7 @@
 
         #locateMe {
             position: absolute;
-            bottom: 80px;
+            bottom: 100px;
             right: 30px;
             z-index: 1000;
         }
