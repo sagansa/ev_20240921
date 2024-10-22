@@ -16,7 +16,10 @@
     <nav class="fixed top-0 z-50 w-full bg-ev-blue-800 bg-opacity-90">
         <div class="container px-4 mx-auto">
             <div class="flex items-center justify-between py-4">
-                <a href="{{ route('home') }}" class="text-xl font-bold text-ev-white">Sagansa - EV</a>
+                <a href="{{ route('home') }}" class="flex items-center text-xl font-bold text-ev-white">
+                    <img src="{{ asset('images/logo-files/logo.png') }}" alt="Sagansa EV Logo" class="h-8 mr-2">
+                    Sagansa - EV
+                </a>
 
                 <button class="lg:hidden text-ev-white" onclick="toggleMenu()">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"

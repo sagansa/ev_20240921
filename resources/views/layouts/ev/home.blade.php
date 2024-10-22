@@ -6,7 +6,7 @@
     <div
         class="flex items-center justify-center min-h-[calc(100vh-4rem)] bg-gradient-to-br from-ev-blue-400 to-ev-green-400">
         <div class="max-w-2xl px-4 py-8 text-center">
-            <h1 class="mb-8 text-4xl font-bold text-ev-white">Welcome to Sagansa - EV</h1>
+            <h1 class="mb-8 text-4xl font-bold text-ev-white">Welcome to Sagansa</h1>
             <div class="space-y-6">
                 <p class="text-xl text-ev-white">
                     Find the nearest charging station for your EV.
