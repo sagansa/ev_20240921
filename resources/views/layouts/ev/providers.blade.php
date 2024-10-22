@@ -99,7 +99,7 @@
                                                 class="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 whitespace-nowrap sm:pl-0">
                                                 {{ $provider->name }}
                                                 <span
-                                                    class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                                                     {{ $provider->charger_locations_count }} loc
                                                 </span>
                                             </td>
@@ -184,7 +184,7 @@
                                     <p class="text-sm font-semibold leading-6 text-gray-900">
                                         {{ $provider->name }}
                                         <span
-                                            class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                                             {{ $provider->charger_locations_count }} loc
                                         </span>
                                     </p>
