@@ -243,7 +243,7 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('province_id')
                     ->relationship('province', 'name')
-                    ->required()
+                    // ->required()
                     ->searchable()
                     ->reactive()
                     ->afterStateUpdated(function ($state, callable $set) {
@@ -255,7 +255,7 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('city_id')
                     ->relationship('city', 'name')
-                    ->required()
+                    // ->required()
                     ->searchable()
                     ->reactive()
                     ->options(function (callable $get) {

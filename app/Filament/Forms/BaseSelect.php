@@ -12,7 +12,7 @@ class BaseSelect extends Select
         parent::setUp();
 
         $this
-            ->inlineLabel()
-            ->required();
+            ->inlineLabel();
+        // ->required();
     }
 }
