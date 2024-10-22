@@ -31,6 +31,7 @@ class EvController extends Controller
             'chargers.typeCharger'
         ])
             ->where('location_on', ['1', '3'])
+            ->where('status', '<>', 3)  // Tambahkan kondisi ini
             ->get();
 
         $providers = Provider::has('chargerLocations')->orderBy('name', 'asc')->get();

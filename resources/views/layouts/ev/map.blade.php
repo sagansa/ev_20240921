@@ -104,7 +104,7 @@
             <div class="flex-1 min-w-[200px]">
                 <select id="restAreaSelect"
                     class="w-full py-2 pl-3 pr-10 text-base border-gray-300 rounded-md focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
-                    <option value="">All Locations</option>
+                    <option value="">Rest Area & Non-Rest Area</option>
                     <option value="1">Rest Area Only</option>
                     <option value="0">Non-Rest Area Only</option>
                 </select>
@@ -162,6 +162,7 @@
 
                 chargerLocations.forEach(location => {
                     if (
+                        location.status !== 3 && // Tambahkan pengecekan status di sini
                         (!selectedProvider || location.provider.id.toString() === selectedProvider) &&
                         (isRestArea === '' || location.is_rest_area.toString() === isRestArea) &&
                         (!selectedCurrentCharger || location.chargers.some(charger => charger
