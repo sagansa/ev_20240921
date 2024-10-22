@@ -15,7 +15,7 @@ use BezhanSalleh\FilamentShield\Traits\HasPanelShield;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class User extends Authenticatable // implements FilamentUser
+class User extends Authenticatable implements FilamentUser
 {
     use HasRoles;
     use HasFactory;
@@ -24,6 +24,9 @@ class User extends Authenticatable // implements FilamentUser
     use HasPanelShield;
     use HasProfilePhoto;
     use TwoFactorAuthenticatable;
+
+    protected $connection = 'mysql'; // Use the sagansa database connection
+    protected $table = 'users';
 
     // protected $connection = 'sagansa'; // Use the sagansa database connection
     // protected $table = 'users'; // Table name in the sagansa database

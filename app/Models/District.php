@@ -11,6 +11,9 @@ class District extends Model
 
     public $timestamps = false;
 
+    protected $connection = 'mysql'; // Use the sagansa database connection
+    protected $table = 'districts';
+
     protected $guarded = [];
 
     public function city()

@@ -11,6 +11,9 @@ class Subdistrict extends Model
 
     public $timestamps = false;
 
+    protected $connection = 'mysql'; // Use the sagansa database connection
+    protected $table = 'subdistricts';
+
     protected $guarded = [];
 
     public function district()

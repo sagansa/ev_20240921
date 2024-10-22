@@ -11,6 +11,9 @@ class PostalCode extends Model
 
     public $timestamps = false;
 
+    protected $connection = 'mysql'; // Use the sagansa database connection
+    protected $table = 'postal_codes';
+
     protected $guarded = [];
 
     public function province()
