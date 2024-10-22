@@ -390,7 +390,6 @@ class ChargerLocationResource extends Resource
                         return TypeCharger::where('current_charger_id', $currentChargerId)->pluck('name', 'id')->toArray();
                     })
                     ->reactive()
-                    ->disableOptionsWhenSelectedInSiblingRepeaterItems()
                     ->afterStateUpdated(function ($state, callable $set) {
                         $set('power_charger_id', null);
                         $set('unit', 1); // Reset the unit field to its default value or any other desired initial state
