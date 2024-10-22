@@ -9,6 +9,7 @@
     <link href="{{ asset('build/assets/app-z-Rg4TxU.js') }}" rel="stylesheet">
     {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
     @yield('additional_head')
+    <link rel="icon" href="{{ asset('images/logo-files/favicon-32x32.png') }}" type="image/png">
 </head>
 
 <body class="flex flex-col min-h-screen bg-ev-white text-ev-gray-800">
@@ -86,7 +87,7 @@
                 </li>
 
                 <!-- Garis pemisah -->
-                <li class="border-t border-ev-blue-700 my-2"></li>
+                <li class="my-2 border-t border-ev-blue-700"></li>
 
                 @auth
                     <li><a href="{{ route('filament.admin.auth.login') }}"
