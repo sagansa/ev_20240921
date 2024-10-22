@@ -57,18 +57,10 @@
             height: 100%;
         }
 
-        #locateMeDesktop {
+        #locateMe {
             position: absolute;
-            bottom: 40px;
-            right: 40px;
-            z-index: 1000;
-        }
-
-        #locateMeMobile {
-            display: none;
-            position: absolute;
-            bottom: 80px; // Sesuaikan nilai ini untuk posisi yang diinginkan pada mobile
-            right: 20px; // Pastikan ini tetap 'right' bukan 'left'
+            bottom: 80px;
+            right: 30px;
             z-index: 1000;
         }
 
@@ -101,66 +93,51 @@
                 height: 100%;
             }
 
-            #locateMeDesktop {
-                display: none;
-            }
-
-            #locateMeMobile {
-                display: block;
+            #locateMe {
+                bottom: 60px; // Ubah nilai ini sesuai kebutuhan
             }
         }
     </style>
 @endsection
 
 @section('content')
-    <div class="relative p-4">
+    <div class="relative">
+        <button id="mapControlsToggle" class="md:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+        </button>
+        <div id="mapControls" class="flex flex-wrap gap-1 mb-0">
+            <div class="flex-1 min-w-[200px]">
+                <select id="providerSelect"
+                    class="w-full py-2 pl-3 pr-10 text-base border-gray-300 rounded-md focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
+                    <option value="">All Providers</option>
+                    @foreach ($providers as $provider)
+                        <option value="{{ $provider->id }}">{{ $provider->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <select id="restAreaSelect"
+                    class="w-full py-2 pl-3 pr-10 text-base border-gray-300 rounded-md focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
+                    <option value="">Rest Area & Non-Rest Area</option>
+                    <option value="1">Rest Area Only</option>
+                    <option value="0">Non-Rest Area Only</option>
+                </select>
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <select id="currentChargerSelect"
+                    class="w-full py-2 pl-3 pr-10 text-base border-gray-300 rounded-md focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
+                    <option value="">All Current Types</option>
+                    @foreach ($currentChargers as $currentCharger)
+                        <option value="{{ $currentCharger->id }}">{{ $currentCharger->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
         <div id="mapContainer">
             <div id="mapid" class="rounded-lg shadow-lg"></div>
-            <div id="mapControls" class="flex flex-wrap gap-1 mb-0">
-                <div class="flex-1 min-w-[200px]">
-                    <select id="providerSelect"
-                        class="w-full py-2 pl-3 pr-10 text-base border-gray-300 rounded-md focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
-                        <option value="">All Providers</option>
-                        @foreach ($providers as $provider)
-                            <option value="{{ $provider->id }}">{{ $provider->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="flex-1 min-w-[200px]">
-                    <select id="restAreaSelect"
-                        class="w-full py-2 pl-3 pr-10 text-base border-gray-300 rounded-md focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
-                        <option value="">Rest Area & Non-Rest Area</option>
-                        <option value="1">Rest Area Only</option>
-                        <option value="0">Non-Rest Area Only</option>
-                    </select>
-                </div>
-                <div class="flex-1 min-w-[200px]">
-                    <select id="currentChargerSelect"
-                        class="w-full py-2 pl-3 pr-10 text-base border-gray-300 rounded-md focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
-                        <option value="">All Current Types</option>
-                        @foreach ($currentChargers as $currentCharger)
-                            <option value="{{ $currentCharger->id }}">{{ $currentCharger->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-            <button id="mapControlsToggle" class="md:hidden">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-                </svg>
-            </button>
-            <button id="locateMeDesktop"
-                class="p-2 text-black transition duration-300 bg-white border border-gray-300 rounded hover:bg-gray-100">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-            </button>
-            <button id="locateMeMobile"
+            <button id="locateMe"
                 class="p-2 text-black transition duration-300 bg-white border border-gray-300 rounded hover:bg-gray-100">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
@@ -301,9 +278,11 @@
                 }
             }
 
-            // Tambahkan event listener untuk kedua tombol
-            document.getElementById('locateMeDesktop').addEventListener('click', locateUser);
-            document.getElementById('locateMeMobile').addEventListener('click', locateUser);
+            // Attempt to locate user immediately
+            locateUser();
+
+            // Add click event for manual location refresh
+            document.getElementById('locateMe').addEventListener('click', locateUser);
 
             // Tambahkan ini untuk memastikan peta dirender dengan benar setelah semua elemen dimuat
             setTimeout(function() {
