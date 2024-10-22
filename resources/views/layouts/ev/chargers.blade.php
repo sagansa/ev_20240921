@@ -145,60 +145,6 @@
                                         </a>
                                     </th>
                                     <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        <a href="{{ route('chargers', ['sort' => 'province', 'direction' => request('sort') == 'province' && request('direction') == 'asc' ? 'desc' : 'asc']) }}"
-                                            class="inline-flex group">
-                                            Province
-                                            <span
-                                                class="flex-none ml-2 text-gray-400 rounded group-hover:visible group-focus:visible">
-                                                @if (request('sort') == 'province')
-                                                    @if (request('direction') == 'asc')
-                                                        &#x25B2;
-                                                    @else
-                                                        &#x25BC;
-                                                    @endif
-                                                @else
-                                                    &#x25B2;
-                                                @endif
-                                            </span>
-                                        </a>
-                                    </th>
-                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        <a href="{{ route('chargers', ['sort' => 'city', 'direction' => request('sort') == 'city' && request('direction') == 'asc' ? 'desc' : 'asc']) }}"
-                                            class="inline-flex group">
-                                            City
-                                            <span
-                                                class="flex-none ml-2 text-gray-400 rounded group-hover:visible group-focus:visible">
-                                                @if (request('sort') == 'city')
-                                                    @if (request('direction') == 'asc')
-                                                        &#x25B2;
-                                                    @else
-                                                        &#x25BC;
-                                                    @endif
-                                                @else
-                                                    &#x25B2;
-                                                @endif
-                                            </span>
-                                        </a>
-                                    </th>
-                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        <a href="{{ route('chargers', ['sort' => 'power', 'direction' => request('sort') == 'power' && request('direction') == 'asc' ? 'desc' : 'asc']) }}"
-                                            class="inline-flex group">
-                                            Power
-                                            <span
-                                                class="flex-none ml-2 text-gray-400 rounded group-hover:visible group-focus:visible">
-                                                @if (request('sort') == 'power')
-                                                    @if (request('direction') == 'asc')
-                                                        &#x25B2;
-                                                    @else
-                                                        &#x25BC;
-                                                    @endif
-                                                @else
-                                                    &#x25B2;
-                                                @endif
-                                            </span>
-                                        </a>
-                                    </th>
-                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                                         <a href="{{ route('chargers', ['sort' => 'current', 'direction' => request('sort') == 'current' && request('direction') == 'asc' ? 'desc' : 'asc']) }}"
                                             class="inline-flex group">
                                             Current
@@ -235,18 +181,51 @@
                                         </a>
                                     </th>
                                     <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                        <a href="{{ route('chargers', ['sort' => 'power', 'direction' => request('sort') == 'power' && request('direction') == 'asc' ? 'desc' : 'asc']) }}"
+                                            class="inline-flex group">
+                                            Power
+                                            <span
+                                                class="flex-none ml-2 text-gray-400 rounded group-hover:visible group-focus:visible">
+                                                @if (request('sort') == 'power')
+                                                    @if (request('direction') == 'asc')
+                                                        &#x25B2;
+                                                    @else
+                                                        &#x25BC;
+                                                    @endif
+                                                @else
+                                                    &#x25B2;
+                                                @endif
+                                            </span>
+                                        </a>
+                                    </th>
+                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                                         Unit
                                     </th>
                                     <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        Merk
-                                    </th>
-                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        <a href="{{ route('chargers', ['sort' => 'rest_area', 'direction' => request('sort') == 'rest_area' && request('direction') == 'asc' ? 'desc' : 'asc']) }}"
+                                        <a href="{{ route('chargers', ['sort' => 'city', 'direction' => request('sort') == 'city' && request('direction') == 'asc' ? 'desc' : 'asc']) }}"
                                             class="inline-flex group">
-                                            Rest Area
+                                            City
                                             <span
                                                 class="flex-none ml-2 text-gray-400 rounded group-hover:visible group-focus:visible">
-                                                @if (request('sort') == 'rest_area')
+                                                @if (request('sort') == 'city')
+                                                    @if (request('direction') == 'asc')
+                                                        &#x25B2;
+                                                    @else
+                                                        &#x25BC;
+                                                    @endif
+                                                @else
+                                                    &#x25B2;
+                                                @endif
+                                            </span>
+                                        </a>
+                                    </th>
+                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                        <a href="{{ route('chargers', ['sort' => 'province', 'direction' => request('sort') == 'province' && request('direction') == 'asc' ? 'desc' : 'asc']) }}"
+                                            class="inline-flex group">
+                                            Province
+                                            <span
+                                                class="flex-none ml-2 text-gray-400 rounded group-hover:visible group-focus:visible">
+                                                @if (request('sort') == 'province')
                                                     @if (request('direction') == 'asc')
                                                         &#x25B2;
                                                     @else
@@ -304,28 +283,22 @@
                                             @endif
                                         </td>
                                         <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                            {{ ucwords(strtolower($charger->chargerLocation->province->name ?? 'n/a')) }}
-                                        </td>
-                                        <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                            {{ ucwords(strtolower($charger->chargerLocation->city->name ?? 'n/a')) }}
-                                        </td>
-                                        <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                            {{ $charger->powerCharger->name ?? 'N/A' }}
-                                        </td>
-                                        <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
                                             {{ $charger->currentCharger->name ?? 'N/A' }}
                                         </td>
                                         <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
                                             {{ $charger->typeCharger->name ?? 'N/A' }}
                                         </td>
                                         <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                            {{ $charger->powerCharger->name ?? 'N/A' }}
+                                        </td>
+                                        <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
                                             {{ $charger->unit ?? 'N/A' }}
                                         </td>
                                         <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                            {{ $charger->merkCharger->name ?? 'N/A' }}
+                                            {{ ucwords(strtolower($charger->chargerLocation->city->name ?? 'n/a')) }}
                                         </td>
                                         <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                            {{ $charger->chargerLocation->is_rest_area ? 'Ya' : 'Tidak' }}
+                                            {{ ucwords(strtolower($charger->chargerLocation->province->name ?? 'n/a')) }}
                                         </td>
                                     </tr>
                                 @endforeach
