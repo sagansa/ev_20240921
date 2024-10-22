@@ -14,7 +14,6 @@ class ImageFileUpload extends FileUpload
             ->hiddenLabel()
             ->nullable()
             ->openable()
-            ->maxSize(1024)
             ->optimize('webp')
             ->image()
             ->imageEditor()
@@ -23,6 +22,6 @@ class ImageFileUpload extends FileUpload
                 'full'
             ])
             ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1'])
-            ;
+        ;
     }
 }
