@@ -99,7 +99,7 @@
                                                 class="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 whitespace-nowrap sm:pl-0">
                                                 {{ $provider->name }}
                                                 <span
-                                                    class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                                    class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                                     {{ $provider->charger_locations_count }} loc
                                                 </span>
                                             </td>
@@ -128,13 +128,13 @@
                                                 </div>
                                             </td>
                                             <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                                {{ $provider->price ? 'Rp ' . number_format($provider->price, 0, ',', '.') : 'N/A' }}
+                                                {{ $provider->price ? $provider->price : 'N/A' }}
                                             </td>
                                             <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                                {{ $provider->admin_fee ? 'Rp ' . number_format($provider->admin_fee, 0, ',', '.') : 'N/A' }}
+                                                {{ $provider->admin_fee ? $provider->admin_fee : 'N/A' }}
                                             </td>
                                             <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                                {{ $provider->tax ? $provider->tax . '%' : 'N/A' }}
+                                                {{ $provider->tax ? $provider->tax : 'N/A' }}
                                             </td>
                                             <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
                                                 @if ($provider->contact)
@@ -184,7 +184,7 @@
                                     <p class="text-sm font-semibold leading-6 text-gray-900">
                                         {{ $provider->name }}
                                         <span
-                                            class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                            class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                             {{ $provider->charger_locations_count }} loc
                                         </span>
                                     </p>
@@ -196,13 +196,13 @@
                                 <p class="text-sm text-gray-600"><span class="font-semibold">Contact:</span>
                                     {{ $provider->contact ?? 'N/A' }}</p>
                                 <p class="text-sm text-gray-600"><span class="font-semibold">Price:</span>
-                                    {{ $provider->price ? 'Rp ' . number_format($provider->price, 0, ',', '.') : 'N/A' }}
+                                    {{ $provider->price ? $provider->price : 'N/A' }}
                                 </p>
                                 <p class="text-sm text-gray-600"><span class="font-semibold">Admin Fee:</span>
-                                    {{ $provider->admin_fee ? 'Rp ' . number_format($provider->admin_fee, 0, ',', '.') : 'N/A' }}
+                                    {{ $provider->admin_fee ? $provider->admin_fee : 'N/A' }}
                                 </p>
                                 <p class="text-sm text-gray-600"><span class="font-semibold">Tax:</span>
-                                    {{ $provider->tax ? $provider->tax . '%' : 'N/A' }}</p>
+                                    {{ $provider->tax ? $provider->tax : 'N/A' }}</p>
                                 <div class="flex flex-wrap items-center gap-2 mt-2">
                                     @if ($provider->web)
                                         <a href="{{ $provider->web }}" target="_blank" title="Website">
