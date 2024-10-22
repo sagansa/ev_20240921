@@ -59,14 +59,6 @@
                                         </th>
                                         <th scope="col"
                                             class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                            Contact
-                                        </th>
-                                        <th scope="col"
-                                            class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                            Email
-                                        </th>
-                                        <th scope="col"
-                                            class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                                             Price
                                         </th>
                                         <th scope="col"
@@ -76,6 +68,14 @@
                                         <th scope="col"
                                             class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                                             Tax
+                                        </th>
+                                        <th scope="col"
+                                            class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                            Contact
+                                        </th>
+                                        <th scope="col"
+                                            class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                            Email
                                         </th>
                                     </tr>
                                 </thead>
@@ -124,6 +124,15 @@
                                                 </div>
                                             </td>
                                             <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                                {{ $provider->price ? 'Rp ' . number_format($provider->price, 0, ',', '.') : 'N/A' }}
+                                            </td>
+                                            <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                                {{ $provider->admin_fee ? 'Rp ' . number_format($provider->admin_fee, 0, ',', '.') : 'N/A' }}
+                                            </td>
+                                            <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                                {{ $provider->tax ? $provider->tax . '%' : 'N/A' }}
+                                            </td>
+                                            <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
                                                 @if ($provider->contact)
                                                     <a href="tel:{{ $provider->contact }}"
                                                         class="text-ev-blue-600 hover:text-ev-blue-800">
@@ -142,15 +151,6 @@
                                                 @else
                                                     N/A
                                                 @endif
-                                            </td>
-                                            <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                                {{ $provider->price ? 'Rp ' . number_format($provider->price, 0, ',', '.') : 'N/A' }}
-                                            </td>
-                                            <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                                {{ $provider->admin_fee ? 'Rp ' . number_format($provider->admin_fee, 0, ',', '.') : 'N/A' }}
-                                            </td>
-                                            <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                                {{ $provider->tax ? $provider->tax . '%' : 'N/A' }}
                                             </td>
                                         </tr>
                                     @endforeach
