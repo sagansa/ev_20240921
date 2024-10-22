@@ -47,6 +47,11 @@ class Charger extends Model
         return $this->belongsTo(MerkCharger::class);
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function getChargerNameAttribute()
     {
         return $this->currentCharger->name .

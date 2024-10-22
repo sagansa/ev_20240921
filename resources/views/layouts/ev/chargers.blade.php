@@ -95,6 +95,9 @@
             </div>
         </form>
 
+        <!-- Tambahkan div untuk peta -->
+        <div id="map" style="height: 400px;" class="mb-8"></div>
+
         <!-- Kode tabel tetap sama -->
         @if ($chargers->count() > 0)
             <div class="flow-root mt-8">
@@ -264,22 +267,12 @@
                                         </td>
                                         <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
                                             @if ($charger->chargerLocation->provider)
-                                                @php
-                                                    $provider = $charger->chargerLocation->provider;
-                                                    $isClickable = $provider->status == 1 && $provider->public == 1;
-                                                @endphp
-                                                <div class="{{ $isClickable ? 'provider-info cursor-pointer' : '' }}"
-                                                    {{ $isClickable ? 'data-provider-id=' . $provider->id : '' }}>
-                                                    @if ($provider->image)
-                                                        <img src="{{ asset('storage/' . $provider->image) }}"
-                                                            alt="{{ $provider->name }}" class="object-contain w-10 h-10"
-                                                            title="{{ $provider->name }}">
-                                                    @else
-                                                        <span>{{ $provider->name }}</span>
-                                                    @endif
-                                                </div>
+                                                <span class="cursor-pointer provider-info"
+                                                    data-provider-id="{{ $charger->chargerLocation->provider->id }}">
+                                                    {{ $charger->chargerLocation->provider->name }}
+                                                </span>
                                             @else
-                                                <span>N/A</span>
+                                                N/A
                                             @endif
                                         </td>
                                         <td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
@@ -350,6 +343,10 @@
 @endsection
 
 @push('scripts')
+    <!-- Tambahkan Leaflet CSS dan JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.querySelector('form');
@@ -365,6 +362,42 @@
             const restAreaSelect = document.getElementById('rest_area');
             const searchInput = document.querySelector('input[name="search"]');
             const clearFilterButton = document.getElementById('clearFilter');
+
+            // Inisialisasi peta
+            var map = L.map('map').setView([-2.5489, 118.0149], 5); // Koordinat Indonesia
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Fungsi untuk membuat ikon kustom
+            function createCustomIcon(iconUrl) {
+                return L.icon({
+                    iconUrl: iconUrl,
+                    iconSize: [38, 38], // Sesuaikan ukuran ikon
+                    iconAnchor: [19, 38], // Sesuaikan anchor ikon
+                    popupAnchor: [0, -38] // Sesuaikan anchor popup
+                });
+            }
+
+            // Tambahkan marker untuk setiap charger
+            @foreach ($chargers as $charger)
+                @if ($charger->chargerLocation && $charger->chargerLocation->latitude && $charger->chargerLocation->longitude)
+                    var iconUrl =
+                        '{{ $charger->chargerLocation->provider && $charger->chargerLocation->provider->image ? asset($charger->chargerLocation->provider->image) : asset('images/default-marker.png') }}';
+                    var customIcon = createCustomIcon(iconUrl);
+
+                    L.marker([{{ $charger->chargerLocation->latitude }},
+                            {{ $charger->chargerLocation->longitude }}
+                        ], {
+                            icon: customIcon
+                        })
+                        .addTo(map)
+                        .bindPopup(
+                            "<b>{{ $charger->chargerLocation->name }}</b><br>Provider: {{ $charger->chargerLocation->provider->name ?? 'N/A' }}"
+                        );
+                @endif
+            @endforeach
 
             // Fungsi untuk mengirim form
             function submitForm() {

@@ -101,9 +101,9 @@ class ChargeResource extends Resource
                         ->label('Charger Location')
                         ->relationship(
                             name: 'chargerLocation',
-                            modifyQueryUsing: fn (Builder $query) => $query->where('status','<>', '3')->orderBy('name', 'asc'),
+                            modifyQueryUsing: fn(Builder $query) => $query->where('status', '<>', '3')->orderBy('name', 'asc'),
                         )
-                        ->getOptionLabelFromRecordUsing(fn (ChargerLocation $record) => "{$record->charger_location_name}")
+                        ->getOptionLabelFromRecordUsing(fn(ChargerLocation $record) => "{$record->charger_location_name}")
                         ->searchable()
                         ->afterStateUpdated(function ($state, callable $set) {
                             $set('charger_id', null);
@@ -117,9 +117,7 @@ class ChargeResource extends Resource
                             return Charger::all()->where('charger_location_id', $chargerLocationId)->pluck('charger_name', 'id')->toArray();
                         })
                         ->searchable()
-                        ->createOptionForm([
-
-                        ]),
+                        ->createOptionForm([]),
 
                     NominalTextInput::make('km_now')
                         ->label('start charging')
@@ -128,7 +126,7 @@ class ChargeResource extends Resource
                     PercentTextInput::make('start_charging_now')
                         ->label('Battery start'),
 
-                    ])->columns(2),
+                ])->columns(2),
 
                 Toggle::make('is_finish_charging')
                     ->label('Is the charging finish?')
@@ -139,11 +137,11 @@ class ChargeResource extends Resource
                     }),
 
                 Section::make('Finish Charging')
-                    ->visible(fn ($get) => $get('is_finish_charging'))
+                    ->visible(fn($get) => $get('is_finish_charging'))
                     ->schema([
                         Grid::make(['default' => 1])->schema([
                             ImageFileUpload::make('image_finish')
-                            ->directory('images/charge'),
+                                ->directory('images/charge'),
                         ]),
 
                         Grid::make(['default' => 1])->schema([
@@ -176,9 +174,9 @@ class ChargeResource extends Resource
                             CurrencyTextInput::make('total_cost')
                                 ->requiredWith('is_finish_charging'),
                         ])
-                        ->columns(2),
+                            ->columns(2),
                     ]),
-                ])->columnSpan(['md' => 3]),
+            ])->columnSpan(['md' => 3]),
 
             Section::make()->schema([
 
@@ -186,7 +184,7 @@ class ChargeResource extends Resource
                     ->readOnly()
                     ->label('Data before')
                     ->suffix('km')
-                    ->currencyMask(thousandSeparator: '.',decimalSeparator: ',',precision: 0),
+                    ->currencyMask(thousandSeparator: '.', decimalSeparator: ',', precision: 0),
 
                 TextInput::make('finish_charging_before')
                     ->readOnly()
@@ -196,7 +194,7 @@ class ChargeResource extends Resource
 
             ])->columnSpan(['md' => 1]),
         ])
-        ->columns(4);
+            ->columns(4);
     }
 
     public static function table(Table $table): Table
@@ -251,7 +249,7 @@ class ChargeResource extends Resource
 
                 TextColumn::make('km_before')
                     ->label('km before')
-                    ->visible(fn ($record) => auth()->user()->hasRole('super_admin'))
+                    ->visible(fn($record) => auth()->user()->hasRole('super_admin'))
                     ->numeric(
                         thousandsSeparator: '.'
                     )
@@ -260,16 +258,16 @@ class ChargeResource extends Resource
                 TextColumn::make('start_charging_now')
                     ->suffix('%')
                     ->toggleable(isToggledHiddenByDefault: true),
-                    // ->summarize(Sum::make()),
+                // ->summarize(Sum::make()),
 
                 TextColumn::make('finish_charging_now')
                     ->suffix('%')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                    // ->summarize(Sum::make()),
+                // ->summarize(Sum::make()),
 
                 TextColumn::make('finish_charging_before')
-                    ->visible(fn ($record) => auth()->user()->hasRole('super_admin'))->suffix('%')
+                    ->visible(fn($record) => auth()->user()->hasRole('super_admin'))->suffix('%')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('parking')
@@ -290,7 +288,7 @@ class ChargeResource extends Resource
                         decimalPlaces: 2,
                         thousandsSeparator: '.',
                         decimalSeparator: ',',
-                        )
+                    )
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->summarize(Sum::make()
                         ->label('')
@@ -298,7 +296,7 @@ class ChargeResource extends Resource
                             decimalPlaces: 2,
                             thousandsSeparator: '.',
                             decimalSeparator: ',',
-                            )
+                        )
                         ->suffix(' kWh')),
 
                 TextColumn::make('street_lighting_tax')
@@ -342,7 +340,11 @@ class ChargeResource extends Resource
                     ->suffix('%')
                     ->numeric(decimalPlaces: 2)
                     ->getStateUsing(function ($record) {
-                        $batteryCapacity = $record->vehicle->typeVehicle->battery_capacity;
+                        if ($record->vehicle && $record->vehicle->typeVehicle) {
+                            $batteryCapacity = $record->vehicle->typeVehicle->battery_capacity;
+                        } else {
+                            $batteryCapacity = 0; // atau nilai default lainnya
+                        }
                         $startCharge = $record->start_charging_now;
                         $finishCharge = $record->finish_charging_now;
                         $kWh = $record->kWh;
@@ -351,7 +353,7 @@ class ChargeResource extends Resource
                         if (!$isKwhMeasured) {
                             return 0; // If is_kwh_measured is false, set losses to 0
                         }
-                        $chargeBatteryCapacity = ($finishCharge - $startCharge) * ($batteryCapacity/100);
+                        $chargeBatteryCapacity = ($finishCharge - $startCharge) * ($batteryCapacity / 100);
                         $losses = $chargeBatteryCapacity > 0 ? (($kWh / $chargeBatteryCapacity) - 1) * 100 : 0;
                         return $losses;
                     }),
@@ -364,7 +366,11 @@ class ChargeResource extends Resource
                         $startChargingNow = $record->start_charging_now;
                         $usedBattery = $finishChargingBefore - $startChargingNow;
 
-                        $batteryCapacity = $record->vehicle->typeVehicle->battery_capacity;
+                        if ($record->vehicle && $record->vehicle->typeVehicle) {
+                            $batteryCapacity = $record->vehicle->typeVehicle->battery_capacity;
+                        } else {
+                            $batteryCapacity = 0; // atau nilai default lainnya
+                        }
 
                         $usedkWh = $usedBattery * $batteryCapacity;
 
@@ -386,12 +392,13 @@ class ChargeResource extends Resource
                     ->suffix(' /kWh'),
 
                 TextColumn::make('user.name')
-                    ->visible(fn ($record) => auth()->user()->hasRole('super_admin')), // Kondisi visibilitas,
+                    ->visible(fn($record) => auth()->user()->hasRole('super_admin')), // Kondisi visibilitas,
 
             ])
-            ->filters([
+            ->filters(
+                [
                     SelectFilter::make('vehicle')
-                        ->relationship('vehicle','license_plate'),
+                        ->relationship('vehicle', 'license_plate'),
                     SelectFilter::make('current_charger')
                         ->relationship('charger.currentCharger', 'name')
                         ->label('Current'),
@@ -417,17 +424,17 @@ class ChargeResource extends Resource
                             return $query
                                 ->when(
                                     $data['date_from'],
-                                    fn (Builder $query, $date): Builder => $query->whereDate('date', '>=', $date),
+                                    fn(Builder $query, $date): Builder => $query->whereDate('date', '>=', $date),
                                 )
                                 ->when(
                                     $data['date_until'],
-                                    fn (Builder $query, $date): Builder => $query->whereDate('date', '<=', $date),
+                                    fn(Builder $query, $date): Builder => $query->whereDate('date', '<=', $date),
                                 );
                         })
 
-                    ],
-                    // layout: FiltersLayout::AboveContent
-                )
+                ],
+                // layout: FiltersLayout::AboveContent
+            )
             ->actions([
                 Tables\Actions\EditAction::make(),
                 // Tables\Actions\ViewAction::make(),
