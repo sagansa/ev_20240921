@@ -30,7 +30,7 @@
         #mapControlsToggle {
             display: none;
             position: absolute;
-            top: 50px;
+            top: 80px;
             right: 20px;
             z-index: 1001;
             background-color: white;
