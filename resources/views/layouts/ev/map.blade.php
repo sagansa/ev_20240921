@@ -27,6 +27,18 @@
             gap: 10px;
         }
 
+        #mapControlsToggle {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            background-color: white;
+            padding: 10px;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
         #providerSelect,
         #restAreaSelect,
         #currentChargerSelect {
@@ -36,8 +48,7 @@
         #mapContainer {
             position: relative;
             width: 100%;
-            height: calc(100vh - 64px - 2rem);
-            padding: 1rem;
+            height: calc(100vh - 64px);
         }
 
         #mapid {
@@ -45,52 +56,64 @@
             height: 100%;
         }
 
+        #mapControls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            z-index: 1000;
+            background-color: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #mapControlsToggle {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            background-color: white;
+            padding: 10px;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
         #locateMe {
             position: absolute;
-            bottom: 170px;
-            right: 30px;
+            bottom: 20px;
+            right: 20px;
             z-index: 1000;
         }
 
         @media (max-width: 767px) {
             #mapControls {
-                position: static;
+                display: none;
                 flex-direction: column;
-                width: 100%;
-                margin-bottom: 10px;
-                padding: 0;
-                background-color: transparent;
-                box-shadow: none;
+                top: 70px;
             }
 
-            #mapControls>div {
-                width: 100%;
-                margin-bottom: 0px;
+            #mapControls.show {
+                display: flex;
             }
 
-            #providerSelect,
-            #restAreaSelect,
-            #currentChargerSelect {
-                width: 100%;
-                margin-bottom: 10px;
-            }
-
-            #mapContainer {
-                height: calc(100vh - 64px - 2rem - 150px);
-                margin-top: 10px;
-                padding: 0;
+            #mapControlsToggle {
+                display: block;
             }
 
             #mapid {
-                border-radius: 8px;
-                height: 80%;
+                border-radius: 0;
             }
         }
     </style>
 @endsection
 
 @section('content')
-    <div class="relative p-2">
+    <div class="relative">
         <div id="mapControls" class="flex flex-wrap gap-1 mb-0">
             <div class="flex-1 min-w-[200px]">
                 <select id="providerSelect"
@@ -119,6 +142,12 @@
                 </select>
             </div>
         </div>
+        <button id="mapControlsToggle" class="md:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+        </button>
         <div id="mapContainer">
             <div id="mapid" class="rounded-lg shadow-lg"></div>
             <button id="locateMe"
@@ -326,6 +355,12 @@
                         10); // Sedikit delay untuk memastikan transisi menu selesai
                 });
             }
+        });
+
+        // Tambahkan ini di akhir script
+        document.getElementById('mapControlsToggle').addEventListener('click', function() {
+            const mapControls = document.getElementById('mapControls');
+            mapControls.classList.toggle('show');
         });
     </script>
 @endpush
