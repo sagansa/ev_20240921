@@ -8,7 +8,7 @@
             <div class="container grid grid-cols-1 gap-8 mx-auto sm:grid-cols-2 lg:grid-cols-4">
                 <!-- Sagansa and Home link -->
                 <div>
-                    <a href="#home" class="text-green hover:underline">
+                    <a href="{{ route('home') }}" class="text-green hover:underline">
                         <h2 class="mb-4 text-2xl font-bold text-green">SAGANSA</h2>
                     </a>
                 </div>
@@ -42,7 +42,7 @@
 
                 <!-- Kontak -->
                 <div>
-                    <h3 class="mb-4 text-xl font-semibold text-green">Kontak</h3>
+                    <h3 class="mb-4 text-xl font-semibold text-green">Contact</h3>
                     <ul class="space-y-2">
                         <li class="flex items-center">
                             <a href="https://wa.me/628111923572" target="_blank"

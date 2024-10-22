@@ -15,7 +15,7 @@
     <nav class="fixed top-0 z-50 w-full bg-ev-blue-800 bg-opacity-90">
         <div class="container px-4 mx-auto">
             <div class="flex items-center justify-between py-4">
-                <a href="{{ route('home') }}" class="text-xl font-bold text-ev-white">Sagansa - EV Charger</a>
+                <a href="{{ route('home') }}" class="text-xl font-bold text-ev-white">Sagansa - EV</a>
 
                 <button class="lg:hidden text-ev-white" onclick="toggleMenu()">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -46,7 +46,7 @@
                 <ul class="items-center hidden space-x-4 lg:flex">
                     @auth
                         <li><a href="{{ route('filament.admin.auth.login') }}"
-                                class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('dashboard') ? 'font-bold text-ev-green-400' : '' }}">Apps</a>
+                                class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('filament.admin.auth.login') ? 'font-bold text-ev-green-400' : '' }}">Apps</a>
                         </li>
                         <li>
                             <form method="POST" action="{{ route('logout') }}">
@@ -80,9 +80,17 @@
                 <li><a href="{{ route('products') }}"
                         class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('products') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Products</a>
                 </li>
+                <li><a href="{{ route('contact') }}"
+                        class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('contact') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Contact
+                        Us</a>
+                </li>
+
+                <!-- Garis pemisah -->
+                <li class="border-t border-ev-blue-700 my-2"></li>
+
                 @auth
                     <li><a href="{{ route('filament.admin.auth.login') }}"
-                            class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('dashboard') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Apps</a>
+                            class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('filament.admin.auth.login') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Apps</a>
                     </li>
                     <li>
                         <form method="POST" action="{{ route('logout') }}">

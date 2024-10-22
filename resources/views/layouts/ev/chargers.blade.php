@@ -361,23 +361,6 @@
                             <div class="mt-2">
                                 <div id="providerDetails" class="text-sm text-gray-500"></div>
                             </div>
-                            <div class="flex items-center mt-4 space-x-4" id="providerLinks">
-                                <a href="#" id="websiteLink" class="hidden" target="_blank"
-                                    rel="noopener noreferrer">
-                                    <img src="{{ asset('svg/website-ui-web-svgrepo-com.svg') }}" alt="Website"
-                                        class="w-6 h-6">
-                                </a>
-                                <a href="#" id="googlePlayLink" class="hidden" target="_blank"
-                                    rel="noopener noreferrer">
-                                    <img src="{{ asset('svg/Google_Play_Store_badge_EN.svg') }}" alt="Google Play"
-                                        class="h-6">
-                                </a>
-                                <a href="#" id="appStoreLink" class="hidden" target="_blank"
-                                    rel="noopener noreferrer">
-                                    <img src="{{ asset('svg/Download_on_the_App_Store_Badge.svg') }}" alt="App Store"
-                                        class="h-6">
-                                </a>
-                            </div>
                         </div>
                     </div>
                 </div>
