@@ -43,7 +43,8 @@ class EvController extends Controller
     {
         $query = Provider::query()
             ->where('status', 1)  // Hanya provider dengan status aktif
-            ->where('public', 1);  // Hanya provider yang bersifat publik
+            ->where('public', 1)  // Hanya provider yang bersifat publik
+            ->withCount('chargerLocations');  // Menambahkan hitungan charger_locations
 
         if ($request->search) {
             $query->where('name', 'like', "%{$request->search}%");

@@ -98,6 +98,10 @@
                                             <td
                                                 class="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 whitespace-nowrap sm:pl-0">
                                                 {{ $provider->name }}
+                                                <span
+                                                    class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    {{ $provider->charger_locations_count }} loc
+                                                </span>
                                             </td>
                                             <td class="px-3 py-4 text-sm text-gray-500">
                                                 <div class="flex flex-wrap items-center gap-2">
@@ -177,7 +181,13 @@
                                     </div>
                                 @endif
                                 <div class="flex-auto min-w-0">
-                                    <p class="text-sm font-semibold leading-6 text-gray-900">{{ $provider->name }}</p>
+                                    <p class="text-sm font-semibold leading-6 text-gray-900">
+                                        {{ $provider->name }}
+                                        <span
+                                            class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            {{ $provider->charger_locations_count }} loc
+                                        </span>
+                                    </p>
                                     <p class="mt-1 text-xs leading-5 text-gray-500 truncate">
                                         {{ $provider->email ?? 'N/A' }}</p>
                                 </div>
