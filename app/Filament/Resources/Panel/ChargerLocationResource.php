@@ -91,18 +91,25 @@ class ChargerLocationResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $chargerLocations = ChargerLocation::query();
+
+        if (Auth::user()->hasRole('user')) {
+            $chargerLocations->where('user_id', Auth::id());
+        }
+
         return $table
-            ->modifyQueryUsing(function (Builder $query) {
-                if (!Auth::user()->hasRole('super_admin')) {
-                    $query->where(function ($query) {
-                        $query->where('status', 2) // verified
-                            ->orWhere(function ($query) {
-                                $query->where('status', 1) // not verified
-                                    ->where('user_id', Auth::id());
-                            });
-                    });
-                }
-            })
+            // ->modifyQueryUsing(function (Builder $query) {
+            //     if (!Auth::user()->hasRole('super_admin')) {
+            //         $query->where(function ($query) {
+            //             $query->where('status', 2) // verified
+            //                 ->orWhere(function ($query) {
+            //                     $query->where('status', 1) // not verified
+            //                         ->where('user_id', Auth::id());
+            //                 });
+            //         });
+            //     }
+            // })
+            ->query($chargerLocations)
             ->poll('60s')
             ->columns([
 
@@ -135,15 +142,14 @@ class ChargerLocationResource extends Resource
 
                 ToggleColumn::make('is_rest_area'),
 
-                StatusLocationColumn::make('status')
-                    ->visible(fn() => Auth::user()->hasRole('super_admin')),
+                StatusLocationColumn::make('status'),
 
                 LocationOnColumn::make('location_on'),
 
                 TextColumn::make('user.name')
                     ->visible(fn($record) => auth()->user()->hasRole('super_admin')), // Kondisi visibilitas,
-
             ])
+
             ->filters([
                 SelectFilter::make('provider')
                     ->relationship('provider', 'name'),
@@ -153,7 +159,15 @@ class ChargerLocationResource extends Resource
                 SelectFilter::make('city')
                     ->searchable()
                     ->relationship('city', 'name'),
+                SelectFilter::make('location_on')
+                    ->options([
+                        '1' => 'public',
+                        '2' => 'private',
+                        '3' => 'dealer',
+                        '4' => 'closed',
+                    ]),
             ], layout: FiltersLayout::AboveContent)
+
             ->actions([
                 ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
@@ -243,7 +257,7 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('province_id')
                     ->relationship('province', 'name')
-                    // ->required()
+                    ->required()
                     ->searchable()
                     ->reactive()
                     ->afterStateUpdated(function ($state, callable $set) {
@@ -255,7 +269,7 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('city_id')
                     ->relationship('city', 'name')
-                    // ->required()
+                    ->required()
                     ->searchable()
                     ->reactive()
                     ->options(function (callable $get) {

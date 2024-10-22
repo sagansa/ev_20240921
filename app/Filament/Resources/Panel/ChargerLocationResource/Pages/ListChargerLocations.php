@@ -20,10 +20,9 @@ class ListChargerLocations extends ListRecords
     {
         return [
             null => Tab::make('All'),
-            'public' => Tab::make()->query(fn ($query) => $query->where('location_on', '1')),
-            'private' => Tab::make()->query(fn ($query) => $query->where('location_on', '2')),
-            'dealer' => Tab::make()->query(fn ($query) => $query->where('location_on', '3')),
-            'closed' => Tab::make()->query(fn ($query) => $query->where('location_on', '4')),
+            'not verified' => Tab::make()->query(fn($query) => $query->where('status', '1')),
+            'verified' => Tab::make()->query(fn($query) => $query->where('status', '2')),
+            'closed' => Tab::make()->query(fn($query) => $query->where('status', '3')),
         ];
     }
 }
