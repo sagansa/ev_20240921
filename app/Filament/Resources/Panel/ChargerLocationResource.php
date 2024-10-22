@@ -295,7 +295,7 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('postal_code_id')
                     ->relationship('postalCode', 'name')
-                    ->required()
+                    // ->required()
                     ->searchable()
                     ->reactive()
                     ->options(function (callable $get) {
