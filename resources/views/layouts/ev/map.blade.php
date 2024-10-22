@@ -193,10 +193,10 @@
                             .bindPopup(`
                             <div class="max-w-xs p-4 rounded-lg shadow-md bg-ev-white">
                                 <h3 class="mb-2 text-lg font-bold text-ev-blue-800">${location.name}</h3>
-                                ${location.image ? `<img src="${location.image}" alt="${location.name}" class="object-cover w-full h-32 mb-2 rounded">` : ''}
+                                ${location.image ? `<img src="/storage/${location.image}" alt="${location.name}" class="object-cover w-full h-32 mb-2 rounded" onerror="this.onerror=null; this.src='/images/placeholder.jpg';">` : ''}
                                 <p class="mb-1 text-ev-gray-600">Provider: ${location.provider.name}</p>
                                 <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
-                                   class="inline-block px-4 py-2 mt-2 text-sm text-white transition duration-300 rounded bg-ev-green-400 hover:bg-ev-green-600"
+                                   class="inline-block px-4 py-2 mt-2 text-sm text-white transition duration-300 rounded bg-ev-green-100 hover:bg-ev-green-600"
                                    target="_blank">
                                     Open in Google Maps
                                 </a>
