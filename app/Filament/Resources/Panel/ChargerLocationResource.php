@@ -235,14 +235,19 @@ class ChargerLocationResource extends Resource
                         TextInput::make('latitude')
                             ->required()
                             ->hiddenLabel()
-                            ->readOnly()
+                            ->readOnly(fn() => Auth::user()->hasRole('user'))
                             ->numeric(),
                         TextInput::make('longitude')
                             ->required()
                             ->hiddenLabel()
-                            ->readOnly()
+                            ->readOnly(fn() => Auth::user()->hasRole('user'))
                             ->numeric(),
                     ])->columns(2),
+
+                TextInput::make('google_maps_url')
+                    ->required()
+                    ->inlineLabel()
+                    ->string(),
 
 
 
@@ -342,16 +347,21 @@ class ChargerLocationResource extends Resource
 
                 BaseSelect::make('provider_id')
                     ->required()
-                    ->relationship('provider', 'name')
+                    ->relationship('provider', 'name', function ($query) {
+                        return $query->where('status', 1);
+                    })
                     ->searchable(),
 
-                Checkbox::make('parking')
-                    ->rules(['boolean'])
-                    ->inlineLabel(),
+                Group::make()
+                    ->schema([
+                        Checkbox::make('parking')
+                            ->rules(['boolean'])
+                            ->inlineLabel(),
 
-                Checkbox::make('is_rest_area')
-                    ->rules(['boolean'])
-                    ->inlineLabel(),
+                        Checkbox::make('is_rest_area')
+                            ->rules(['boolean'])
+                            ->inlineLabel(),
+                    ])->columns(2),
 
                 BaseSelect::make('status')
                     ->visible(fn() => Auth::user()->hasRole('super_admin'))
@@ -381,6 +391,11 @@ class ChargerLocationResource extends Resource
         return Repeater::make('chargers')
             ->relationship()
             ->minItems(1)
+            ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+                $data['user_id'] = auth()->id();
+
+                return $data;
+            })
             ->schema([
                 Select::make('current_charger_id')
                     ->placeholder('Current ')
