@@ -167,7 +167,7 @@ class ChargerResource extends Resource
                     ),
 
                 TextColumn::make('user.name')
-                    // ->visible(fn($record) => auth()->user()->hasRole('super_admin'))
+                    ->visible(fn($record) => !auth()->user()->hasRole('user'))
                     ->searchable()
                     ->sortable(),
             ])
@@ -238,5 +238,17 @@ class ChargerResource extends Resource
             'view' => Pages\ViewCharger::route('/{record}'),
             'edit' => Pages\EditCharger::route('/{record}/edit'),
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->where(function (Builder $query) {
+                $query->where('status', '<>', 3)
+                    ->orWhere(function (Builder $subQuery) {
+                        $subQuery->where('status', 3)
+                            ->where('user_id', Auth::id());
+                    });
+            });
     }
 }
