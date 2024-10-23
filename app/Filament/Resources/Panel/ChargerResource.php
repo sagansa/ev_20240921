@@ -123,28 +123,22 @@ class ChargerResource extends Resource
                     ->sortable(),
 
                 TextColumn::make('chargerLocation.provider.name')
-                    ->searchable()
                     ->sortable(),
 
                 TextColumn::make('currentCharger.name')
-                    ->searchable()
                     ->sortable(),
 
                 TextColumn::make('typeCharger.name')
-                    ->searchable()
                     ->sortable(),
 
                 TextColumn::make('powerCharger.name')
-                    ->searchable()
                     ->sortable(),
 
                 TextColumn::make('chargerLocation.city.name')
-                    ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
 
                 TextColumn::make('chargerLocation.province.name')
-                    ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
 
@@ -168,18 +162,11 @@ class ChargerResource extends Resource
 
                 TextColumn::make('user.name')
                     ->visible(fn($record) => !auth()->user()->hasRole('user'))
-                    ->searchable()
                     ->sortable(),
             ])
             ->filters([
-                SelectFilter::make('chargerLocation.provider')
-                    ->relationship('chargerLocation.provider', 'name'),
                 SelectFilter::make('currentCharger')
                     ->relationship('currentCharger', 'name'),
-                SelectFilter::make('typeCharger')
-                    ->relationship('typeCharger', 'name'),
-                SelectFilter::make('powerCharger')
-                    ->relationship('powerCharger', 'name'),
             ])
             ->actions([
                 ActionGroup::make([
