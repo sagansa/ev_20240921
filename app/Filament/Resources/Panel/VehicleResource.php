@@ -22,6 +22,7 @@ use App\Filament\Resources\Panel\VehicleResource\Pages;
 use App\Models\ModelVehicle;
 use App\Models\TypeVehicle;
 use App\Tables\Columns\StatusActiveColumn;
+use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Repeater;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
@@ -62,58 +63,63 @@ class VehicleResource extends Resource
                     ImageFileUpload::make('image')->directory('images/vehicle'),
                 ]),
 
-                Grid::make(['default' => 2])->schema([
-                    TextInput::make('license_plate')
-                        ->label('License Plate/Name Your Vehicle')
-                        ->inlineLabel()
-                        ->string()
-                        ->required(),
+                Grid::make(['default' => 1])->schema([
 
-                    BaseSelect::make('brand_vehicle_id')
-                        ->label('Brand')
-                        ->relationship('brandVehicle', 'name')
-                        ->searchable()
-                        ->reactive()
-                        ->afterStateUpdated(function ($state, callable $set) {
-                            $set('model_vehicle_id', null);
-                            $set('type_vehicle_id', null);
-                        }),
+                    Group::make()->schema([
+                        BaseSelect::make('brand_vehicle_id')
+                            ->label('Brand')
+                            ->relationship('brandVehicle', 'name')
+                            ->searchable()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                $set('model_vehicle_id', null);
+                                $set('type_vehicle_id', null);
+                            }),
 
-                    BaseSelect::make('model_vehicle_id')
-                        ->label('Model')
-                        ->options(function (callable $get) {
-                            $brandVehicleId = $get('brand_vehicle_id');
-                            return ModelVehicle::where('brand_vehicle_id', $brandVehicleId)->pluck('name', 'id')->toArray();
-                        })
-                        ->searchable()
-                        ->reactive()
-                        ->afterStateUpdated(function ($state, callable $set) {
-                            $set('type_vehicle_id', null);
-                        }),
+                        BaseSelect::make('model_vehicle_id')
+                            ->label('Model')
+                            ->options(function (callable $get) {
+                                $brandVehicleId = $get('brand_vehicle_id');
+                                return ModelVehicle::where('brand_vehicle_id', $brandVehicleId)->pluck('name', 'id')->toArray();
+                            })
+                            ->searchable()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                $set('type_vehicle_id', null);
+                            }),
 
-                    Select::make('type_vehicle_id')
-                        ->label('Type')
-                        ->options(function (callable $get) {
-                            $modelVehicleId = $get('model_vehicle_id');
-                            return TypeVehicle::where('model_vehicle_id', $modelVehicleId)->pluck('name', 'id')->toArray();
-                        })
-                        ->nullable()
-                        ->inlineLabel()
-                        ->searchable()
-                        ->reactive(),
+                        Select::make('type_vehicle_id')
+                            ->label('Type')
+                            ->options(function (callable $get) {
+                                $modelVehicleId = $get('model_vehicle_id');
+                                return TypeVehicle::where('model_vehicle_id', $modelVehicleId)->pluck('name', 'id')->toArray();
+                            })
+                            ->nullable()
+                            ->inlineLabel()
+                            ->searchable()
+                            ->reactive(),
+                    ]),
 
-                    TodayDatePicker::make('ownership')
-                        ->rules(['date'])
-                        ->nullable()
-                        ->native(false),
+                    Group::make()->schema([
+                        TextInput::make('license_plate')
+                            ->label('License Plate/Name Your Vehicle')
+                            ->inlineLabel()
+                            ->string()
+                            ->required(),
 
-                    BaseSelect::make('status')
-                        ->default('1')
-                        ->searchable()
-                        ->options([
-                            '1' => 'active',
-                            '2' => 'inactive',
-                        ]),
+                        TodayDatePicker::make('ownership')
+                            ->rules(['date'])
+                            ->nullable()
+                            ->native(false),
+
+                        BaseSelect::make('status')
+                            ->default('1')
+                            ->searchable()
+                            ->options([
+                                '1' => 'active',
+                                '2' => 'inactive',
+                            ]),
+                    ]),
                 ])
             ]),
 
@@ -121,30 +127,38 @@ class VehicleResource extends Resource
                 Repeater::make('charges')
                     ->relationship()
                     ->schema([
-                        Grid::make(['default' => 2])->schema([
-                            NominalTextInput::make('km_now')
-                            ->label('km')
-                            ->suffix('km'),
+                        Grid::make()
+                            ->schema([
+                                TextInput::make('km_now')
+                                    ->label('km')
+                                    ->inlineLabel()
+                                    ->suffix('km')
+                                    ->numeric(),
 
-                            PercentTextInput::make('finish_charging_now')
-                                ->label('Battery now')
-                                ->requiredWith('is_finish_charging'),
-                        ]),
-                ])
-                ->defaultItems(1)
-                ->addable(false)
-                ->deletable(false)
-                ->minItems(1)
-                ->maxItems(1)
-                // ->hidden(fn ($state) => count($state) > 1) // <--- Update this line
-                ->mutateRelationshipDataBeforeCreateUsing(function (array $data, Vehicle $record): array {
-                    $data['user_id'] = Auth::id(); // ok
-                    $data['date'] = today()->format('Y-m-d'); // ok
+                                TextInput::make('finish_charging_now')
+                                    ->label('Battery now')
+                                    ->inlineLabel()
+                                    ->suffix('%')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue(100)
+                                    ->requiredWith('is_finish_charging'),
+                            ]),
+                    ])
+                    ->defaultItems(1)
+                    ->addable(false)
+                    ->deletable(false)
+                    ->minItems(1)
+                    ->maxItems(1)
+                    // ->hidden(fn ($state) => count($state) > 1) // <--- Update this line
+                    ->mutateRelationshipDataBeforeCreateUsing(function (array $data, Vehicle $record): array {
+                        $data['user_id'] = Auth::id(); // ok
+                        $data['date'] = today()->format('Y-m-d'); // ok
 
-                    return $data;
-                })
+                        return $data;
+                    })
             ])
-            ->hidden(fn (?Vehicle $record) => $record !== null),
+                ->hidden(fn(?Vehicle $record) => $record !== null),
         ]);
     }
 
@@ -185,7 +199,7 @@ class VehicleResource extends Resource
                 StatusActiveColumn::make('status'),
 
                 TextColumn::make('user.name')
-                    ->visible(fn ($record) => auth()->user()->hasRole('super_admin')), // Kondisi visibilitas,
+                    ->visible(fn($record) => auth()->user()->hasRole('super_admin')), // Kondisi visibilitas,
             ])
             ->filters([])
             ->actions([

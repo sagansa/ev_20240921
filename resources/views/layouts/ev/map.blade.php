@@ -15,7 +15,8 @@
 
         #mapControls {
             position: absolute;
-            top: 30px;
+            top: 80px;
+            /* Ubah dari 30px menjadi 80px */
             right: 30px;
             z-index: 1000;
             background-color: white;
@@ -30,7 +31,8 @@
         #mapControlsToggle {
             display: none;
             position: absolute;
-            top: 80px;
+            top: 130px;
+            /* Ubah dari 80px menjadi 130px */
             right: 20px;
             z-index: 1001;
             background-color: white;
