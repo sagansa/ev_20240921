@@ -195,7 +195,7 @@ class ChargerResource extends Resource
             ->bulkActions([
 
                 Tables\Actions\BulkActionGroup::make([
-                    BulkAction::make('updateStatus')
+                    BulkAction::make('updateStatusVerified')
                         ->label('Change Status to Verified')
                         ->action(function (Collection $records) {
                             $records->each(function ($record) {
@@ -207,7 +207,7 @@ class ChargerResource extends Resource
                         ->color('success')
                         ->icon('heroicon-o-exclamation-circle'),
 
-                    BulkAction::make('updateStatus')
+                    BulkAction::make('updateStatusClosed')
                         ->label('Change Status to Closed')
                         ->action(function (Collection $records) {
                             $records->each(function ($record) {
