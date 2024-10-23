@@ -28,7 +28,8 @@ class EvController extends Controller
             'city',
             'chargers.powerCharger',
             'chargers.currentCharger',
-            'chargers.typeCharger'
+            'chargers.typeCharger',
+            'user' // Tambahkan ini untuk memuat relasi user
         ])
             ->where('location_on', ['1', '3'])
             ->where('status', '<>', 3)  // Tambahkan kondisi ini
