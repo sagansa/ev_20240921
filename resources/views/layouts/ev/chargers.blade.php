@@ -6,8 +6,6 @@
     <div class="p-8">
         <h2 class="mb-6 text-3xl font-bold text-ev-blue-800">Chargers</h2>
 
-        <!-- Tambahkan div untuk peta -->
-        <div id="map" style="height: 400px;" class="mb-8"></div>
 
         <!-- Form pencarian dan filter -->
         <form action="{{ route('chargers') }}" method="GET" class="mb-4 space-y-4">
@@ -96,9 +94,6 @@
                 </button>
             </div>
         </form>
-
-        <!-- Tambahkan div untuk peta -->
-        <div id="map" style="height: 400px;" class="mb-8"></div>
 
         <!-- Kode tabel tetap sama -->
         @if ($chargers->count() > 0)
@@ -345,10 +340,6 @@
 @endsection
 
 @push('scripts')
-    <!-- Tambahkan Leaflet CSS dan JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.querySelector('form');
@@ -364,42 +355,6 @@
             const restAreaSelect = document.getElementById('rest_area');
             const searchInput = document.querySelector('input[name="search"]');
             const clearFilterButton = document.getElementById('clearFilter');
-
-            // Inisialisasi peta
-            var map = L.map('map').setView([-2.5489, 118.0149], 5); // Koordinat Indonesia
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-
-            // Fungsi untuk membuat ikon kustom
-            function createCustomIcon(iconUrl) {
-                return L.icon({
-                    iconUrl: iconUrl,
-                    iconSize: [38, 38], // Sesuaikan ukuran ikon
-                    iconAnchor: [19, 38], // Sesuaikan anchor ikon
-                    popupAnchor: [0, -38] // Sesuaikan anchor popup
-                });
-            }
-
-            // Tambahkan marker untuk setiap charger
-            @foreach ($chargers as $charger)
-                @if ($charger->chargerLocation && $charger->chargerLocation->latitude && $charger->chargerLocation->longitude)
-                    var iconUrl =
-                        '{{ $charger->chargerLocation->provider && $charger->chargerLocation->provider->image ? asset($charger->chargerLocation->provider->image) : asset('images/default-marker.png') }}';
-                    var customIcon = createCustomIcon(iconUrl);
-
-                    L.marker([{{ $charger->chargerLocation->latitude }},
-                            {{ $charger->chargerLocation->longitude }}
-                        ], {
-                            icon: customIcon
-                        })
-                        .addTo(map)
-                        .bindPopup(
-                            "<b>{{ $charger->chargerLocation->name }}</b><br>Provider: {{ $charger->chargerLocation->provider->name ?? 'N/A' }}"
-                        );
-                @endif
-            @endforeach
 
             // Fungsi untuk mengirim form
             function submitForm() {

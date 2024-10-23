@@ -64,6 +64,43 @@
             z-index: 1000;
         }
 
+        .custom-icon {
+            position: relative;
+            width: 40px;
+            height: 50px;
+        }
+
+        .custom-icon-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #3b82f6;
+            overflow: hidden;
+            z-index: 2;
+            background-color: white;
+        }
+
+        .custom-icon-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .custom-icon-pointer {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background-color: #3b82f6;
+            clip-path: polygon(50% 100%, 0 0, 100% 0);
+            z-index: 1;
+        }
+
         @media (max-width: 767px) {
             #mapControls {
                 display: none;
@@ -178,13 +215,27 @@
 
                 chargerLocations.forEach(location => {
                     if (
-                        location.status !== 3 && // Tambahkan pengecekan status di sini
+                        location.status !== 3 &&
                         (!selectedProvider || location.provider.id.toString() === selectedProvider) &&
                         (isRestArea === '' || location.is_rest_area.toString() === isRestArea) &&
                         (!selectedCurrentCharger || location.chargers.some(charger => charger
                             .current_charger && charger.current_charger.id.toString() ===
                             selectedCurrentCharger))
                     ) {
+                        // Buat ikon kustom untuk setiap provider
+                        const customIcon = L.divIcon({
+                            className: 'custom-icon',
+                            html: `
+                                <div class="custom-icon-pointer"></div>
+                                <div class="custom-icon-image">
+                                    <img src="/storage/${location.provider.image}" alt="${location.provider.name}">
+                                </div>
+                            `,
+                            iconSize: [40, 50],
+                            iconAnchor: [20, 50],
+                            popupAnchor: [0, -50]
+                        });
+
                         let chargersHtml = '';
                         if (location.chargers && location.chargers.length > 0) {
                             chargersHtml =
@@ -206,8 +257,9 @@
                             chargersHtml += '</ul>';
                         }
 
-                        const marker = L.marker([location.latitude, location.longitude])
-                            .bindPopup(`
+                        const marker = L.marker([location.latitude, location.longitude], {
+                            icon: customIcon
+                        }).bindPopup(`
                             <div class="max-w-xs p-4 rounded-lg shadow-md bg-ev-white">
                                 <h3 class="mb-2 text-lg font-bold text-ev-blue-800">${location.name}</h3>
                                 ${location.image ? `<img src="/storage/${location.image}" alt="${location.name}" class="object-cover w-full h-32 mb-2 rounded" onerror="this.onerror=null; this.src='/images/placeholder.jpg';">` : ''}
