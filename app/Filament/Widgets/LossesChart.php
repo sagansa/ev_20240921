@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\User\Widgets;
+namespace App\Filament\Widgets;
 
 use App\Models\Charge;
 use Filament\Widgets\ChartWidget;
@@ -39,12 +39,12 @@ class LossesChart extends ChartWidget
         $labels = [];
 
         foreach ($charges as $charge) {
-        $average_loss = (($charge->total_kWh / $charge->total_charge_battery) - 1) * 100;
-        if ($average_loss > 0) {
-            $data[] = $average_loss;
-            $labels[] = $charge->provider;
+            $average_loss = (($charge->total_kWh / $charge->total_charge_battery) - 1) * 100;
+            if ($average_loss > 0) {
+                $data[] = $average_loss;
+                $labels[] = $charge->provider;
+            }
         }
-    }
 
         return [
             'labels' => $labels,

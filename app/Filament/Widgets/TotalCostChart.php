@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\User\Widgets;
+namespace App\Filament\Widgets;
 
 use App\Models\Charge;
 use Filament\Widgets\ChartWidget;
@@ -33,9 +33,11 @@ class TotalCostChart extends ChartWidget
         $userId = Auth::id();
 
         $charges = Charge::where('user_id', $userId)
-            ->select(DB::raw('YEAR(date) as year'),
+            ->select(
+                DB::raw('YEAR(date) as year'),
                 DB::raw('MONTH(date) as month'),
-                DB::raw('SUM(total_cost) as total_cost'))
+                DB::raw('SUM(total_cost) as total_cost')
+            )
             ->where('date', '>=', now()->subMonths(12)->startOfMonth())
             ->groupBy(DB::raw('YEAR(date)'), DB::raw('MONTH(date)'))
             ->orderBy(DB::raw('YEAR(date)'), 'asc')
@@ -76,9 +78,7 @@ class TotalCostChart extends ChartWidget
                 ],
             ],
             'labels' => $labels,
-            'scales' => [
-
-        ],
+            'scales' => [],
         ];
     }
 

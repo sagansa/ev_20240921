@@ -6,6 +6,8 @@
     <div class="p-8">
         <h2 class="mb-6 text-3xl font-bold text-ev-blue-800">Chargers</h2>
 
+        <!-- Tambahkan div untuk peta -->
+        <div id="map" style="height: 400px;" class="mb-8"></div>
 
         <!-- Form pencarian dan filter -->
         <form action="{{ route('chargers') }}" method="GET" class="mb-4 space-y-4">

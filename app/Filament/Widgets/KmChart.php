@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\User\Widgets;
+namespace App\Filament\Widgets;
 
 use App\Models\Charge;
 use Filament\Widgets\ChartWidget;
@@ -36,7 +36,8 @@ class KmChart extends ChartWidget
             ->select(
                 DB::raw('YEAR(date) as year'),
                 DB::raw('MONTH(date) as month'),
-                DB::raw('SUM(km_now - km_before) as km'))
+                DB::raw('SUM(km_now - km_before) as km')
+            )
             ->where('date', '>=', now()->subMonths(12)->startOfMonth())
             ->groupBy(DB::raw('YEAR(date)'), DB::raw('MONTH(date)'))
             ->orderBy(DB::raw('YEAR(date)'), 'asc')
