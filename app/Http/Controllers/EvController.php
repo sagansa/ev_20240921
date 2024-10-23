@@ -52,9 +52,9 @@ class EvController extends Controller
             $query->where('name', 'like', "%{$request->search}%");
         }
 
-        // Jika tidak ada pencarian atau pengurutan yang diminta, gunakan pengurutan acak
+        // Jika tidak ada pencarian atau pengurutan yang diminta, urutkan berdasarkan jumlah lokasi terbanyak
         if (!$request->search && !$request->sort) {
-            $providers = $query->inRandomOrder()->get();
+            $providers = $query->orderByDesc('charger_locations_count')->get();
         } else {
             // Jika ada pencarian atau pengurutan, gunakan logika yang sudah ada
             $providers = $query->when($request->sort, function ($query, $sort) use ($request) {
