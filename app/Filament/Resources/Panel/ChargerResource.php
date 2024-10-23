@@ -34,7 +34,7 @@ class ChargerResource extends Resource
 {
     protected static ?string $model = Charger::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-map';
 
     protected static ?int $navigationSort = 4;
 
@@ -188,12 +188,11 @@ class ChargerResource extends Resource
                         ->hidden(function ($record) {
                             $user = Auth::user();
                             // Sembunyikan jika user bukan admin dan status charger adalah 2
-                            return !$user->hasRole('admin') && $record->status === 2;
+                            return $user->hasRole('user') && $record->status === 2;
                         }),
                 ]),
             ])
             ->bulkActions([
-
                 Tables\Actions\BulkActionGroup::make([
                     BulkAction::make('updateStatusVerified')
                         ->label('Change Status to Verified')
@@ -205,7 +204,8 @@ class ChargerResource extends Resource
                         ->requiresConfirmation()
                         ->deselectRecordsAfterCompletion()
                         ->color('success')
-                        ->icon('heroicon-o-exclamation-circle'),
+                        ->icon('heroicon-o-check-circle')
+                        ->visible(fn() => !Auth::user()->hasRole('user')),
 
                     BulkAction::make('updateStatusClosed')
                         ->label('Change Status to Closed')
@@ -217,7 +217,8 @@ class ChargerResource extends Resource
                         ->requiresConfirmation()
                         ->deselectRecordsAfterCompletion()
                         ->color('gray')
-                        ->icon('heroicon-o-exclamation-circle'),
+                        ->icon('heroicon-o-x-circle')
+                        ->visible(fn() => !Auth::user()->hasRole('user')),
                 ])
             ]);
     }
