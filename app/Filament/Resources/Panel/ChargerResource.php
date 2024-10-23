@@ -148,8 +148,23 @@ class ChargerResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
 
-                StatusLocationColumn::make('status')
-                    ->sortable(),
+                TextColumn::make('status')
+                    ->sortable()
+                    ->formatStateUsing(
+                        fn(string $state): string => match ($state) {
+                            '1' => 'not verified',
+                            '2' => 'verified',
+                            '3' => 'closed',
+                        }
+                    )
+                    ->badge()
+                    ->color(
+                        fn(string $state): string => match ($state) {
+                            '1' => 'warning',
+                            '2' => 'success',
+                            '3' => 'danger',
+                        }
+                    ),
 
                 TextColumn::make('user.name')
                     // ->visible(fn($record) => auth()->user()->hasRole('super_admin'))
