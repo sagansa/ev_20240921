@@ -126,11 +126,18 @@ class ChargerLocationResource extends Resource
                     ->sortable(),
 
                 TextColumn::make('Coordinate')
-                    ->sortable()
+                    ->getStateUsing(function ($record) {
+                        return $record->latitude . ',' . $record->longitude;
+                    })
                     ->url(function ($record) {
                         return 'https://www.google.com/maps/place/' . $record->latitude . ',' . $record->longitude;
                     })
-                    ->openUrlInNewTab(),
+                    ->openUrlInNewTab()
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query
+                            ->orderBy('latitude', $direction)
+                            ->orderBy('longitude', $direction);
+                    }),
 
                 CheckboxColumn::make('parking'),
 
