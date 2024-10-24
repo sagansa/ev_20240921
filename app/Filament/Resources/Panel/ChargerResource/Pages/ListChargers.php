@@ -25,6 +25,7 @@ class ListChargers extends ListRecords
             'not verified' => Tab::make()->query(fn($query) => $query->where('status', '1')),
             'verified' => Tab::make()->query(fn($query) => $query->where('status', '2')),
             'closed' => Tab::make()->query(fn($query) => $query->where('status', '3')),
+            'external' => Tab::make()->query(fn($query) => $query->where('status', '4')),
         ];
     }
 }
