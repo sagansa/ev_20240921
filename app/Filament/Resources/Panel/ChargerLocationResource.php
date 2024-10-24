@@ -369,6 +369,7 @@ class ChargerLocationResource extends Resource
                         '1' => 'not verified',
                         '2' => 'verified',
                         '3' => 'closed',
+                        '4' => 'external',
                     ]),
 
                 BaseSelect::make('location_on')
