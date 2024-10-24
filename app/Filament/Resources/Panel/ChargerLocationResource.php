@@ -245,7 +245,7 @@ class ChargerLocationResource extends Resource
                     ])->columns(2),
 
                 TextInput::make('google_maps_url')
-                    ->required()
+                    ->required(fn() => !auth()->user()->hasRole('super_admin'))
                     ->inlineLabel()
                     ->string(),
 
