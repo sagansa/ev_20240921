@@ -15,6 +15,7 @@ class StatusLocationColumn extends TextColumn
                 '1' => 'not verified',
                 '2' => 'verified',
                 '3' => 'closed',
+                '4' => 'external',
             }
         );
 
@@ -24,6 +25,7 @@ class StatusLocationColumn extends TextColumn
                     '1' => 'warning',
                     '2' => 'success',
                     '3' => 'danger',
+                    '4' => 'info',
                 }
             );
     }
