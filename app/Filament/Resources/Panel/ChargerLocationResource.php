@@ -242,12 +242,12 @@ class ChargerLocationResource extends Resource
                         TextInput::make('latitude')
                             ->required()
                             ->hiddenLabel()
-                            ->readOnly(fn() => Auth::user()->hasRole('user'))
+                            // ->readOnly(fn() => Auth::user()->hasRole('user'))
                             ->numeric(),
                         TextInput::make('longitude')
                             ->required()
                             ->hiddenLabel()
-                            ->readOnly(fn() => Auth::user()->hasRole('user'))
+                            // ->readOnly(fn() => Auth::user()->hasRole('user'))
                             ->numeric(),
                     ])->columns(2),
 
