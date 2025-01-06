@@ -21,7 +21,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\ImageColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
 use App\Filament\Resources\Panel\ChargeResource\Pages;
 use App\Models\Charger;
 use App\Models\Vehicle;
@@ -181,13 +180,13 @@ class ChargeResource extends Resource
             Section::make()->schema([
 
                 TextInput::make('km_before')
-                    ->readOnly()
+                    // ->readOnly()
                     ->label('Data before')
                     ->suffix('km')
                     ->currencyMask(thousandSeparator: '.', decimalSeparator: ',', precision: 0),
 
                 TextInput::make('finish_charging_before')
-                    ->readOnly()
+                    // ->readOnly()
                     ->label('Battery finish before')
                     ->requiredWith('is_finish_charging')
                     ->suffix('%'),

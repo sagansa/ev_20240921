@@ -5,19 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'EV Charger')</title>
-    <link href="{{ asset('build/assets/app-nJ2U37WV.css') }}" rel="stylesheet">
-    <link href="{{ asset('build/assets/app-z-Rg4TxU.js') }}" rel="stylesheet">
-    {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
+    {{-- <link href="{{ asset('build/assets/app-nJ2U37WV.css') }}" rel="stylesheet">
+    <link href="{{ asset('build/assets/app-z-Rg4TxU.js') }}" rel="stylesheet"> --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     @yield('additional_head')
     <link rel="icon" href="{{ asset('images/logo-files/favicon-32x32.png') }}" type="image/png">
 </head>
 
 <body class="flex flex-col min-h-screen bg-ev-white text-ev-gray-800">
-    <nav class="fixed top-0 z-50 w-full bg-ev-blue-800 bg-opacity-90">
+    <nav class="fixed top-0 z-50 w-full bg-opacity-90 bg-ev-blue-800">
         <div class="container px-4 mx-auto">
-            <div class="flex items-center justify-between py-4">
+            <div class="flex justify-between items-center py-4">
                 <a href="{{ route('home') }}" class="flex items-center text-xl font-bold text-ev-white">
-                    <img src="{{ asset('images/logo-files/logo.png') }}" alt="Sagansa EV Logo" class="h-8 mr-2">
+                    <img src="{{ asset('images/logo-files/logo.png') }}" alt="Sagansa EV Logo" class="mr-2 h-8">
                     Sagansa - EV
                 </a>
 
@@ -29,7 +29,7 @@
                     </svg>
                 </button>
 
-                <ul class="items-center justify-center flex-1 hidden space-x-12 lg:flex">
+                <ul class="hidden flex-1 justify-center items-center space-x-12 lg:flex">
                     <li><a href="{{ route('map') }}"
                             class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('map') ? 'font-bold text-ev-green-400' : '' }}">Map</a>
                     </li>
@@ -47,7 +47,7 @@
                             Us</a></li>
                 </ul>
 
-                <ul class="items-center hidden space-x-4 lg:flex">
+                <ul class="hidden items-center space-x-4 lg:flex">
                     @auth
                         <li><a href="{{ route('filament.admin.auth.login') }}"
                                 class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('filament.admin.auth.login') ? 'font-bold text-ev-green-400' : '' }}">Apps</a>
@@ -100,7 +100,7 @@
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit"
-                                class="block w-full px-4 py-2 text-left text-ev-white hover:bg-ev-blue-700">Logout</button>
+                                class="block px-4 py-2 w-full text-left text-ev-white hover:bg-ev-blue-700">Logout</button>
                         </form>
                     </li>
                 @else
