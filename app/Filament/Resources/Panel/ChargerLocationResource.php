@@ -18,7 +18,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\Checkbox;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\RichEditor;
 use Filament\Tables\Columns\CheckboxColumn;
 use App\Filament\Resources\Panel\ChargerLocationResource\Pages;
@@ -27,7 +26,6 @@ use App\Models\PowerCharger;
 use App\Models\TypeCharger;
 use App\Tables\Columns\LocationOnColumn;
 use App\Tables\Columns\StatusLocationColumn;
-use Cheesegrits\FilamentGoogleMaps\Columns\MapColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Repeater;
@@ -36,9 +34,7 @@ use Filament\Tables\Columns\ToggleColumn;
 use Humaidem\FilamentMapPicker\Fields\OSMMap;
 use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Enums\FiltersLayout;
-use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
-use Illuminate\Routing\Route;
 
 class ChargerLocationResource extends Resource
 {
@@ -251,12 +247,10 @@ class ChargerLocationResource extends Resource
                             ->numeric(),
                     ])->columns(2),
 
-                TextInput::make('google_maps_url')
-                    ->required(fn() => !auth()->user()->hasRole('super_admin'))
-                    ->inlineLabel()
-                    ->string(),
-
-
+                // TextInput::make('google_maps_url')
+                //     ->required(fn() => !auth()->user()->hasRole('super_admin'))
+                //     ->inlineLabel()
+                //     ->string(),
 
             ]),
 
