@@ -142,14 +142,14 @@
 @section('content')
     <div class="relative">
         <button id="mapControlsToggle" class="md:hidden">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
             </svg>
         </button>
         <div id="mapControls" class="flex flex-wrap gap-1 mb-0">
             <div class="flex-1 min-w-[200px]">
                 <select id="providerSelect"
-                    class="w-full py-2 pl-3 pr-10 text-base border-gray-300 rounded-md focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
+                    class="py-2 pr-10 pl-3 w-full text-base rounded-md border-gray-300 focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
                     <option value="">All Providers</option>
                     @foreach ($providers as $provider)
                         <option value="{{ $provider->id }}">{{ $provider->name }}</option>
@@ -158,7 +158,7 @@
             </div>
             <div class="flex-1 min-w-[200px]">
                 <select id="restAreaSelect"
-                    class="w-full py-2 pl-3 pr-10 text-base border-gray-300 rounded-md focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
+                    class="py-2 pr-10 pl-3 w-full text-base rounded-md border-gray-300 focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
                     <option value="">Rest Area & Non-Rest Area</option>
                     <option value="1">Rest Area Only</option>
                     <option value="0">Non-Rest Area Only</option>
@@ -166,7 +166,7 @@
             </div>
             <div class="flex-1 min-w-[200px]">
                 <select id="currentChargerSelect"
-                    class="w-full py-2 pl-3 pr-10 text-base border-gray-300 rounded-md focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
+                    class="py-2 pr-10 pl-3 w-full text-base rounded-md border-gray-300 focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
                     <option value="">All Current Types</option>
                     @foreach ($currentChargers as $currentCharger)
                         <option value="{{ $currentCharger->id }}">{{ $currentCharger->name }}</option>
@@ -177,7 +177,7 @@
         <div id="mapContainer">
             <div id="mapid" class="rounded-lg shadow-lg"></div>
             <button id="locateMe"
-                class="p-2 text-black transition duration-300 bg-white border border-gray-300 rounded hover:bg-gray-100">
+                class="p-2 text-black bg-white rounded border border-gray-300 transition duration-300 hover:bg-gray-100">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -252,8 +252,9 @@
                                         .current_charger.name : 'N/A';
                                     const typeCharger = charger.type_charger ? charger.type_charger
                                         .name : 'N/A';
+                                    const units = charger.unit || 1;
                                     chargersHtml +=
-                                        `<li class="text-ev-gray-600">${powerCharger} - ${currentCharger} - ${typeCharger}</li>`;
+                                        `<li class="text-ev-gray-600">${powerCharger} - ${currentCharger} - ${typeCharger} (${units} unit)</li>`;
                                 }
                             });
                             chargersHtml += '</ul>';
@@ -262,11 +263,11 @@
                         const marker = L.marker([location.latitude, location.longitude], {
                             icon: customIcon
                         }).bindPopup(`
-                            <div class="max-w-xs p-4 rounded-lg shadow-md bg-ev-white">
+                            <div class="p-4 max-w-xs rounded-lg shadow-md bg-ev-white">
                                 <h3 class="mb-2 text-lg font-bold text-ev-blue-800">${location.name}</h3>
-                                ${location.image ? `<img src="/storage/${location.image}" alt="${location.name}" class="object-cover w-full h-32 mb-2 rounded" onerror="this.onerror=null; this.src='/images/placeholder.jpg';">` : ''}
+                                ${location.image ? `<img src="/storage/${location.image}" alt="${location.name}" class="object-cover mb-2 w-full h-32 rounded" onerror="this.onerror=null; this.src='/images/placeholder.jpg';">` : ''}
                                 <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
-                                   class="inline-block px-4 py-2 mt-2 text-sm text-white transition duration-300 rounded bg-ev-green-100 hover:bg-ev-green-600"
+                                   class="inline-block px-4 py-2 mt-2 text-sm text-white rounded transition duration-300 bg-ev-green-100 hover:bg-ev-green-600"
                                    target="_blank">
                                     Open in Google Maps
                                 </a>
