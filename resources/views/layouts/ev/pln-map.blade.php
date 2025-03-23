@@ -66,8 +66,8 @@
         #mapid {
             width: 100%;
             height: 100%;
-            border: 2px solid #3b82f6;
-            border-radius: 8px;
+            /* border: 2px solid #3b82f6;
+                border-radius: 8px; */
         }
 
         #locateMe {
