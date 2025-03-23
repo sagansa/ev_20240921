@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EvController;
+use App\Http\Controllers\PlnChargerLocationController;
 use Filament\Http\Controllers\Auth\LoginController;
 use Filament\Http\Controllers\Auth\RegisterController;
 
@@ -20,7 +21,10 @@ Route::middleware([
     })->name('dashboard');
 });
 
-Route::get('/', [EvController::class, 'index'])->name('home');
+Route::get('/', [EvController::class, 'plnMap'])->name('home');
+
+// Route::get('/', [PlnChargerLocationController::class, 'index'])->name('home');
+Route::get('/pln-map', [EvController::class, 'plnMap'])->name('pln-map');
 Route::get('/map', [EvController::class, 'map'])->name('map');
 Route::get('/providers', [EvController::class, 'providers'])->name('providers');
 Route::get('/products', [EvController::class, 'products'])->name('products');

@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'EV Charger')</title>
-    <link href="{{ asset('build/assets/app-CrjDxZmL.css') }}" rel="stylesheet">
-    <link href="{{ asset('build/assets/app-z-Rg4TxU.js') }}" rel="stylesheet">
+    <link href="{{ asset('build/assets/app-DG-O2peG.css ') }}" rel="stylesheet">
+    <link href="{{ asset('build/assets/app-z-Rg4TxU.js ') }}" rel="stylesheet">
     {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
     @yield('additional_head')
     <link rel="icon" href="{{ asset('images/logo-files/favicon-32x32.png') }}" type="image/png">
@@ -30,8 +30,8 @@
                 </button>
 
                 <ul class="hidden flex-1 justify-center items-center space-x-12 lg:flex">
-                    <li><a href="{{ route('map') }}"
-                            class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('map') ? 'font-bold text-ev-green-400' : '' }}">Map</a>
+                    <li><a href="{{ route('pln-map') }}"
+                            class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('pln-map') ? 'font-bold text-ev-green-400' : '' }}">Map</a>
                     </li>
                     <li><a href="{{ route('chargers') }}"
                             class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('chargers') ? 'font-bold text-ev-green-400' : '' }}">Chargers</a>

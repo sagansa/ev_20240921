@@ -11,6 +11,7 @@ use App\Models\PowerCharger;
 use App\Models\TypeCharger;
 use App\Models\Province;
 use App\Models\City;
+use App\Models\PlnChargerLocation;
 use Illuminate\Http\Request;
 
 class EvController extends Controller
@@ -19,6 +20,20 @@ class EvController extends Controller
     {
         // Arahkan ke halaman map atau halaman lain yang Anda inginkan
         return view('layouts.ev.home');
+    }
+
+    public function plnMap()
+    {
+        $plnLocations = PlnChargerLocation::with([
+            'provider',
+            'locationCategory',
+            'plnChargerLocationDetails',
+            'plnChargerLocationDetails.chargerCategory',
+            'plnChargerLocationDetails.merkCharger',
+        ])->get();
+
+        $providers = Provider::has('chargerLocations')->orderBy('name', 'asc')->get();
+        return view('layouts.ev.pln-map', compact('plnLocations', 'providers'));
     }
 
     public function map()
