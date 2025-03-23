@@ -1,8 +1,27 @@
 @extends('layouts.main')
 
-@section('title', 'Map - EV Charger')
+@section('title', 'Lokasi Charging Station EV di Indonesia | Peta Stasiun Pengisian Kendaraan Listrik')
 
 @section('additional_head')
+    <meta name="description"
+        content="Temukan lokasi charging station kendaraan listrik terdekat di Indonesia. Peta interaktif stasiun pengisian EV dengan informasi real-time lokasi anda, tipe charging, kapasitas, dan provider.">
+    <meta name="keywords"
+        content="charging station EV, SPKLU, stasiun pengisian kendaraan listrik, peta charger EV, lokasi charging station Indonesia, EV charger map">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        "name": "Peta Lokasi Charging Station EV di Indonesia",
+        "description": "Database lengkap lokasi charging station kendaraan listrik di Indonesia dengan informasi detail provider, tipe charger, dan kategori lokasi.",
+        "keywords": ["charging station", "SPKLU", "EV charger", "stasiun pengisian listrik", "kendaraan listrik", "electric vehicle"],
+        "url": "{{ url()->current() }}",
+        "provider": {
+            "@type": "PT Sagansa Engineering Indonesia",
+            "name": "EV Charging Network Indonesia"
+        }
+    }
+    </script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <style>
@@ -101,6 +120,23 @@
             object-fit: cover;
         }
 
+        .custom-icon.user-location .custom-icon-image {
+            border-color: #3b82f6;
+            background-color: #ffffff;
+        }
+
+        .custom-icon.user-location .user-dot {
+            width: 16px;
+            height: 16px;
+            background-color: #3b82f6;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 2s infinite;
+        }
+
         .custom-icon-pointer {
             position: absolute;
             bottom: 0;
@@ -111,6 +147,43 @@
             background-color: #3b82f6;
             clip-path: polygon(50% 100%, 0 0, 100% 0);
             z-index: 1;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+
+            70% {
+                transform: translate(-50%, -50%) scale(2);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0;
+            }
+        }
+
+        #locateMe {
+            transition: all 0.3s ease;
+        }
+
+        #locateMe.locating {
+            background-color: #3b82f6;
+            color: white;
+            animation: rotate 2s linear infinite;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         @media (max-width: 767px) {
@@ -216,6 +289,8 @@
             const map = L.map('mapid').setView(defaultView, 13);
             let userMarker;
             let markers = [];
+            let locationWatcher;
+            let isLocating = false;
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
