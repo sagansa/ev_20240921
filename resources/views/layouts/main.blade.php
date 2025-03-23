@@ -5,9 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'EV Charger')</title>
-    <link href="{{ asset('build/assets/app-DG-O2peG.css ') }}" rel="stylesheet">
-    <link href="{{ asset('build/assets/app-z-Rg4TxU.js ') }}" rel="stylesheet">
-    {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
+    <!-- Scripts -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    <!-- Styles -->
+    @livewireStyles
     @yield('additional_head')
     <link rel="icon" href="{{ asset('images/logo-files/favicon-32x32.png') }}" type="image/png">
 </head>
