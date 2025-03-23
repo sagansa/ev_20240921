@@ -34,3 +34,4 @@ Route::get('/get-cities/{province}', [EvController::class, 'getCities'])->name('
 Route::get('/get-type-chargers/{current}', [EvController::class, 'getTypeChargers'])->name('get.type.chargers');
 Route::get('/get-power-chargers/{type}', [EvController::class, 'getPowerChargers'])->name('get.power.chargers');
 Route::get('/get-provider-details/{provider}', [EvController::class, 'getProviderDetails']);
+Route::get('/filter-pln-locations/{chargingType?}/{locationCategory?}', [EvController::class, 'filterPlnLocations'])->name('filter.pln.locations');

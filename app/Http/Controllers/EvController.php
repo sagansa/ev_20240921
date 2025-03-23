@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Charger;
 use App\Models\ChargerLocation;
+use App\Models\ChargingType;
 use App\Models\Product;
 use App\Models\Provider;
 use App\Models\CurrentCharger;
@@ -11,6 +12,7 @@ use App\Models\PowerCharger;
 use App\Models\TypeCharger;
 use App\Models\Province;
 use App\Models\City;
+use App\Models\LocationCategory;
 use App\Models\PlnChargerLocation;
 use Illuminate\Http\Request;
 
@@ -33,7 +35,16 @@ class EvController extends Controller
         ])->get();
 
         $providers = Provider::has('chargerLocations')->orderBy('name', 'asc')->get();
-        return view('layouts.ev.pln-map', compact('plnLocations', 'providers'));
+        $chargingTypes = ChargingType::orderBy('name', 'asc')->get();
+        $locationCategories = LocationCategory::orderBy('name', 'asc')->get();
+
+        return view('layouts.ev.pln-map',
+            compact(
+                'plnLocations',
+                'providers',
+                'chargingTypes',
+                'locationCategories'
+            ));
     }
 
     public function map()

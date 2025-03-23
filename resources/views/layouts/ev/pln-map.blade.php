@@ -63,13 +63,6 @@
             padding: 20px;
         }
 
-        #mapid {
-            width: 100%;
-            height: 100%;
-            border: 2px solid #3b82f6;
-            border-radius: 8px;
-        }
-
         #locateMe {
             position: absolute;
             bottom: 120px;
@@ -178,6 +171,24 @@
                     @endforeach
                 </select>
             </div>
+            <div class="flex-1 min-w-[200px]">
+                <select id="chargingTypeSelect"
+                    class="py-2 pr-10 pl-3 w-full text-base rounded-md border-gray-300 focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
+                    <option value="">All Charging Types</option>
+                    @foreach ($chargingTypes as $type)
+                        <option value="{{ $type->id }}">{{ $type->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <select id="locationCategorySelect"
+                    class="py-2 pr-10 pl-3 w-full text-base rounded-md border-gray-300 focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
+                    <option value="">All Location Categories</option>
+                    @foreach ($locationCategories as $category)
+                        <option value="{{ $category->id }}">{{ $category->name }}</option>
+                    @endforeach
+                </select>
+            </div>
         </div>
         <div id="mapContainer">
             <div id="mapid" class="rounded-lg shadow-lg"></div>
@@ -213,12 +224,26 @@
 
             const chargerLocations = @json($plnLocations);
 
-            function createMarkers(selectedProvider = '') {
+            function createMarkers(selectedProvider = '', selectedChargingType = '', selectedLocationCategory =
+                '') {
                 markers.forEach(marker => map.removeLayer(marker));
                 markers = [];
 
                 chargerLocations.forEach(location => {
-                    if (!selectedProvider || location.provider.id.toString() === selectedProvider) {
+                    const hasMatchingChargingType = !selectedChargingType || (location
+                        .pln_charger_location_details && location.pln_charger_location_details.some(
+                            detail => {
+                                return detail.charging_type_id && detail.charging_type_id.toString() ===
+                                    selectedChargingType;
+                            }));
+
+                    const hasMatchingProvider = !selectedProvider || (location.provider && location.provider
+                        .id && location.provider.id.toString() === selectedProvider);
+                    const hasMatchingCategory = !selectedLocationCategory || (location.location_category &&
+                        location.location_category.id && location.location_category.id.toString() ===
+                        selectedLocationCategory);
+
+                    if (hasMatchingProvider && hasMatchingChargingType && hasMatchingCategory) {
                         const customIcon = L.divIcon({
                             className: 'custom-icon',
                             html: `
@@ -241,8 +266,6 @@
                                 const power = detail.power ? detail.power : 'N/A';
                                 const connectorCount = detail.count_connector_charger ? detail
                                     .count_connector_charger : 'N/A';
-                                // const category = detail.charger_category ? detail.charger_category
-                                //     .name : 'N/A';
                                 const merk = detail.merk_charger ? detail.merk_charger.name : 'N/A';
                                 detailsHtml +=
                                     `<li class="text-ev-gray-600">${merk} - ${power} - (${connectorCount} connectors)</li>`;
@@ -274,109 +297,20 @@
             createMarkers();
 
             const providerSelect = document.getElementById('providerSelect');
-            providerSelect.addEventListener('change', function() {
-                createMarkers(this.value);
-            });
+            const chargingTypeSelect = document.getElementById('chargingTypeSelect');
+            const locationCategorySelect = document.getElementById('locationCategorySelect');
 
-            function locateUser() {
-                if ("geolocation" in navigator) {
-                    navigator.geolocation.getCurrentPosition(function(position) {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-
-                        if (userMarker) {
-                            map.removeLayer(userMarker);
-                        }
-
-                        userMarker = L.marker([lat, lng], {
-                            icon: L.icon({
-                                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                                iconSize: [25, 41],
-                                iconAnchor: [12, 41],
-                                popupAnchor: [1, -34],
-                                shadowSize: [41, 41]
-                            })
-                        }).addTo(map).bindPopup("You are here!").openPopup();
-
-                        map.setView([lat, lng], 15);
-                    }, function(error) {
-                        console.error("Error: " + error.message);
-                        alert("Unable to retrieve your location. Using default view.");
-                        map.setView(defaultView, 13);
-                    });
-                } else {
-                    alert("Geolocation is not supported by your browser. Using default view.");
-                    map.setView(defaultView, 13);
-                }
+            function updateMarkers() {
+                createMarkers(
+                    providerSelect.value,
+                    chargingTypeSelect.value,
+                    locationCategorySelect.value
+                );
             }
 
-            locateUser();
-            document.getElementById('locateMe').addEventListener('click', locateUser);
-
-            setTimeout(function() {
-                map.invalidateSize();
-            }, 100);
-
-            window.addEventListener('resize', function() {
-                map.invalidateSize();
-            });
-
-            function adjustMapPosition() {
-                const mobileMenu = document.getElementById('mobile-menu');
-                const mapControls = document.getElementById('mapControls');
-                const mapContainer = document.getElementById('mapContainer');
-                const navbarHeight = 64;
-
-                if (window.innerWidth <= 767) {
-                    const mobileMenuHeight = mobileMenu ? mobileMenu.offsetHeight : 0;
-                    const newTopPosition = navbarHeight + (mobileMenu && !mobileMenu.classList.contains('hidden') ?
-                        mobileMenuHeight : 0);
-
-                    mapControls.style.position = 'static';
-                    mapControls.style.top = '';
-                    mapControls.style.right = '';
-                    mapControls.style.left = '';
-                    mapControls.style.background = 'transparent';
-                    mapControls.style.boxShadow = 'none';
-                    mapControls.style.padding = '0';
-                    mapContainer.style.marginTop = '10px';
-                    mapContainer.style.height = '100vh';
-                } else {
-                    mapControls.style.position = 'absolute';
-                    mapControls.style.top = '30px';
-                    mapControls.style.right = '30px';
-                    mapControls.style.left = '';
-                    mapControls.style.background = 'white';
-                    mapControls.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-                    mapControls.style.padding = '10px';
-                    mapContainer.style.marginTop = '';
-                    mapContainer.style.height = '100vh';
-                }
-
-                map.invalidateSize();
-            }
-
-            window.addEventListener('load', adjustMapPosition);
-            window.addEventListener('resize', adjustMapPosition);
-
-            const mobileMenuToggle = document.querySelector('[onclick="toggleMenu()"]');
-            if (mobileMenuToggle) {
-                mobileMenuToggle.addEventListener('click', function() {
-                    setTimeout(adjustMapPosition, 10);
-                });
-            }
-
-            document.getElementById('mapControlsToggle').addEventListener('click', function() {
-                const mapControls = document.getElementById('mapControls');
-                mapControls.classList.toggle('show');
-                this.classList.toggle('active');
-                if (this.classList.contains('active')) {
-                    this.style.transform = 'rotate(90deg)';
-                } else {
-                    this.style.transform = 'rotate(0deg)';
-                }
-            });
+            providerSelect.addEventListener('change', updateMarkers);
+            chargingTypeSelect.addEventListener('change', updateMarkers);
+            locationCategorySelect.addEventListener('change', updateMarkers);
         });
     </script>
 @endsection
