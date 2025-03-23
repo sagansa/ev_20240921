@@ -87,6 +87,71 @@
             bottom: 120px;
             right: 30px;
             z-index: 1000;
+            width: 40px;
+            height: 40px;
+            background-color: white;
+            border: 2px solid #3b82f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #locateMe:hover {
+            transform: scale(1.1);
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        #locateMe.locating {
+            background-color: #3b82f6;
+            color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .location-error {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ef4444;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, 100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+
+        position: absolute;
+        bottom: 120px;
+        right: 30px;
+        z-index: 1000;
         }
 
         .custom-icon {
@@ -167,7 +232,72 @@
         }
 
         #locateMe {
+            position: absolute;
+            bottom: 120px;
+            right: 30px;
+            z-index: 1000;
+            width: 40px;
+            height: 40px;
+            background-color: white;
+            border: 2px solid #3b82f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
             transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #locateMe:hover {
+            transform: scale(1.1);
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        #locateMe.locating {
+            background-color: #3b82f6;
+            color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .location-error {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ef4444;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, 100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+
+        transition: all 0.3s ease;
         }
 
         #locateMe.locating {
@@ -221,8 +351,73 @@
             }
 
             #locateMe {
-                bottom: 60px;
+                position: absolute;
+                bottom: 120px;
+                right: 30px;
+                z-index: 1000;
+                width: 40px;
+                height: 40px;
+                background-color: white;
+                border: 2px solid #3b82f6;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             }
+
+            #locateMe:hover {
+                transform: scale(1.1);
+                background-color: #3b82f6;
+                color: white;
+            }
+
+            #locateMe.locating {
+                background-color: #3b82f6;
+                color: white;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                from {
+                    transform: rotate(0deg);
+                }
+
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            .location-error {
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: #ef4444;
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                z-index: 1000;
+                animation: slideUp 0.3s ease-out;
+            }
+
+            @keyframes slideUp {
+                from {
+                    transform: translate(-50%, 100%);
+                    opacity: 0;
+                }
+
+                to {
+                    transform: translate(-50%, 0);
+                    opacity: 1;
+                }
+            }
+
+            bottom: 60px;
+        }
         }
     </style>
 @endsection
@@ -292,12 +487,93 @@
             let locationWatcher;
             let isLocating = false;
 
+            function showLocationError(message) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'fixed bottom-4 left-4 bg-red-500 text-white px-4 py-2 rounded shadow-lg z-50';
+                errorDiv.textContent = message;
+                document.body.appendChild(errorDiv);
+                setTimeout(() => errorDiv.remove(), 3000);
+            }
+
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap'
             }).addTo(map);
 
             const chargerLocations = @json($plnLocations);
+
+            locateMe.addEventListener('click', function() {
+                if (isLocating) return;
+                isLocating = true;
+                locateMe.classList.add('locating');
+
+                if (!navigator.geolocation) {
+                    showLocationError('Geolocation tidak didukung oleh browser Anda');
+                    isLocating = false;
+                    locateMe.classList.remove('locating');
+                    return;
+                }
+
+                navigator.permissions.query({
+                    name: 'geolocation'
+                }).then(function(result) {
+                    if (result.state === 'denied') {
+                        showLocationError(
+                            'Izin lokasi ditolak. Mohon aktifkan di pengaturan browser Anda');
+                        isLocating = false;
+                        locateMe.classList.remove('locating');
+                        return;
+                    }
+
+                    navigator.geolocation.getCurrentPosition(
+                        function(position) {
+                            const userLatLng = [position.coords.latitude, position.coords
+                                .longitude
+                            ];
+                            if (userMarker) {
+                                map.removeLayer(userMarker);
+                            }
+
+                            const userIcon = L.divIcon({
+                                className: 'custom-icon user-location',
+                                html: `
+                                    <div class="custom-icon-image">
+                                        <div class="user-dot"></div>
+                                    </div>
+                                `,
+                                iconSize: [40, 40],
+                                iconAnchor: [20, 20]
+                            });
+
+                            userMarker = L.marker(userLatLng, {
+                                icon: userIcon
+                            }).addTo(map);
+                            map.setView(userLatLng, 15);
+                            isLocating = false;
+                            locateMe.classList.remove('locating');
+                        },
+                        function(error) {
+                            let errorMsg =
+                                'Terjadi kesalahan saat mencoba mendapatkan lokasi Anda';
+                            if (error.code === 1) {
+                                errorMsg =
+                                    'Izin lokasi ditolak. Mohon aktifkan di pengaturan browser Anda';
+                            } else if (error.code === 2) {
+                                errorMsg = 'Lokasi tidak tersedia';
+                            } else if (error.code === 3) {
+                                errorMsg = 'Waktu permintaan lokasi habis';
+                            }
+                            showLocationError(errorMsg);
+                            isLocating = false;
+                            locateMe.classList.remove('locating');
+                        }, {
+                            enableHighAccuracy: true,
+                            timeout: 10000,
+                            maximumAge: 0
+                        }
+                    );
+                });
+            });
 
             function createMarkers(selectedProvider = '', selectedChargingType = '', selectedLocationCategory =
                 '') {
