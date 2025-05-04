@@ -645,23 +645,33 @@
                 });
             }
 
-            createMarkers();
+            // Tambahkan handler untuk toggle filter di mobile
+            const mapControlsToggle = document.getElementById('mapControlsToggle');
+            const mapControls = document.getElementById('mapControls');
 
+            mapControlsToggle.addEventListener('click', function() {
+                mapControls.classList.toggle('show');
+            });
+
+            // Tambahkan event listener untuk filter
             const providerSelect = document.getElementById('providerSelect');
             const chargingTypeSelect = document.getElementById('chargingTypeSelect');
             const locationCategorySelect = document.getElementById('locationCategorySelect');
 
-            function updateMarkers() {
-                createMarkers(
-                    providerSelect.value,
-                    chargingTypeSelect.value,
-                    locationCategorySelect.value
-                );
-            }
-
             providerSelect.addEventListener('change', updateMarkers);
             chargingTypeSelect.addEventListener('change', updateMarkers);
             locationCategorySelect.addEventListener('change', updateMarkers);
+
+            function updateMarkers() {
+                const selectedProvider = providerSelect.value;
+                const selectedChargingType = chargingTypeSelect.value;
+                const selectedLocationCategory = locationCategorySelect.value;
+
+                createMarkers(selectedProvider, selectedChargingType, selectedLocationCategory);
+            }
+
+            // Inisialisasi marker pertama kali
+            createMarkers();
         });
     </script>
 @endsection

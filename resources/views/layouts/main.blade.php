@@ -32,7 +32,12 @@
 
                 <ul class="hidden flex-1 justify-center items-center space-x-12 lg:flex">
                     <li><a href="{{ route('pln-map') }}"
-                            class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('pln-map') ? 'font-bold text-ev-green-400' : '' }}">Map</a>
+                            class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('pln-map') ? 'font-bold text-ev-green-400' : '' }}">PLN
+                            Map</a>
+                    </li>
+                    <li><a href="{{ route('map') }}"
+                            class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('map') ? 'font-bold text-ev-green-400' : '' }}">Community
+                            Map</a>
                     </li>
                     <li><a href="{{ route('chargers') }}"
                             class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('chargers') ? 'font-bold text-ev-green-400' : '' }}">Chargers</a>
@@ -73,8 +78,13 @@
         </div>
         <div id="mobile-menu" class="hidden lg:hidden">
             <ul class="py-2 bg-ev-blue-800">
+                <li><a href="{{ route('pln-map') }}"
+                        class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('pln-map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">PLN
+                        Map</a>
+                </li>
                 <li><a href="{{ route('map') }}"
-                        class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Map</a>
+                        class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Community
+                        Map</a>
                 </li>
                 <li><a href="{{ route('chargers') }}"
                         class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('chargers') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Chargers</a>

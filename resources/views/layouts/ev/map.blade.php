@@ -9,6 +9,9 @@
     <style>
         #mapid {
             z-index: 1;
+            height: 100%;
+            width: 100%;
+            transition: all 0.3s ease;
             border: 2px solid #3b82f6;
             border-radius: 8px;
         }
@@ -16,7 +19,6 @@
         #mapControls {
             position: absolute;
             top: 80px;
-            /* Ubah dari 30px menjadi 80px */
             right: 30px;
             z-index: 1000;
             background-color: white;
@@ -26,19 +28,80 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            transition: all 0.3s ease;
+            opacity: 1;
+            transform: translateY(0);
         }
 
         #mapControlsToggle {
             display: none;
             position: absolute;
             top: 130px;
-            /* Ubah dari 80px menjadi 130px */
             right: 20px;
             z-index: 1001;
             background-color: white;
             padding: 10px;
             border-radius: 50%;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        #mapControlsToggle:hover {
+            background-color: #f3f4f6;
+            transform: scale(1.05);
+        }
+
+        #mapContainer {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 64px);
+            margin: 0;
+            padding: 20px;
+        }
+
+        #mapid {
+            z-index: 1;
+            height: 100%;
+            width: 100%;
+            transition: all 0.3s ease;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+        }
+
+        @media (max-width: 767px) {
+            #mapControls {
+                display: flex;
+                top: 70px;
+                right: 20px;
+                flex-direction: column;
+                width: 80%;
+                max-width: 300px;
+                background-color: rgba(255, 255, 255, 0.95);
+                opacity: 0;
+                transform: translateY(-20px);
+                pointer-events: none;
+            }
+
+            #mapControls.show {
+                opacity: 1;
+                transform: translateY(0);
+                pointer-events: auto;
+            }
+
+            #mapControlsToggle {
+                display: block;
+            }
+
+            #mapContainer {
+                height: calc(100vh - 64px);
+                padding: 0;
+            }
+
+            #mapid {
+                border-radius: 0;
+                height: 100%;
+            }
         }
 
         #providerSelect,
