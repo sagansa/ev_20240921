@@ -17,6 +17,8 @@ class Charger extends Model
 
     protected $guarded = [];
 
+    protected $withCount = ['charges'];
+
     public function currentCharger()
     {
         return $this->belongsTo(CurrentCharger::class);
@@ -59,5 +61,10 @@ class Charger extends Model
             $this->typeCharger->name .
             ' - ' .
             $this->powerCharger->name;
+    }
+
+    public function charges()
+    {
+        return $this->hasMany(Charge::class);
     }
 }

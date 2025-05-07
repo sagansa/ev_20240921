@@ -190,6 +190,27 @@
             background-color: #059669;
         }
 
+        .popup-content .usage-info {
+            margin-top: 8px;
+            padding: 8px;
+            background-color: #f3f4f6;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .dark .popup-content .usage-info {
+            background-color: #374151;
+        }
+
+        .usage-count {
+            font-weight: 600;
+            color: #3b82f6;
+        }
+
+        .dark .usage-count {
+            color: #60a5fa;
+        }
+
         @media (max-width: 767px) {
             #mapContainer {
                 padding: 0;
@@ -384,13 +405,13 @@
                                     ${location.chargers.map(charger => {
                                         if (!selectedCurrentCharger || charger.current_charger?.id?.toString() === selectedCurrentCharger) {
                                             return `
-                                                        <li>
-                                                            ${charger.power_charger?.name || 'N/A'} -
-                                                            ${charger.current_charger?.name || 'N/A'} -
-                                                            ${charger.type_charger?.name || 'N/A'}
-                                                            (${charger.unit || 1} unit)
-                                                        </li>
-                                                    `;
+                                                                <li>
+                                                                    ${charger.power_charger?.name || 'N/A'} -
+                                                                    ${charger.current_charger?.name || 'N/A'} -
+                                                                    ${charger.type_charger?.name || 'N/A'}
+                                                                    (${charger.unit || 1} unit)
+                                                                </li>
+                                                            `;
                                         }
                                         return '';
                                     }).join('')}
@@ -448,6 +469,10 @@
                                         `}
 
                                 ${chargersHtml}
+
+                                <div class="usage-info">
+                                    <p>Telah digunakan <span class="usage-count">${location.charges_count || 0}</span> kali</p>
+                                </div>
 
                                 <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
                                    class="maps-link"

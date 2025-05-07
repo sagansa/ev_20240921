@@ -39,6 +39,8 @@ class ChargerLocation extends Model
         'location',
     ];
 
+    protected $withCount = ['charges'];
+
     public function provider()
     {
         return $this->belongsTo(Provider::class);

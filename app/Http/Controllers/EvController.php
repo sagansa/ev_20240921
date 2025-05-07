@@ -211,6 +211,10 @@ class EvController extends Controller
                 $query->join('charger_locations', 'chargers.charger_location_id', '=', 'charger_locations.id')
                     ->orderBy('charger_locations.is_rest_area', $direction);
                 break;
+            case 'usage':
+                $query->withCount('charges')
+                    ->orderBy('charges_count', $direction);
+                break;
             default:
                 $query->orderBy('id', $direction);
         }
@@ -290,5 +294,19 @@ class EvController extends Controller
             'tax' => $provider->tax,
             'admin_fee' => $provider->admin_fee,
         ]);
+    }
+
+    public function plnChargers()
+    {
+        $plnChargerDetails = PlnChargerLocation::with([
+            'provider',
+            'locationCategory',
+            'plnChargerLocationDetails',
+            'plnChargerLocationDetails.chargerCategory',
+            'plnChargerLocationDetails.merkCharger'
+        ])
+        ->paginate(10);
+
+        return view('layouts.ev.pln-chargers', compact('plnChargerDetails'));
     }
 }

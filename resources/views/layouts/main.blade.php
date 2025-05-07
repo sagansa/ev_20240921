@@ -31,16 +31,51 @@
                 </button>
 
                 <ul class="hidden flex-1 justify-center items-center space-x-12 lg:flex">
-                    <li><a href="{{ route('pln-map') }}"
-                            class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('pln-map') ? 'font-bold text-ev-green-400' : '' }}">PLN
-                            Map</a>
+                    <li class="relative group">
+                        <button onclick="toggleMapDesktopDropdown()"
+                            class="flex items-center transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs(['pln-map', 'map']) ? 'font-bold text-ev-green-400' : '' }}">
+                            Maps
+                            <svg class="ml-1 w-4 h-4 transition-transform duration-200 transform" id="map-desktop-arrow"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div id="map-desktop-dropdown"
+                            class="hidden absolute py-2 mt-2 w-48 rounded-md shadow-xl bg-ev-blue-800">
+                            <a href="{{ route('pln-map') }}"
+                                class="block px-4 py-2 text-sm text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('pln-map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                                PLN Map
+                            </a>
+                            <a href="{{ route('map') }}"
+                                class="block px-4 py-2 text-sm text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                                Community Map
+                            </a>
+                        </div>
                     </li>
-                    <li><a href="{{ route('map') }}"
-                            class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('map') ? 'font-bold text-ev-green-400' : '' }}">Community
-                            Map</a>
-                    </li>
-                    <li><a href="{{ route('chargers') }}"
-                            class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('chargers') ? 'font-bold text-ev-green-400' : '' }}">Chargers</a>
+                    <li class="relative group">
+                        <button onclick="toggleDesktopDropdown()"
+                            class="flex items-center transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs(['chargers', 'pln-chargers']) ? 'font-bold text-ev-green-400' : '' }}">
+                            Chargers
+                            <svg class="ml-1 w-4 h-4 transition-transform duration-200 transform" id="desktop-arrow"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div id="desktop-dropdown"
+                            class="hidden absolute py-2 mt-2 w-48 rounded-md shadow-xl bg-ev-blue-800">
+                            <a href="{{ route('chargers') }}"
+                                class="block px-4 py-2 text-sm text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('chargers') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                                Community Chargers
+                            </a>
+                            <a href="{{ route('pln-chargers') }}"
+                                class="block px-4 py-2 text-sm text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('pln-chargers') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                                PLN Chargers
+                            </a>
+                        </div>
                     </li>
                     <li><a href="{{ route('providers') }}"
                             class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('providers') ? 'font-bold text-ev-green-400' : '' }}">Providers</a>
@@ -78,16 +113,48 @@
         </div>
         <div id="mobile-menu" class="hidden lg:hidden">
             <ul class="py-2 bg-ev-blue-800">
-                <li><a href="{{ route('pln-map') }}"
-                        class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('pln-map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">PLN
-                        Map</a>
+                <li class="relative">
+                    <button onclick="toggleMapMobileDropdown()"
+                        class="flex items-center justify-between w-full px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs(['pln-map', 'map']) ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                        Maps
+                        <svg class="ml-1 w-4 h-4 transition-transform duration-200 transform" id="map-mobile-arrow"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                    </button>
+                    <div id="map-mobile-dropdown" class="hidden bg-ev-blue-900">
+                        <a href="{{ route('pln-map') }}"
+                            class="block px-8 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('pln-map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                            PLN Map
+                        </a>
+                        <a href="{{ route('map') }}"
+                            class="block px-8 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                            Community Map
+                        </a>
+                    </div>
                 </li>
-                <li><a href="{{ route('map') }}"
-                        class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Community
-                        Map</a>
-                </li>
-                <li><a href="{{ route('chargers') }}"
-                        class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('chargers') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Chargers</a>
+                <li class="relative">
+                    <button onclick="toggleMobileDropdown()"
+                        class="flex items-center justify-between w-full px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs(['chargers', 'pln-chargers']) ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                        Chargers
+                        <svg class="ml-1 w-4 h-4 transition-transform duration-200 transform" id="mobile-arrow"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                    </button>
+                    <div id="mobile-dropdown" class="hidden bg-ev-blue-900">
+                        <a href="{{ route('chargers') }}"
+                            class="block px-8 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('chargers') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                            Community Chargers
+                        </a>
+                        <a href="{{ route('pln-chargers') }}"
+                            class="block px-8 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('pln-chargers') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                            PLN Chargers
+                        </a>
+                    </div>
                 </li>
                 <li><a href="{{ route('providers') }}"
                         class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('providers') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Providers</a>
@@ -137,6 +204,65 @@
             const mobileMenu = document.getElementById('mobile-menu');
             mobileMenu.classList.toggle('hidden');
         }
+
+        function toggleDesktopDropdown() {
+            const dropdown = document.getElementById('desktop-dropdown');
+            const arrow = document.getElementById('desktop-arrow');
+            dropdown.classList.toggle('hidden');
+            arrow.classList.toggle('rotate-180');
+        }
+
+        function toggleMobileDropdown() {
+            const dropdown = document.getElementById('mobile-dropdown');
+            const arrow = document.getElementById('mobile-arrow');
+            dropdown.classList.toggle('hidden');
+            arrow.classList.toggle('rotate-180');
+        }
+
+        function toggleMapDesktopDropdown() {
+            const dropdown = document.getElementById('map-desktop-dropdown');
+            const arrow = document.getElementById('map-desktop-arrow');
+            dropdown.classList.toggle('hidden');
+            arrow.classList.toggle('rotate-180');
+        }
+
+        function toggleMapMobileDropdown() {
+            const dropdown = document.getElementById('map-mobile-dropdown');
+            const arrow = document.getElementById('map-mobile-arrow');
+            dropdown.classList.toggle('hidden');
+            arrow.classList.toggle('rotate-180');
+        }
+
+        // Update click outside handler
+        document.addEventListener('click', function(event) {
+            const desktopDropdown = document.getElementById('desktop-dropdown');
+            const mobileDropdown = document.getElementById('mobile-dropdown');
+            const mapDesktopDropdown = document.getElementById('map-desktop-dropdown');
+            const mapMobileDropdown = document.getElementById('map-mobile-dropdown');
+
+            const desktopButton = event.target.closest('.group button');
+            const mobileButton = event.target.closest('.relative button');
+
+            if (!desktopButton && !desktopDropdown.contains(event.target)) {
+                desktopDropdown.classList.add('hidden');
+                document.getElementById('desktop-arrow').classList.remove('rotate-180');
+            }
+
+            if (!mobileButton && !mobileDropdown.contains(event.target)) {
+                mobileDropdown.classList.add('hidden');
+                document.getElementById('mobile-arrow').classList.remove('rotate-180');
+            }
+
+            if (!desktopButton && !mapDesktopDropdown.contains(event.target)) {
+                mapDesktopDropdown.classList.add('hidden');
+                document.getElementById('map-desktop-arrow').classList.remove('rotate-180');
+            }
+
+            if (!mobileButton && !mapMobileDropdown.contains(event.target)) {
+                mapMobileDropdown.classList.add('hidden');
+                document.getElementById('map-mobile-arrow').classList.remove('rotate-180');
+            }
+        });
     </script>
 </body>
 
