@@ -292,53 +292,13 @@
 
 @section('content')
     <div class="relative w-full h-screen bg-white dark:bg-gray-900">
-        <div class="map-container">
-            <div class="map-controls">
-                <select id="providerSelect"
-                    class="px-3 py-2 w-full text-sm rounded-lg border dark:bg-gray-700 dark:border-gray-600">
-                    <option value="">Semua Provider</option>
-                    @foreach ($providers as $provider)
-                        <option value="{{ $provider->id }}">{{ $provider->name }}</option>
-                    @endforeach
-                </select>
-
-                <select id="chargingTypeSelect"
-                    class="px-3 py-2 w-full text-sm rounded-lg border dark:bg-gray-700 dark:border-gray-600">
-                    <option value="">Semua Tipe Charging</option>
-                    @foreach ($chargingTypes as $type)
-                        <option value="{{ $type->id }}">{{ $type->name }}</option>
-                    @endforeach
-                </select>
-
-                <select id="locationCategorySelect"
-                    class="px-3 py-2 w-full text-sm rounded-lg border dark:bg-gray-700 dark:border-gray-600">
-                    <option value="">Semua Kategori Lokasi</option>
-                    @foreach ($locationCategories as $category)
-                        <option value="{{ $category->id }}">{{ $category->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <button id="mapControlsToggle" class="map-controls-toggle">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-            </button>
+        <x-map.container>
+            <x-map.controls :providers="$providers" :charging-types="$chargingTypes" :location-categories="$locationCategories" />
 
             <div id="mapid" class="w-full h-full rounded-lg border-2 border-ev-blue-500 dark:border-ev-blue-400"></div>
 
-            <button id="locateMe" class="map-locate-button">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-            </button>
-        </div>
+            <x-map.locate-button />
+        </x-map.container>
     </div>
 
     @push('scripts')
@@ -350,6 +310,7 @@
                 const map = L.map('mapid').setView(defaultView, 13);
                 let markers = [];
                 let userMarker;
+                let markerCluster;
 
                 // Toggle mobile controls
                 const mapControlsToggle = document.getElementById('mapControlsToggle');
@@ -370,11 +331,19 @@
 
                 function createMarkers(selectedProvider = '', selectedChargingType = '', selectedLocationCategory =
                     '') {
+                    // Hapus marker yang ada
                     markers.forEach(marker => map.removeLayer(marker));
                     markers = [];
 
+                    // Dapatkan batas peta yang terlihat
+                    const bounds = map.getBounds();
+
                     chargerLocations.forEach(location => {
                         if (!location) return;
+
+                        // Cek apakah lokasi berada dalam batas peta yang terlihat
+                        const latlng = L.latLng(location.latitude, location.longitude);
+                        if (!bounds.contains(latlng)) return;
 
                         const hasMatchingChargingType = !selectedChargingType ||
                             location.pln_charger_location_details?.some(detail =>
@@ -388,17 +357,71 @@
                             location.location_category?.id?.toString() === selectedLocationCategory;
 
                         if (hasMatchingProvider && hasMatchingChargingType && hasMatchingCategory) {
-                            const providerImage = location.provider?.image || '/images/placeholder.jpg';
+                            const providerImage = location.provider?.image ?
+                                `/storage/${location.provider.image}` :
+                                '/images/placeholder.jpg';
                             const providerName = location.provider?.name || 'Provider Tidak Diketahui';
+
+                            // Fungsi untuk mengecek keberadaan gambar
+                            function checkImage(url) {
+                                return new Promise((resolve) => {
+                                    const img = new Image();
+                                    img.onload = () => resolve(url);
+                                    img.onerror = () => resolve(null);
+                                    img.src = url;
+                                });
+                            }
+
+                            // Daftar fallback images untuk provider
+                            const providerFallbacks = [
+                                providerImage,
+                                '/images/ev-charging.png',
+                                '/images/ev-default.png',
+                                '/images/placeholder.jpg'
+                            ];
+
+                            // Daftar fallback images untuk lokasi
+                            const locationFallbacks = [
+                                location.image ? `/storage/${location.image}` : null,
+                                '/images/ev-station.png',
+                                '/images/charging-station.png',
+                                '/images/placeholder.jpg'
+                            ].filter(Boolean);
+
+                            // Fungsi untuk mendapatkan gambar pertama yang valid
+                            async function getFirstValidImage(fallbacks) {
+                                for (const url of fallbacks) {
+                                    const validImage = await checkImage(url);
+                                    if (validImage) return validImage;
+                                }
+                                return '/images/no-image.png'; // Final fallback
+                            }
 
                             const customIcon = L.divIcon({
                                 className: 'map-marker',
                                 html: `
                                     <div class="map-marker-pointer"></div>
                                     <div class="map-marker-image">
-                                        <img src="/storage/${providerImage}"
+                                        <img src="${providerImage}"
                                              alt="${providerName}"
-                                             onerror="this.onerror=null; this.src='/images/placeholder.jpg';">
+                                             onerror="(async function(img) {
+                                                const fallbacks = [
+                                                    '/images/ev-charging.png',
+                                                    '/images/ev-default.png',
+                                                    '/images/placeholder.jpg',
+                                                    '/images/no-image.png'
+                                                ];
+                                                for (const url of fallbacks) {
+                                                    try {
+                                                        await fetch(url, { method: 'HEAD' });
+                                                        img.src = url;
+                                                        return;
+                                                    } catch (e) {
+                                                        continue;
+                                                    }
+                                                }
+                                             })(this)"
+                                             loading="lazy">
                                     </div>
                                 `,
                                 iconSize: [40, 50],
@@ -415,11 +438,49 @@
                                     </h3>
 
                                     ${location.image ? `
-                                                                        <img src="/storage/${location.image}"
-                                                                            alt="${location.name || 'Lokasi Tidak Diketahui'}"
-                                                                            class="object-cover mb-2 w-full h-32 rounded"
-                                                                            onerror="this.onerror=null; this.src='/images/placeholder.jpg';">
-                                                                    ` : ''}
+                                                <img src="/storage/${location.image}"
+                                                    alt="${location.name || 'Lokasi Tidak Diketahui'}"
+                                                    class="object-cover mb-2 w-full h-32 rounded"
+                                                    onerror="(async function(img) {
+                                                        const fallbacks = [
+                                                            '/images/ev-station.png',
+                                                            '/images/charging-station.png',
+                                                            '/images/placeholder.jpg',
+                                                            '/images/no-image.png'
+                                                        ];
+                                                        for (const url of fallbacks) {
+                                                            try {
+                                                                await fetch(url, { method: 'HEAD' });
+                                                                img.src = url;
+                                                                return;
+                                                            } catch (e) {
+                                                                continue;
+                                                            }
+                                                        }
+                                                    })(this)"
+                                                    loading="lazy">
+                                            ` : `
+                                                <img src="/images/ev-station.png"
+                                                    alt="Default EV Station"
+                                                    class="object-cover mb-2 w-full h-32 rounded"
+                                                    onerror="(async function(img) {
+                                                        const fallbacks = [
+                                                            '/images/charging-station.png',
+                                                            '/images/placeholder.jpg',
+                                                            '/images/no-image.png'
+                                                        ];
+                                                        for (const url of fallbacks) {
+                                                            try {
+                                                                await fetch(url, { method: 'HEAD' });
+                                                                img.src = url;
+                                                                return;
+                                                            } catch (e) {
+                                                                continue;
+                                                            }
+                                                        }
+                                                    })(this)"
+                                                    loading="lazy">
+                                            `}
 
                                     <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
                                         class="inline-block px-4 py-2 mt-2 text-sm text-white bg-green-500 rounded transition duration-300 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
@@ -466,9 +527,14 @@
                     );
                 }
 
+                // Event listener untuk perubahan filter
                 providerSelect.addEventListener('change', updateMarkers);
                 chargingTypeSelect.addEventListener('change', updateMarkers);
                 locationCategorySelect.addEventListener('change', updateMarkers);
+
+                // Event listener untuk pergerakan peta
+                map.on('moveend', updateMarkers);
+                map.on('zoomend', updateMarkers);
 
                 // Handle user location
                 const locateButton = document.getElementById('locateMe');
@@ -506,6 +572,9 @@
 
                             map.setView(userLatLng, 15);
                             locateButton.classList.remove('locating');
+
+                            // Update markers setelah pindah ke lokasi pengguna
+                            updateMarkers();
                         },
                         function(error) {
                             locateButton.classList.remove('locating');
@@ -526,6 +595,35 @@
                             showError(errorMsg);
                         }
                     );
+                });
+
+                // Event listener untuk lokasi pengguna
+                window.addEventListener('userLocation', function(event) {
+                    const userLatLng = [event.detail.latitude, event.detail.longitude];
+
+                    if (userMarker) {
+                        map.removeLayer(userMarker);
+                    }
+
+                    const userIcon = L.divIcon({
+                        className: 'map-marker map-user-location',
+                        html: `
+                            <div class="map-marker-image">
+                                <div class="map-user-dot"></div>
+                            </div>
+                        `,
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 20]
+                    });
+
+                    userMarker = L.marker(userLatLng, {
+                        icon: userIcon
+                    }).addTo(map);
+
+                    map.setView(userLatLng, 15);
+
+                    // Update markers setelah pindah ke lokasi pengguna
+                    updateMarkers();
                 });
 
                 function showError(message) {
