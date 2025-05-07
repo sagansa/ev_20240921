@@ -438,49 +438,49 @@
                                     </h3>
 
                                     ${location.image ? `
-                                                <img src="/storage/${location.image}"
-                                                    alt="${location.name || 'Lokasi Tidak Diketahui'}"
-                                                    class="object-cover mb-2 w-full h-32 rounded"
-                                                    onerror="(async function(img) {
-                                                        const fallbacks = [
-                                                            '/images/ev-station.png',
-                                                            '/images/charging-station.png',
-                                                            '/images/placeholder.jpg',
-                                                            '/images/no-image.png'
-                                                        ];
-                                                        for (const url of fallbacks) {
-                                                            try {
-                                                                await fetch(url, { method: 'HEAD' });
-                                                                img.src = url;
-                                                                return;
-                                                            } catch (e) {
-                                                                continue;
-                                                            }
-                                                        }
-                                                    })(this)"
-                                                    loading="lazy">
-                                            ` : `
-                                                <img src="/images/ev-station.png"
-                                                    alt="Default EV Station"
-                                                    class="object-cover mb-2 w-full h-32 rounded"
-                                                    onerror="(async function(img) {
-                                                        const fallbacks = [
-                                                            '/images/charging-station.png',
-                                                            '/images/placeholder.jpg',
-                                                            '/images/no-image.png'
-                                                        ];
-                                                        for (const url of fallbacks) {
-                                                            try {
-                                                                await fetch(url, { method: 'HEAD' });
-                                                                img.src = url;
-                                                                return;
-                                                            } catch (e) {
-                                                                continue;
-                                                            }
-                                                        }
-                                                    })(this)"
-                                                    loading="lazy">
-                                            `}
+                                                        <img src="/storage/${location.image}"
+                                                            alt="${location.name || 'Lokasi Tidak Diketahui'}"
+                                                            class="object-cover mb-2 w-full h-32 rounded"
+                                                            onerror="(async function(img) {
+                                                                const fallbacks = [
+                                                                    '/images/ev-station.png',
+                                                                    '/images/charging-station.png',
+                                                                    '/images/placeholder.jpg',
+                                                                    '/images/no-image.png'
+                                                                ];
+                                                                for (const url of fallbacks) {
+                                                                    try {
+                                                                        await fetch(url, { method: 'HEAD' });
+                                                                        img.src = url;
+                                                                        return;
+                                                                    } catch (e) {
+                                                                        continue;
+                                                                    }
+                                                                }
+                                                            })(this)"
+                                                            loading="lazy">
+                                                    ` : `
+                                                        <img src="/images/ev-station.png"
+                                                            alt="Default EV Station"
+                                                            class="object-cover mb-2 w-full h-32 rounded"
+                                                            onerror="(async function(img) {
+                                                                const fallbacks = [
+                                                                    '/images/charging-station.png',
+                                                                    '/images/placeholder.jpg',
+                                                                    '/images/no-image.png'
+                                                                ];
+                                                                for (const url of fallbacks) {
+                                                                    try {
+                                                                        await fetch(url, { method: 'HEAD' });
+                                                                        img.src = url;
+                                                                        return;
+                                                                    } catch (e) {
+                                                                        continue;
+                                                                    }
+                                                                }
+                                                            })(this)"
+                                                            loading="lazy">
+                                                    `}
 
                                     <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
                                         class="inline-block px-4 py-2 mt-2 text-sm text-white bg-green-500 rounded transition duration-300 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
@@ -493,19 +493,19 @@
                                     </p>
 
                                     ${location.pln_charger_location_details?.length ? `
-                                                                        <div class="mt-4">
-                                                                            <h4 class="font-semibold text-blue-700 dark:text-blue-400">Detail Charger:</h4>
-                                                                            <ul class="pl-4 list-disc">
-                                                                                ${location.pln_charger_location_details.map(detail => `
+                                                                                <div class="mt-4">
+                                                                                    <h4 class="font-semibold text-blue-700 dark:text-blue-400">Detail Charger:</h4>
+                                                                                    <ul class="pl-4 list-disc">
+                                                                                        ${location.pln_charger_location_details.map(detail => `
                                                     <li class="text-gray-600 dark:text-gray-300">
                                                         ${detail.merk_charger?.name || 'Tidak Diketahui'} -
                                                         ${detail.power || '0'} -
                                                         (${detail.count_connector_charger || '0'} konektor)
                                                     </li>
                                                 `).join('')}
-                                                                            </ul>
-                                                                        </div>
-                                                                    ` : ''}
+                                                                                    </ul>
+                                                                                </div>
+                                                                            ` : ''}
                                 </div>
                             `);
                             markers.push(marker);

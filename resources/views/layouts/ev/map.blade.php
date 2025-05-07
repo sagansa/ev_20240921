@@ -3,55 +3,9 @@
 @section('title', 'Map - EV Charger')
 
 @section('additional_head')
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
-        #mapid {
-            z-index: 1;
-            height: 100%;
-            width: 100%;
-            transition: all 0.3s ease;
-            border: 2px solid #3b82f6;
-            border-radius: 8px;
-        }
-
-        #mapControls {
-            position: absolute;
-            top: 80px;
-            right: 30px;
-            z-index: 1000;
-            background-color: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s ease;
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        #mapControlsToggle {
-            display: none;
-            position: absolute;
-            top: 130px;
-            right: 20px;
-            z-index: 1001;
-            background-color: white;
-            padding: 10px;
-            border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        #mapControlsToggle:hover {
-            background-color: #f3f4f6;
-            transform: scale(1.05);
-        }
-
         #mapContainer {
             position: relative;
             width: 100%;
@@ -69,92 +23,104 @@
             border-radius: 8px;
         }
 
-        @media (max-width: 767px) {
-            #mapControls {
-                display: flex;
-                top: 70px;
-                right: 20px;
-                flex-direction: column;
-                width: 80%;
-                max-width: 300px;
-                background-color: rgba(255, 255, 255, 0.95);
-                opacity: 0;
-                transform: translateY(-20px);
-                pointer-events: none;
-            }
-
-            #mapControls.show {
-                opacity: 1;
-                transform: translateY(0);
-                pointer-events: auto;
-            }
-
-            #mapControlsToggle {
-                display: block;
-            }
-
-            #mapContainer {
-                height: calc(100vh - 64px);
-                padding: 0;
-            }
-
-            #mapid {
-                border-radius: 0;
-                height: 100%;
-            }
-        }
-
-        #providerSelect,
-        #restAreaSelect,
-        #currentChargerSelect {
-            width: 200px;
-        }
-
-        #mapContainer {
-            position: relative;
+        #mapControls {
+            position: absolute;
+            top: 80px;
+            right: 30px;
+            z-index: 1000;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: all 0.3s ease;
+            max-width: 300px;
             width: 100%;
-            height: calc(100vh - 64px - 2rem);
-            padding: 1rem;
         }
 
-        #mapid {
+        #mapControlsToggle {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            background-color: white;
+            padding: 10px;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+
+        .map-select {
             width: 100%;
-            height: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #374151;
+            background-color: white;
+            transition: all 0.2s;
+        }
+
+        .map-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            ring: 2px solid #3b82f6;
         }
 
         #locateMe {
             position: absolute;
-            bottom: 120px;
+            bottom: 30px;
             right: 30px;
             z-index: 1000;
+            background-color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
         }
 
-        .custom-icon {
-            position: relative;
+        #locateMe:hover {
+            transform: scale(1.1);
+            background-color: #f3f4f6;
+        }
+
+        #locateMe.locating {
+            animation: spin 1s linear infinite;
+        }
+
+        .custom-marker {
             width: 40px;
             height: 50px;
+            position: relative;
         }
 
-        .custom-icon-image {
-            position: absolute;
-            top: 0;
-            left: 0;
+        .custom-marker-image {
             width: 40px;
             height: 40px;
             border-radius: 50%;
             border: 2px solid #3b82f6;
             overflow: hidden;
-            z-index: 2;
             background-color: white;
+            position: relative;
+            z-index: 2;
         }
 
-        .custom-icon-image img {
+        .custom-marker-image img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
 
-        .custom-icon-pointer {
+        .custom-marker-pointer {
             position: absolute;
             bottom: 0;
             left: 50%;
@@ -166,81 +132,166 @@
             z-index: 1;
         }
 
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .popup-content {
+            padding: 16px;
+            max-width: 300px;
+        }
+
+        .popup-content img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        .popup-content h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .popup-content .charger-details {
+            margin-top: 12px;
+            padding-left: 16px;
+            list-style-type: disc;
+        }
+
+        .popup-content .charger-details li {
+            font-size: 14px;
+            color: #4b5563;
+            margin-bottom: 4px;
+        }
+
+        .popup-content .maps-link {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 8px 16px;
+            background-color: #10b981;
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .popup-content .maps-link:hover {
+            background-color: #059669;
+        }
+
         @media (max-width: 767px) {
+            #mapContainer {
+                padding: 0;
+            }
+
             #mapControls {
-                display: none;
-                top: 70px;
-                right: 20px;
-                flex-direction: column;
-                width: 80%;
-                max-width: 300px;
-                background-color: rgba(255, 255, 255, 0.9);
+                top: auto;
+                bottom: 80px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+                background-color: rgba(255, 255, 255, 0.95);
+                transform: translateY(120%);
+                opacity: 0;
+                pointer-events: none;
             }
 
             #mapControls.show {
-                display: flex;
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
             }
 
             #mapControlsToggle {
-                display: block;
-            }
-
-            #mapContainer {
-                height: calc(100vh - 64px);
-                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
             #mapid {
                 border-radius: 0;
-                height: 100%;
+                border: none;
             }
 
             #locateMe {
-                bottom: 60px; // Ubah nilai ini sesuai kebutuhan
+                bottom: 20px;
+                right: 20px;
             }
+        }
+
+        .dark #mapControls {
+            background-color: #1f2937;
+            color: white;
+        }
+
+        .dark .map-select {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: white;
+        }
+
+        .dark .popup-content {
+            background-color: #1f2937;
+            color: white;
+        }
+
+        .dark .popup-content h3 {
+            color: #e5e7eb;
+        }
+
+        .dark .popup-content .charger-details li {
+            color: #d1d5db;
         }
     </style>
 @endsection
 
 @section('content')
     <div class="relative">
-        <button id="mapControlsToggle" class="md:hidden">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-            </svg>
-        </button>
-        <div id="mapControls" class="flex flex-wrap gap-1 mb-0">
-            <div class="flex-1 min-w-[200px]">
-                <select id="providerSelect"
-                    class="py-2 pr-10 pl-3 w-full text-base rounded-md border-gray-300 focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
-                    <option value="">All Providers</option>
+        <div id="mapContainer">
+            <div id="mapid"></div>
+
+            <div id="mapControls">
+                <select id="providerSelect" class="map-select">
+                    <option value="">Semua Provider</option>
                     @foreach ($providers as $provider)
                         <option value="{{ $provider->id }}">{{ $provider->name }}</option>
                     @endforeach
                 </select>
-            </div>
-            <div class="flex-1 min-w-[200px]">
-                <select id="restAreaSelect"
-                    class="py-2 pr-10 pl-3 w-full text-base rounded-md border-gray-300 focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
+
+                <select id="restAreaSelect" class="map-select">
                     <option value="">Rest Area & Non-Rest Area</option>
-                    <option value="1">Rest Area Only</option>
-                    <option value="0">Non-Rest Area Only</option>
+                    <option value="1">Rest Area</option>
+                    <option value="0">Non-Rest Area</option>
                 </select>
-            </div>
-            <div class="flex-1 min-w-[200px]">
-                <select id="currentChargerSelect"
-                    class="py-2 pr-10 pl-3 w-full text-base rounded-md border-gray-300 focus:outline-none focus:ring-ev-blue-500 focus:border-ev-blue-500 sm:text-sm">
-                    <option value="">All Current Types</option>
+
+                <select id="currentChargerSelect" class="map-select">
+                    <option value="">Semua Tipe Arus</option>
                     @foreach ($currentChargers as $currentCharger)
                         <option value="{{ $currentCharger->id }}">{{ $currentCharger->name }}</option>
                     @endforeach
                 </select>
             </div>
-        </div>
-        <div id="mapContainer">
-            <div id="mapid" class="rounded-lg shadow-lg"></div>
-            <button id="locateMe"
-                class="p-2 text-black bg-white rounded border border-gray-300 transition duration-300 hover:bg-gray-100">
+
+            <button id="mapControlsToggle" class="hover:bg-gray-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+            </button>
+
+            <button id="locateMe" title="Temukan lokasi saya">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -254,18 +305,14 @@
 @endsection
 
 @push('scripts')
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
-        require.config({
-            paths: {
-                'leaflet': 'https://unpkg.com/leaflet/dist/leaflet'
-            }
-        });
-
-        require(['leaflet'], function(L) {
+        document.addEventListener('DOMContentLoaded', function() {
             const defaultView = [-6.200000, 106.816666];
             const map = L.map('mapid').setView(defaultView, 13);
-            let userMarker;
             let markers = [];
+            let userMarker;
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
@@ -278,22 +325,51 @@
                 markers.forEach(marker => map.removeLayer(marker));
                 markers = [];
 
+                const bounds = map.getBounds();
+
                 chargerLocations.forEach(location => {
+                    if (!location || location.status === 3) return;
+
+                    const latlng = L.latLng(location.latitude, location.longitude);
+                    if (!bounds.contains(latlng)) return;
+
                     if (
-                        location.status !== 3 &&
-                        (!selectedProvider || location.provider.id.toString() === selectedProvider) &&
-                        (isRestArea === '' || location.is_rest_area.toString() === isRestArea) &&
-                        (!selectedCurrentCharger || location.chargers.some(charger => charger
-                            .current_charger && charger.current_charger.id.toString() ===
-                            selectedCurrentCharger))
+                        (!selectedProvider || location.provider?.id?.toString() === selectedProvider) &&
+                        (isRestArea === '' || location.is_rest_area?.toString() === isRestArea) &&
+                        (!selectedCurrentCharger || location.chargers?.some(charger =>
+                            charger.current_charger?.id?.toString() === selectedCurrentCharger
+                        ))
                     ) {
-                        // Buat ikon kustom untuk setiap provider
+                        const providerImage = location.provider?.image ?
+                            `/storage/${location.provider.image}` :
+                            '/images/placeholder.jpg';
+                        const providerName = location.provider?.name || 'Provider Tidak Diketahui';
+
                         const customIcon = L.divIcon({
-                            className: 'custom-icon',
+                            className: 'custom-marker',
                             html: `
-                                <div class="custom-icon-pointer"></div>
-                                <div class="custom-icon-image">
-                                    <img src="/storage/${location.provider.image}" alt="${location.provider.name}">
+                                <div class="custom-marker-pointer"></div>
+                                <div class="custom-marker-image">
+                                    <img src="${providerImage}"
+                                         alt="${providerName}"
+                                         onerror="(async function(img) {
+                                            const fallbacks = [
+                                                '/images/ev-charging.png',
+                                                '/images/ev-default.png',
+                                                '/images/placeholder.jpg',
+                                                '/images/no-image.png'
+                                            ];
+                                            for (const url of fallbacks) {
+                                                try {
+                                                    await fetch(url, { method: 'HEAD' });
+                                                    img.src = url;
+                                                    return;
+                                                } catch (e) {
+                                                    continue;
+                                                }
+                                            }
+                                         })(this)"
+                                         loading="lazy">
                                 </div>
                             `,
                             iconSize: [40, 50],
@@ -302,40 +378,83 @@
                         });
 
                         let chargersHtml = '';
-                        if (location.chargers && location.chargers.length > 0) {
-                            chargersHtml =
-                                '<h4 class="mt-2 mb-1 font-semibold text-ev-blue-700">Chargers:</h4><ul class="pl-4 list-disc">';
-                            location.chargers.forEach(charger => {
-                                if (!selectedCurrentCharger || (charger.current_charger && charger
-                                        .current_charger.id.toString() === selectedCurrentCharger
-                                    )) {
-                                    const powerCharger = charger.power_charger ? charger
-                                        .power_charger.name : 'N/A';
-                                    const currentCharger = charger.current_charger ? charger
-                                        .current_charger.name : 'N/A';
-                                    const typeCharger = charger.type_charger ? charger.type_charger
-                                        .name : 'N/A';
-                                    const units = charger.unit || 1;
-                                    chargersHtml +=
-                                        `<li class="text-ev-gray-600">${powerCharger} - ${currentCharger} - ${typeCharger} (${units} unit)</li>`;
-                                }
-                            });
-                            chargersHtml += '</ul>';
+                        if (location.chargers?.length > 0) {
+                            chargersHtml = `
+                                <ul class="charger-details">
+                                    ${location.chargers.map(charger => {
+                                        if (!selectedCurrentCharger || charger.current_charger?.id?.toString() === selectedCurrentCharger) {
+                                            return `
+                                                        <li>
+                                                            ${charger.power_charger?.name || 'N/A'} -
+                                                            ${charger.current_charger?.name || 'N/A'} -
+                                                            ${charger.type_charger?.name || 'N/A'}
+                                                            (${charger.unit || 1} unit)
+                                                        </li>
+                                                    `;
+                                        }
+                                        return '';
+                                    }).join('')}
+                                </ul>
+                            `;
                         }
 
                         const marker = L.marker([location.latitude, location.longitude], {
                             icon: customIcon
                         }).bindPopup(`
-                            <div class="p-4 max-w-xs rounded-lg shadow-md bg-ev-white">
-                                <h3 class="mb-2 text-lg font-bold text-ev-blue-800">${location.name}</h3>
-                                ${location.image ? `<img src="/storage/${location.image}" alt="${location.name}" class="object-cover mb-2 w-full h-32 rounded" onerror="this.onerror=null; this.src='/images/placeholder.jpg';">` : ''}
-                                <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
-                                   class="inline-block px-4 py-2 mt-2 text-sm text-white rounded transition duration-300 bg-ev-green-100 hover:bg-ev-green-600"
-                                   target="_blank">
-                                    Open in Google Maps
-                                </a>
+                            <div class="popup-content">
+                                <h3>${location.name || 'Lokasi Tidak Diketahui'}</h3>
+
+                                ${location.image ? `
+                                            <img src="/storage/${location.image}"
+                                                alt="${location.name || 'Lokasi Tidak Diketahui'}"
+                                                onerror="(async function(img) {
+                                                    const fallbacks = [
+                                                        '/images/ev-station.png',
+                                                        '/images/charging-station.png',
+                                                        '/images/placeholder.jpg',
+                                                        '/images/no-image.png'
+                                                    ];
+                                                    for (const url of fallbacks) {
+                                                        try {
+                                                            await fetch(url, { method: 'HEAD' });
+                                                            img.src = url;
+                                                            return;
+                                                        } catch (e) {
+                                                            continue;
+                                                        }
+                                                    }
+                                                })(this)"
+                                                loading="lazy">
+                                        ` : `
+                                            <img src="/images/ev-station.png"
+                                                alt="Default EV Station"
+                                                onerror="(async function(img) {
+                                                    const fallbacks = [
+                                                        '/images/charging-station.png',
+                                                        '/images/placeholder.jpg',
+                                                        '/images/no-image.png'
+                                                    ];
+                                                    for (const url of fallbacks) {
+                                                        try {
+                                                            await fetch(url, { method: 'HEAD' });
+                                                            img.src = url;
+                                                            return;
+                                                        } catch (e) {
+                                                            continue;
+                                                        }
+                                                    }
+                                                })(this)"
+                                                loading="lazy">
+                                        `}
+
                                 ${chargersHtml}
-                                <p class="mb-1 text-ev-gray-600">Contributor: ${location.user ? location.user.name : 'Unknown'}</p>
+
+                                <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
+                                   class="maps-link"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    Buka di Google Maps
+                                </a>
                             </div>
                         `);
                         markers.push(marker);
@@ -344,128 +463,104 @@
                 });
             }
 
-            createMarkers();
-
-            // Provider select functionality
+            // Handle filter updates
             const providerSelect = document.getElementById('providerSelect');
             const restAreaSelect = document.getElementById('restAreaSelect');
             const currentChargerSelect = document.getElementById('currentChargerSelect');
 
-            providerSelect.addEventListener('change', function() {
-                createMarkers(this.value, restAreaSelect.value, currentChargerSelect.value);
-            });
+            function updateMarkers() {
+                createMarkers(
+                    providerSelect.value,
+                    restAreaSelect.value,
+                    currentChargerSelect.value
+                );
+            }
 
-            restAreaSelect.addEventListener('change', function() {
-                createMarkers(providerSelect.value, this.value, currentChargerSelect.value);
-            });
+            providerSelect.addEventListener('change', updateMarkers);
+            restAreaSelect.addEventListener('change', updateMarkers);
+            currentChargerSelect.addEventListener('change', updateMarkers);
 
-            currentChargerSelect.addEventListener('change', function() {
-                createMarkers(providerSelect.value, restAreaSelect.value, this.value);
-            });
+            // Event listeners untuk pergerakan peta
+            map.on('moveend', updateMarkers);
+            map.on('zoomend', updateMarkers);
 
-            function locateUser() {
-                if ("geolocation" in navigator) {
-                    navigator.geolocation.getCurrentPosition(function(position) {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
+            // Handle user location
+            const locateButton = document.getElementById('locateMe');
+
+            locateButton.addEventListener('click', function() {
+                if (!navigator.geolocation) {
+                    alert('Geolokasi tidak didukung oleh browser Anda');
+                    return;
+                }
+
+                locateButton.classList.add('locating');
+
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const userLatLng = [position.coords.latitude, position.coords.longitude];
 
                         if (userMarker) {
                             map.removeLayer(userMarker);
                         }
 
-                        userMarker = L.marker([lat, lng], {
-                            icon: L.icon({
-                                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                                iconSize: [25, 41],
-                                iconAnchor: [12, 41],
-                                popupAnchor: [1, -34],
-                                shadowSize: [41, 41]
+                        userMarker = L.marker(userLatLng, {
+                            icon: L.divIcon({
+                                className: 'custom-marker',
+                                html: `
+                                    <div class="custom-marker-image" style="background-color: #ef4444; border-color: #ef4444;">
+                                        <div style="width: 12px; height: 12px; background-color: white; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+                                    </div>
+                                `,
+                                iconSize: [40, 40],
+                                iconAnchor: [20, 20]
                             })
-                        }).addTo(map).bindPopup("You are here!").openPopup();
+                        }).addTo(map);
 
-                        map.setView([lat, lng], 15);
-                    }, function(error) {
-                        console.error("Error: " + error.message);
-                        alert("Unable to retrieve your location. Using default view.");
-                        map.setView(defaultView, 13);
-                    });
-                } else {
-                    alert("Geolocation is not supported by your browser. Using default view.");
-                    map.setView(defaultView, 13);
-                }
-            }
+                        map.setView(userLatLng, 15);
+                        locateButton.classList.remove('locating');
+                        updateMarkers();
+                    },
+                    function(error) {
+                        locateButton.classList.remove('locating');
+                        let message = 'Terjadi kesalahan saat mencoba mendapatkan lokasi Anda';
 
-            // Attempt to locate user immediately
-            locateUser();
+                        switch (error.code) {
+                            case error.PERMISSION_DENIED:
+                                message = 'Anda menolak permintaan geolokasi';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                message = 'Informasi lokasi tidak tersedia';
+                                break;
+                            case error.TIMEOUT:
+                                message = 'Permintaan untuk mendapatkan lokasi pengguna habis waktu';
+                                break;
+                        }
 
-            // Add click event for manual location refresh
-            document.getElementById('locateMe').addEventListener('click', locateUser);
+                        alert(message);
+                    }
+                );
+            });
 
-            // Tambahkan ini untuk memastikan peta dirender dengan benar setelah semua elemen dimuat
-            setTimeout(function() {
+            // Toggle controls di mobile
+            const mapControlsToggle = document.getElementById('mapControlsToggle');
+            const mapControls = document.getElementById('mapControls');
+
+            mapControlsToggle.addEventListener('click', function() {
+                mapControls.classList.toggle('show');
+            });
+
+            // Initialize markers
+            createMarkers();
+
+            // Trigger map resize after initialization
+            setTimeout(() => {
                 map.invalidateSize();
             }, 100);
 
-            // Tambahkan event listener untuk mengubah ukuran peta saat jendela diubah ukurannya
+            // Resize handler
             window.addEventListener('resize', function() {
                 map.invalidateSize();
             });
-
-            // Tambahkan ini untuk menyesuaikan posisi mapControls dan mapContainer
-            function adjustMapPosition() {
-                const mobileMenu = document.getElementById('mobile-menu');
-                const mapControls = document.getElementById('mapControls');
-                const mapContainer = document.getElementById('mapContainer');
-                const navbarHeight = 64; // Sesuaikan dengan tinggi navbar Anda
-
-                if (window.innerWidth <= 767) {
-                    const mobileMenuHeight = mobileMenu.offsetHeight;
-                    const newTopPosition = navbarHeight + (mobileMenu.classList.contains('hidden') ? 0 :
-                        mobileMenuHeight);
-
-                    mapControls.style.position = 'static';
-                    mapControls.style.top = '';
-                    mapControls.style.right = '';
-                    mapControls.style.left = '';
-                    mapControls.style.background = 'transparent';
-                    mapControls.style.boxShadow = 'none';
-                    mapControls.style.padding = '0';
-                    mapContainer.style.marginTop = '10px';
-                    mapContainer.style.height = `calc(100vh - ${newTopPosition}px - 100px)`;
-                } else {
-                    mapControls.style.position = 'absolute';
-                    mapControls.style.top = '30px';
-                    mapControls.style.right = '30px';
-                    mapControls.style.left = '';
-                    mapControls.style.background = 'white';
-                    mapControls.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-                    mapControls.style.padding = '10px';
-                    mapContainer.style.marginTop = '';
-                    mapContainer.style.height = 'calc(100vh - 64px - 2rem)';
-                }
-
-                map.invalidateSize();
-            }
-
-            // Panggil fungsi saat halaman dimuat dan saat ukuran jendela berubah
-            window.addEventListener('load', adjustMapPosition);
-            window.addEventListener('resize', adjustMapPosition);
-
-            // Tambahkan event listener untuk toggle menu mobile
-            const mobileMenuToggle = document.querySelector('[onclick="toggleMenu()"]');
-            if (mobileMenuToggle) {
-                mobileMenuToggle.addEventListener('click', function() {
-                    setTimeout(adjustMapPosition,
-                        10); // Sedikit delay untuk memastikan transisi menu selesai
-                });
-            }
-        });
-
-        // Tambahkan ini di akhir script
-        document.getElementById('mapControlsToggle').addEventListener('click', function() {
-            const mapControls = document.getElementById('mapControls');
-            mapControls.classList.toggle('show');
         });
     </script>
 @endpush
