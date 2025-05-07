@@ -221,30 +221,31 @@
             }
         }
 
-        .dark .leaflet-tile {
-            filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+        .map-controls {
+            background-color: white;
+            color: #1f2937;
         }
 
-        .dark .leaflet-container {
-            background: #242424;
+        .map-controls select,
+        .map-controls option {
+            background-color: white;
+            color: #1f2937;
+            border-color: #e5e7eb;
         }
 
-        .dark .leaflet-popup-content-wrapper {
-            background-color: #1f2937;
+        .map-controls select:focus {
+            border-color: #3b82f6;
+            outline: none;
+            ring-color: #3b82f6;
         }
 
-        .dark .map-controls {
-            background-color: #1f2937;
-            color: white;
+        .map-controls-toggle {
+            background-color: white;
+            color: #1f2937;
         }
 
-        .dark .map-controls-toggle {
-            background-color: #1f2937;
-            color: white;
-        }
-
-        .dark .map-controls-toggle:hover {
-            background-color: #374151;
+        .map-controls-toggle:hover {
+            background-color: #f3f4f6;
         }
 
         @media (max-width: 767px) {
@@ -263,10 +264,6 @@
                 opacity: 0;
                 transform: translateY(-20px);
                 pointer-events: none;
-            }
-
-            .dark .map-controls {
-                background-color: rgba(31, 41, 55, 0.95);
             }
 
             .map-controls.show {
@@ -291,11 +288,11 @@
 @endsection
 
 @section('content')
-    <div class="relative w-full h-screen bg-white dark:bg-gray-900">
+    <div class="relative w-full h-screen bg-white">
         <x-map.container>
             <x-map.controls :providers="$providers" :charging-types="$chargingTypes" :location-categories="$locationCategories" />
 
-            <div id="mapid" class="w-full h-full rounded-lg border-2 border-ev-blue-500 dark:border-ev-blue-400"></div>
+            <div id="mapid" class="w-full h-full rounded-lg border-2 border-ev-blue-500"></div>
 
             <x-map.locate-button />
         </x-map.container>
@@ -432,80 +429,43 @@
                             const marker = L.marker([location.latitude, location.longitude], {
                                 icon: customIcon
                             }).bindPopup(`
-                                <div class="p-4 max-w-xs bg-white rounded-lg shadow-md dark:bg-gray-800">
-                                    <h3 class="mb-2 text-lg font-bold text-blue-800 dark:text-blue-300">
+                                <div class="p-4 max-w-xs bg-white rounded-lg shadow-md">
+                                    <h3 class="mb-2 text-lg font-bold text-blue-800">
                                         ${location.name || 'Lokasi Tidak Diketahui'}
                                     </h3>
 
-                                    ${location.image ? `
-                                                                <img src="/storage/${location.image}"
-                                                                    alt="${location.name || 'Lokasi Tidak Diketahui'}"
-                                                                    class="object-cover mb-2 w-full h-32 rounded"
-                                                                    onerror="(async function(img) {
-                                                                        const fallbacks = [
-                                                                            '/images/ev-station.png',
-                                                                            '/images/charging-station.png',
-                                                                            '/images/placeholder.jpg',
-                                                                            '/images/no-image.png'
-                                                                        ];
-                                                                        for (const url of fallbacks) {
-                                                                            try {
-                                                                                await fetch(url, { method: 'HEAD' });
-                                                                                img.src = url;
-                                                                                return;
-                                                                            } catch (e) {
-                                                                                continue;
-                                                                            }
-                                                                        }
-                                                                    })(this)"
-                                                                    loading="lazy">
-                                                            ` : `
-                                                                <img src="/images/ev-station.png"
-                                                                    alt="Default EV Station"
-                                                                    class="object-cover mb-2 w-full h-32 rounded"
-                                                                    onerror="(async function(img) {
-                                                                        const fallbacks = [
-                                                                            '/images/charging-station.png',
-                                                                            '/images/placeholder.jpg',
-                                                                            '/images/no-image.png'
-                                                                        ];
-                                                                        for (const url of fallbacks) {
-                                                                            try {
-                                                                                await fetch(url, { method: 'HEAD' });
-                                                                                img.src = url;
-                                                                                return;
-                                                                            } catch (e) {
-                                                                                continue;
-                                                                            }
-                                                                        }
-                                                                    })(this)"
-                                                                    loading="lazy">
-                                                            `}
+
 
                                     <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
-                                        class="inline-block px-4 py-2 mt-2 text-sm text-white bg-green-500 rounded transition duration-300 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
+                                        class="inline-block px-4 py-2 mt-2 text-sm text-white bg-green-500 rounded transition duration-300 hover:bg-green-600"
                                         target="_blank" rel="noopener noreferrer">
                                         Buka di Google Maps
                                     </a>
 
-                                    <p class="mb-1 text-gray-600 dark:text-gray-300">
+                                    <p class="mb-1 text-gray-600">
                                         Kategori Lokasi: ${location.location_category?.name || 'Tidak Diketahui'}
                                     </p>
 
                                     ${location.pln_charger_location_details?.length ? `
-                                                                                        <div class="mt-4">
-                                                                                            <h4 class="font-semibold text-blue-700 dark:text-blue-400">Detail Charger:</h4>
-                                                                                            <ul class="pl-4 list-disc">
-                                                                                                ${location.pln_charger_location_details.map(detail => `
-                                                    <li class="text-gray-600 dark:text-gray-300">
-                                                        ${detail.merk_charger?.name || 'Tidak Diketahui'} -
-                                                        ${detail.power || '0'} -
-                                                        (${detail.count_connector_charger || '0'} konektor)
+                                                                <div class="mt-4">
+                                                                    <h4 class="font-semibold text-blue-700">Detail Charger:</h4>
+                                                                    <ul class="pl-4 list-disc">
+                                                                        ${location.pln_charger_location_details.map(detail => `
+                                                    <li class="text-gray-600">
+                                                        <div class="flex flex-col space-y-1">
+                                                            <span class="font-medium">Merk: ${detail.merk_charger?.name || 'Tidak Diketahui'}</span>
+                                                            <span>Daya: ${detail.power || '0'} kW</span>
+                                                            <span>Jumlah Konektor: ${detail.count_connector_charger || '0'}</span>
+                                                            <span>Status: ${detail.is_active_charger ? 'Aktif' : 'Tidak Aktif'}</span>
+                                                            <span>Kategori: ${detail.charger_category?.name || 'Tidak Diketahui'}</span>
+                                                            <span>Tanggal Operasi: ${detail.operation_date ? new Date(detail.operation_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Tidak Diketahui'}</span>
+                                                            <span>Tahun: ${detail.year || 'Tidak Diketahui'}</span>
+                                                        </div>
                                                     </li>
                                                 `).join('')}
-                                                                                            </ul>
-                                                                                        </div>
-                                                                                    ` : ''}
+                                                                    </ul>
+                                                                </div>
+                                                            ` : '<p class="mt-2 text-gray-500">Tidak ada detail charger</p>'}
                                 </div>
                             `);
                             markers.push(marker);

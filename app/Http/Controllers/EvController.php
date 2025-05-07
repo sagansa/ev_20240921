@@ -14,6 +14,7 @@ use App\Models\Province;
 use App\Models\City;
 use App\Models\LocationCategory;
 use App\Models\PlnChargerLocation;
+use App\Models\PlnChargerLocationDetail;
 use Illuminate\Http\Request;
 
 class EvController extends Controller
@@ -31,20 +32,24 @@ class EvController extends Controller
             'locationCategory',
             'plnChargerLocationDetails',
             'plnChargerLocationDetails.chargerCategory',
-            'plnChargerLocationDetails.merkCharger',
+            'plnChargerLocationDetails.merkCharger'
         ])->get();
 
-        $providers = Provider::has('chargerLocations')->orderBy('name', 'asc')->get();
-        $chargingTypes = ChargingType::orderBy('name', 'asc')->get();
-        $locationCategories = LocationCategory::orderBy('name', 'asc')->get();
+        $latestOperationDate = PlnChargerLocationDetail::orderBy('operation_date', 'desc')
+            ->whereNotNull('operation_date')
+            ->value('operation_date');
 
-        return view('layouts.ev.pln-map',
-            compact(
-                'plnLocations',
-                'providers',
-                'chargingTypes',
-                'locationCategories'
-            ));
+        $providers = Provider::all();
+        $chargingTypes = ChargingType::all();
+        $locationCategories = LocationCategory::all();
+
+        return view('layouts.ev.pln-map', compact(
+            'plnLocations',
+            'providers',
+            'chargingTypes',
+            'locationCategories',
+            'latestOperationDate'
+        ));
     }
 
     public function map()
@@ -298,12 +303,12 @@ class EvController extends Controller
 
     public function plnChargers()
     {
-        $plnChargerDetails = PlnChargerLocation::with([
-            'provider',
-            'locationCategory',
-            'plnChargerLocationDetails',
-            'plnChargerLocationDetails.chargerCategory',
-            'plnChargerLocationDetails.merkCharger'
+        $plnChargerDetails = PlnChargerLocationDetail::with([
+            // 'provider',
+            // 'locationCategory',
+            // 'plnChargerLocationDetails',
+            // 'plnChargerLocationDetails.chargerCategory',
+            // 'plnChargerLocationDetails.merkCharger'
         ])
         ->paginate(10);
 
