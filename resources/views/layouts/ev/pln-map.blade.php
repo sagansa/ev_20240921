@@ -447,25 +447,22 @@
                                     </p>
 
                                     ${location.pln_charger_location_details?.length ? `
-                                                                <div class="mt-4">
-                                                                    <h4 class="font-semibold text-blue-700">Detail Charger:</h4>
-                                                                    <ul class="pl-4 list-disc">
-                                                                        ${location.pln_charger_location_details.map(detail => `
+                                                                                                                                        <div class="mt-4">
+                                                                                                                                            <h4 class="font-semibold text-blue-700">Detail Charger:</h4>
+                                                                                                                                            <ul class="pl-4 list-disc">
+                                                                                                                                                ${location.pln_charger_location_details.map(detail => `
                                                     <li class="text-gray-600">
                                                         <div class="flex flex-col space-y-1">
                                                             <span class="font-medium">Merk: ${detail.merk_charger?.name || 'Tidak Diketahui'}</span>
-                                                            <span>Daya: ${detail.power || '0'} kW</span>
+                                                            <span>Daya: ${detail.power || '0'}</span>
                                                             <span>Jumlah Konektor: ${detail.count_connector_charger || '0'}</span>
-                                                            <span>Status: ${detail.is_active_charger ? 'Aktif' : 'Tidak Aktif'}</span>
-                                                            <span>Kategori: ${detail.charger_category?.name || 'Tidak Diketahui'}</span>
-                                                            <span>Tanggal Operasi: ${detail.operation_date ? new Date(detail.operation_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Tidak Diketahui'}</span>
-                                                            <span>Tahun: ${detail.year || 'Tidak Diketahui'}</span>
+
                                                         </div>
                                                     </li>
                                                 `).join('')}
-                                                                    </ul>
-                                                                </div>
-                                                            ` : '<p class="mt-2 text-gray-500">Tidak ada detail charger</p>'}
+                                                                                                                                            </ul>
+                                                                                                                                        </div>
+                                                                                                                                    ` : '<p class="mt-2 text-gray-500">Tidak ada detail charger</p>'}
                                 </div>
                             `);
                             markers.push(marker);
