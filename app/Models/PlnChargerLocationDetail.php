@@ -15,8 +15,9 @@ class PlnChargerLocationDetail extends Model
         'count_connector_charger',
         'operation_date',
         'year',
-        'charger_category_id',
+        'category_charger_id',
         'merk_charger_id',
+        'charging_type_id',
         ];
 
     public function plnChargerLocation()

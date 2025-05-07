@@ -94,17 +94,6 @@ class ChargerLocationResource extends Resource
         }
 
         return $table
-            // ->modifyQueryUsing(function (Builder $query) {
-            //     if (!Auth::user()->hasRole('super_admin')) {
-            //         $query->where(function ($query) {
-            //             $query->where('status', 2) // verified
-            //                 ->orWhere(function ($query) {
-            //                     $query->where('status', 1) // not verified
-            //                         ->where('user_id', Auth::id());
-            //                 });
-            //         });
-            //     }
-            // })
             ->query($chargerLocations)
             ->poll('60s')
             ->columns([
@@ -149,8 +138,13 @@ class ChargerLocationResource extends Resource
 
                 LocationOnColumn::make('location_on'),
 
+                TextColumn::make('charges_count')
+                    ->label('Total Charge')
+                    ->counts('charges')
+                    ->sortable(),
+
                 TextColumn::make('user.name')
-                    ->visible(fn($record) => auth()->user()->hasRole('super_admin')), // Kondisi visibilitas,
+                    ->visible(fn($record) => auth()->user()->hasRole('super_admin')), // Kondisi visibilitas
             ])
 
             ->filters([
