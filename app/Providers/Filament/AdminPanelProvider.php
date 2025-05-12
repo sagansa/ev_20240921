@@ -31,6 +31,7 @@ class AdminPanelProvider extends PanelProvider
             ->passwordReset()
             ->topNavigation()
             ->emailVerification()
+            ->maxContentWidth('full')
             ->profile()
             ->colors([
                 'primary' => Color::Sky,

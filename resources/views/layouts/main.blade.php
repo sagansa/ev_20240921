@@ -123,13 +123,13 @@
                             </path>
                         </svg>
                     </button>
-                    <div id="map-mobile-dropdown" class="hidden bg-ev-blue-900">
+                    <div id="map-mobile-dropdown" class="hidden px-4 bg-ev-blue-900">
                         <a href="{{ route('pln-map') }}"
-                            class="block px-8 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('pln-map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                            class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('pln-map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
                             PLN Map
                         </a>
                         <a href="{{ route('map') }}"
-                            class="block px-8 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                            class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
                             Community Map
                         </a>
                     </div>
@@ -145,14 +145,14 @@
                             </path>
                         </svg>
                     </button>
-                    <div id="mobile-dropdown" class="hidden bg-ev-blue-900">
+                    <div id="mobile-dropdown" class="hidden px-4 bg-ev-blue-900">
                         <a href="{{ route('chargers') }}"
-                            class="block px-8 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('chargers') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
-                            Community Chargers
+                            class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('pln-map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                            PLN Chargers
                         </a>
                         <a href="{{ route('pln-chargers') }}"
-                            class="block px-8 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('pln-chargers') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
-                            PLN Chargers
+                            class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
+                            Community Chargers
                         </a>
                     </div>
                 </li>
