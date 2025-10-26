@@ -23,6 +23,7 @@
         enableFavorites: @js($enableFavorites),
     })"
     {{ $attributes->merge(['class' => 'interactive-map-container relative w-full ' . $class]) }}
+    style="height: 100vh;"
 >
     <div id="mapid" @class(['absolute inset-0', $mapClass]) style="height: 100%; width: 100%;"></div>
 
@@ -77,7 +78,7 @@
     <div 
         id="mobileFilters" 
         class="mobile-filters absolute z-10 bg-white rounded-lg shadow-lg p-4 flex flex-col gap-3 transition-all duration-300 md:hidden"
-        style="top: 150px; right: 20px; width: 280px; max-width: calc(100% - 40px);"
+        style="top: 150px; right: 20px; width: 280px; max-width: calc(100% - 40px); display: none;"
         x-show="showMobileFilters"
         x-cloak
     >
@@ -120,7 +121,7 @@
         id="locateMe" 
         title="Temukan lokasi saya"
         class="locate-me-button absolute z-10 bg-white border-2 border-ev-blue-500 rounded-full w-12 h-12 flex items-center justify-center shadow-lg cursor-pointer transition-all duration-300 hover:scale-110"
-        style="bottom: 30px; right: 30px; z-index: 1000;"
+        style="bottom: 30px; right: 30px;"
     >
         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ev-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -229,8 +230,8 @@
 
             .locate-me-button {
                 position: absolute;
-                bottom: 30px;
-                right: 30px;
+                bottom: 30px; /* Positioned at the bottom */
+                right: 30px;  /* Positioned at the right */
                 z-index: 1000;
                 width: 48px;
                 height: 48px;
@@ -472,7 +473,10 @@
                     showMobileFilters: false,
                     
                     init() {
-                        this.initMap();
+                        // Wait for DOM to be fully loaded before initializing map
+                        this.$nextTick(() => {
+                            this.initMap();
+                        });
                         this.loadFavorites();
                         
                         // Watch for user location events
@@ -500,6 +504,7 @@
                     toggleMobileFilters() {
                         this.showMobileFilters = !this.showMobileFilters;
                         const filters = document.getElementById('mobileFilters');
+                        
                         if (this.showMobileFilters) {
                             filters.style.display = 'block';
                         } else {
@@ -514,35 +519,37 @@
                             return;
                         }
                         
-                        // Initialize the map
-                        this.map = L.map('mapid').setView(config.defaultLocation, config.defaultZoom);
-                        
-                        // Add tile layer
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            maxZoom: 19,
-                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        }).addTo(this.map);
-                        
-                        // Initialize marker cluster group if enabled
-                        if (config.enableClustering) {
-                            this.markerClusterGroup = L.markerClusterGroup({
-                                spiderfyOnMaxZoom: true,
-                                showCoverageOnHover: false,
-                                zoomToBoundsOnClick: true
-                            });
-                            this.map.addLayer(this.markerClusterGroup);
-                        }
-                        
-                        // Create markers
-                        this.createMarkers();
-                        
-                        // Handle map events
-                        this.map.on('moveend', () => this.filterMarkers());
-                        this.map.on('zoomend', () => this.filterMarkers());
-                        
-                        // Trigger map resize after initialization
+                        // Initialize the map with a small delay to ensure DOM is ready
                         setTimeout(() => {
-                            this.map.invalidateSize();
+                            this.map = L.map('mapid').setView(config.defaultLocation, config.defaultZoom);
+                            
+                            // Add tile layer
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                maxZoom: 19,
+                                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            }).addTo(this.map);
+                            
+                            // Initialize marker cluster group if enabled
+                            if (config.enableClustering) {
+                                this.markerClusterGroup = L.markerClusterGroup({
+                                    spiderfyOnMaxZoom: true,
+                                    showCoverageOnHover: false,
+                                    zoomToBoundsOnClick: true
+                                });
+                                this.map.addLayer(this.markerClusterGroup);
+                            }
+                            
+                            // Create markers
+                            this.createMarkers();
+                            
+                            // Handle map events
+                            this.map.on('moveend', () => this.filterMarkers());
+                            this.map.on('zoomend', () => this.filterMarkers());
+                            
+                            // Trigger map resize after initialization
+                            setTimeout(() => {
+                                this.map.invalidateSize();
+                            }, 100);
                         }, 100);
                     },
                     
