@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('address');
-            $table->unsignedBigInteger('provider_id');
+            $table->char('provider_id', 36);
             $table->string('owner_machine');
             $table->decimal('latitude', 12, 8);
             $table->decimal('longitude', 12, 8);

@@ -15,8 +15,6 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-
     <!-- Styles -->
     @livewireStyles
 </head>
@@ -44,7 +42,6 @@
 
     @stack('modals')
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     @livewireScripts
 </body>
 

@@ -7,47 +7,56 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
-## About Laravel
+## EV Charging Management System
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+This is a Laravel-based application for managing electric vehicle charging infrastructure throughout Indonesia. The system allows users to:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- View and filter charging locations across different providers
+- Access information about EV charging stations from various providers including PLN
+- Track charging session records with detailed cost breakdowns
+- View provider details and contact information
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Key Features
 
-## Learning Laravel
+1. **Location Management**
+   - Interactive map view of charging locations
+   - Filtering by province, city, charging type, and power specifications
+   - Integration with PLN charging locations (public utility provider)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+2. **Provider Management**
+   - Registration and management of charging service providers
+   - Public and private provider access controls
+   - Provider-specific details, pricing, and contact information
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+3. **Charging Session Tracking**
+   - Detailed logging of charging sessions
+   - Cost calculations including taxes and admin fees
+   - Before/after kilometer tracking
+   - kWh consumption measurement
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## System Architecture
 
-## Laravel Sponsors
+The application follows the Laravel MVC architecture with the following components:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- **Frontend**: Blade templates with Tailwind CSS styling
+- **Backend**: Laravel PHP framework with MySQL database
+- **Maps**: Interactive mapping functionality using OpenStreetMap (free alternative to Google Maps)
+- **Authentication**: Laravel Sanctum API authentication
+- **File Storage**: Image uploads for charging session verification
 
-### Premium Partners
+## Deployment
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+To build and deploy the application assets to GitHub:
+
+1. Run `npm run build` to compile the assets
+2. Run `npm run deploy` to automatically commit and push built files to GitHub
+
+Alternatively, you can manually run the deploy script:
+```bash
+./deploy.sh
+```
+
+The system also includes GitHub Actions for automatic deployment to GitHub Pages when pushing to the main branch.
 
 ## Contributing
 

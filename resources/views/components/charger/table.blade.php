@@ -23,7 +23,7 @@
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
                             <x-charger.table.cell>
                                 @if ($charger->chargerLocation && $charger->chargerLocation->latitude && $charger->chargerLocation->longitude)
-                                    <a href="https://www.google.com/maps/search/?api=1&query={{ $charger->chargerLocation->latitude }},{{ $charger->chargerLocation->longitude }}"
+                                    <a href="https://www.openstreetmap.org/?mlat={{ $charger->chargerLocation->latitude }}&mlon={{ $charger->chargerLocation->longitude }}#map=15/{{ $charger->chargerLocation->latitude }}/{{ $charger->chargerLocation->longitude }}"
                                         target="_blank"
                                         class="text-ev-blue-600 hover:text-ev-blue-800 dark:text-ev-blue-400 dark:hover:text-ev-blue-300">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20"

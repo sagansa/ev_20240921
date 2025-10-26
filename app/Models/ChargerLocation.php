@@ -129,4 +129,36 @@ class ChargerLocation extends Model
     {
         return $this->provider->name . ' - ' . $this->name;
     }
+
+    /**
+     * Scope to get charger locations near a given point, ordered by distance
+     *
+     * @param \Illuminate\Database\Query\Builder $query
+     * @param float $latitude
+     * @param float $longitude
+     * @param int $distanceInKm
+     * @return \Illuminate\Database\Query\Builder
+     */
+    public function scopeNear($query, $latitude, $longitude, $distanceInKm = 10)
+    {
+        return $query->selectRaw("
+            *,
+            (6371 * acos(
+                cos(radians(?)) * 
+                cos(radians(latitude)) * 
+                cos(radians(longitude) - radians(?)) + 
+                sin(radians(?)) * 
+                sin(radians(latitude))
+            )) AS distance
+        ", [$latitude, $longitude, $latitude])
+        ->whereRaw("
+            (6371 * acos(
+                cos(radians(?)) * 
+                cos(radians(latitude)) * 
+                cos(radians(longitude) - radians(?)) + 
+                sin(radians(?)) * 
+                sin(radians(latitude))
+            )) < ?", [$latitude, $longitude, $latitude, $distanceInKm])
+        ->orderBy('distance');
+    }
 }

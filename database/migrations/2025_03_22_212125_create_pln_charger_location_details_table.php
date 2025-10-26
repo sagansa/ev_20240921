@@ -16,11 +16,11 @@ return new class extends Migration
             $table->unsignedBigInteger('pln_charger_location_id');
             $table->string('power');
             $table->string('is_active_charger');
-            $table->int('count_connector_charger');
+            $table->integer('count_connector_charger');
             $table->date('operation_date');
             $table->year('year');
             $table->unsignedBigInteger('charger_category_id');
-            $table->unsignedBigInteger('merk_charger_id');
+            $table->char('merk_charger_id', 36);
             $table->timestamps();
 
             $table->foreign('pln_charger_location_id')

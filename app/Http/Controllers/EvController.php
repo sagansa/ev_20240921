@@ -15,6 +15,7 @@ use App\Models\City;
 use App\Models\LocationCategory;
 use App\Models\PlnChargerLocation;
 use App\Models\PlnChargerLocationDetail;
+use App\Services\GeocodingService;
 use Illuminate\Http\Request;
 
 class EvController extends Controller
@@ -42,13 +43,15 @@ class EvController extends Controller
         $providers = Provider::all();
         $chargingTypes = ChargingType::all();
         $locationCategories = LocationCategory::all();
+        $evYoutubeVideoId = config('services.youtube.ev_video_id');
 
         return view('layouts.ev.pln-map', compact(
             'plnLocations',
             'providers',
             'chargingTypes',
             'locationCategories',
-            'latestOperationDate'
+            'latestOperationDate',
+            'evYoutubeVideoId'
         ));
     }
 
@@ -68,8 +71,10 @@ class EvController extends Controller
 
         $providers = Provider::has('chargerLocations')->orderBy('name', 'asc')->get();
         $currentChargers = CurrentCharger::orderBy('name', 'asc')->get();
+        $chargingTypes = ChargingType::all(); // Add this line to fix the undefined variable error
+        $locationCategories = LocationCategory::all(); // Also add location categories for consistency
 
-        return view('layouts.ev.map', compact('chargerLocations', 'providers', 'currentChargers'));
+        return view('layouts.ev.map', compact('chargerLocations', 'providers', 'currentChargers', 'chargingTypes', 'locationCategories'));
     }
 
     public function providers(Request $request)
@@ -308,10 +313,68 @@ class EvController extends Controller
             // 'locationCategory',
             // 'plnChargerLocationDetails',
             // 'plnChargerLocationDetails.chargerCategory',
-            // 'plnChargerLocationDetails.merkCharger'
+            // 'plnChargerLocationDetails.merkCharger',
         ])
         ->paginate(10);
 
         return view('layouts.ev.pln-chargers', compact('plnChargerDetails'));
+    }
+
+    public function searchAddress(Request $request)
+    {
+        $request->validate([
+            'address' => 'required|string|max:255',
+        ]);
+
+        $geocodingService = new GeocodingService();
+        $coordinates = $geocodingService->geocodeAddress($request->address);
+
+        if ($coordinates) {
+            return response()->json([
+                'success' => true,
+                'data' => $coordinates
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Address not found'
+            ], 404);
+        }
+    }
+
+    public function findNearbyChargers(Request $request)
+    {
+        $request->validate([
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
+            'radius' => 'nullable|numeric|min:1|max:50', // in kilometers
+        ]);
+
+        $latitude = $request->latitude;
+        $longitude = $request->longitude;
+        $radius = $request->radius ?? 10; // default to 10 km if not provided
+
+        $nearbyChargers = ChargerLocation::with([
+            'provider',
+            'city',
+            'chargers.powerCharger',
+            'chargers.currentCharger',
+            'chargers.typeCharger',
+            'user'
+        ])
+        ->where('location_on', ['1', '3'])
+        ->where('status', '<>', 3)
+        ->near($latitude, $longitude, $radius)
+        ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $nearbyChargers
+        ]);
+    }
+
+    public function showFindNearbyChargers()
+    {
+        return view('layouts.ev.find-nearby-chargers');
     }
 }

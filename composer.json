@@ -11,7 +11,7 @@
         "php": "^8.2",
         "ariaieboy/filament-currency": "^1.9",
         "bezhansalleh/filament-shield": "^3.2",
-        "cheesegrits/filament-google-maps": "^3.0",
+
         "filament/filament": "^3.2",
         "flowframe/laravel-trend": "^0.2.0",
         "humaidem/filament-map-picker": "^0.1.5",

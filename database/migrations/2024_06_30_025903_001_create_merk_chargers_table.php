@@ -13,7 +13,7 @@ return new class extends Migration {
     public function up()
     {
         Schema::create('merk_chargers', function (Blueprint $table) {
-            $table->char('id', 36)->index();
+            $table->char('id', 36)->primary();
             $table->string('name', 255);
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
