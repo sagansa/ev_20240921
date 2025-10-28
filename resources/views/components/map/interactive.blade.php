@@ -411,19 +411,25 @@
 
             .custom-marker {
                 position: relative;
-                display: inline-block;
+                display: inline-flex;
+                align-items: flex-start;
+                justify-content: center;
                 transition: transform 0.2s ease;
             }
 
             .custom-marker:hover {
-                transform: scale(1.05);
+                transform: translateY(-2px) scale(1.03);
                 z-index: 1002;
             }
 
             .marker-pin {
                 position: relative;
-                width: var(--pin-width, 44px);
-                height: var(--pin-height, 60px);
+                width: var(--pin-width, 46px);
+                height: var(--pin-height, 64px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                filter: drop-shadow(0 6px 12px rgba(15, 23, 42, 0.18));
             }
 
             .marker-pin__shape {
@@ -434,13 +440,15 @@
 
             .marker-pin__avatar {
                 position: absolute;
-                top: calc(var(--pin-height, 60px) * 0.38);
-                left: 50%;
-                transform: translate(-50%, -50%);
-                width: var(--pin-avatar, 28px);
-                height: var(--pin-avatar, 28px);
+                inset: calc(var(--pin-height, 64px) * 0.18) auto auto 50%;
+                transform: translate(-50%, 0);
+                width: var(--pin-avatar, 30px);
+                height: var(--pin-avatar, 30px);
                 border-radius: 9999px;
                 background-color: #ffffff;
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
                 box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--pin-stroke, #1d4ed8);
                 display: flex;
                 align-items: center;
@@ -448,25 +456,19 @@
                 overflow: hidden;
             }
 
-            .marker-pin__avatar img {
-                width: 100%;
-                height: 100%;
-                object-fit: contain;
-            }
-
             .marker-pin__avatar span {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                font-size: calc(var(--pin-avatar, 28px) * 0.42);
+                font-size: calc(var(--pin-avatar, 30px) * 0.44);
                 font-weight: 600;
                 color: var(--pin-stroke, #1d4ed8);
                 text-transform: uppercase;
-                letter-spacing: 0.04em;
+                letter-spacing: 0.05em;
             }
 
             .marker-pin__avatar--initials {
-                background-color: #eff6ff;
+                background-color: #f8fafc;
             }
 
             .custom-marker.map-user-location {
@@ -1044,11 +1046,11 @@
                                 <path d="M16 1C7.725 1 1 7.725 1 16c0 10.021 10.388 23.494 14.555 28.43a1.5 1.5 0 002.29 0C22.012 39.494 32 26.021 32 16 32 7.725 24.275 1 16 1Z" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2" />
                             </svg>
                         `;
+                        const avatarStyle = hasLogo
+                            ? `style="background-image:url('${this.escapeForCssUrl(providerLogo)}');"`
+                            : '';
                         const avatarMarkup = `
-                            <div class="marker-pin__avatar ${hasLogo ? '' : 'marker-pin__avatar--initials'}">
-                                ${hasLogo
-                                    ? `<img src="${this.escapeHtml(providerLogo)}" alt="${providerName}" loading="lazy" onerror="this.style.display='none'; const span=this.nextElementSibling; if(span){span.style.display='inline-flex';}">`
-                                    : ''}
+                            <div class="marker-pin__avatar ${hasLogo ? '' : 'marker-pin__avatar--initials'}" ${avatarStyle}>
                                 <span style="display:${hasLogo ? 'none' : 'inline-flex'};">${providerInitials}</span>
                             </div>
                         `;
