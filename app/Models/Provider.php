@@ -13,7 +13,19 @@ class Provider extends Model
 
     protected $connection = 'ev'; // Use the sagansa database connection
 
-    protected $guarded = [];
+    protected $build = [
+        'id',
+        'name',
+        'image',
+        'status',
+        'contact',
+        'address',
+        'province_id',
+        'city_id',
+        'district_id',
+        'subdistrict_id',
+        'postal_code_id',
+    ];
 
     public function chargerLocations()
     {

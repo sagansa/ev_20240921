@@ -29,15 +29,25 @@
     <div class="max-w-4xl mx-auto">
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
             <!-- YouTube Video Player -->
-            <div class="relative pt-[56.25%]"> <!-- 16:9 Aspect Ratio -->
-                <iframe 
-                    class="absolute top-0 left-0 w-full h-full"
-                    src="https://www.youtube.com/embed/{{ $video->video_id }}"
-                    title="{{ $video->title }}"
-                    frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen>
-                </iframe>
+            <div class="relative pt-[56.25%]" id="youtube-player-wrapper-{{ $video->id }}">
+                <div 
+                    id="youtube-player-{{ $video->id }}"
+                    class="absolute inset-0 w-full h-full"
+                    data-video-id="{{ $video->video_id }}"
+                    role="presentation"
+                ></div>
+                <div 
+                    id="youtube-player-fallback-{{ $video->id }}"
+                    class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-ev-gray-100 text-center px-6 hidden"
+                >
+                    <p class="text-ev-gray-700 font-medium">Video tidak dapat diputar langsung di situs ini.</p>
+                    <a href="https://www.youtube.com/watch?v={{ $video->video_id }}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="inline-flex items-center px-4 py-2 bg-ev-blue-600 text-white text-sm font-semibold rounded-lg shadow hover:bg-ev-blue-700 transition">
+                        Buka di YouTube
+                    </a>
+                </div>
             </div>
 
             <div class="p-6">
@@ -74,3 +84,83 @@
     </div>
 </div>
 @endsection
+
+@once
+    @push('scripts')
+        <script>
+            window.evYoutube = window.evYoutube || {
+                ready: false,
+                queue: [],
+                loading: false,
+            };
+
+            window.evYoutube.loadApi = function () {
+                if (window.evYoutube.loading) return;
+                window.evYoutube.loading = true;
+                if (document.getElementById('youtube-iframe-api')) {
+                    return;
+                }
+                const tag = document.createElement('script');
+                tag.id = 'youtube-iframe-api';
+                tag.src = 'https://www.youtube.com/iframe_api';
+                document.head.appendChild(tag);
+                window.onYouTubeIframeAPIReady = function () {
+                    window.evYoutube.ready = true;
+                    window.evYoutube.queue.forEach(fn => fn());
+                    window.evYoutube.queue = [];
+                };
+            };
+
+            window.evYoutube.initPlayer = function ({ playerId, videoId, fallbackId }) {
+                const createPlayer = () => {
+                    try {
+                        const player = new YT.Player(playerId, {
+                            videoId,
+                            playerVars: {
+                                rel: 0,
+                                modestbranding: 1,
+                                playsinline: 1,
+                                origin: window.location.origin,
+                            },
+                            events: {
+                                onError: () => window.evYoutube.showFallback(fallbackId),
+                            },
+                        });
+                        return player;
+                    } catch (error) {
+                        console.error('YouTube player init error', error);
+                        window.evYoutube.showFallback(fallbackId);
+                    }
+                };
+
+                if (window.evYoutube.ready && window.YT && window.YT.Player) {
+                    createPlayer();
+                } else {
+                    window.evYoutube.queue.push(createPlayer);
+                    window.evYoutube.loadApi();
+                }
+            };
+
+            window.evYoutube.showFallback = function (fallbackId) {
+                const fallback = document.getElementById(fallbackId);
+                if (fallback) {
+                    fallback.classList.remove('hidden');
+                }
+            };
+        </script>
+    @endpush
+@endonce
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.evYoutube) {
+                window.evYoutube.initPlayer({
+                    playerId: 'youtube-player-{{ $video->id }}',
+                    videoId: '{{ $video->video_id }}',
+                    fallbackId: 'youtube-player-fallback-{{ $video->id }}',
+                });
+            }
+        });
+    </script>
+@endpush
