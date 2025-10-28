@@ -25,6 +25,15 @@ else
     exit 1
 fi
 
+# Ask for confirmation before syncing with GitHub
+echo -e "${YELLOW}Do you want to add, commit, and push the build output to GitHub?${NC}"
+read -r -p "Proceed with GitHub sync? (y/N): " CONFIRM_GITHUB_SYNC
+
+if [[ ! "$CONFIRM_GITHUB_SYNC" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+    echo -e "${YELLOW}GitHub sync skipped. Build artifacts remain only on your local machine.${NC}"
+    exit 0
+fi
+
 # Add built files to git (force add because public/build is in .gitignore)
 echo -e "${YELLOW}Adding built files to git...${NC}"
 git add -f public/build/

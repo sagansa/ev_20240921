@@ -366,6 +366,16 @@ To avoid additional costs associated with Google Maps API usage, the system has 
 3. Limited interactivity in current map views
 4. Missing features for enhanced user experience
 
+### Map Rendering Status (2024-09-21)
+- Leaflet-based map is now visible on both community and PLN views.
+- The first QA pass after enabling the map surfaced several UX items (now tracked and resolved in the same iteration):
+  1. Popup links were still pointing to OpenStreetMap; they now launch Google Maps.
+  2. Marker artwork (especially PLN assets) was oversized and has been resized/tuned.
+  3. PLN and community datasets now ship with distinct marker styling to reflect their different data sources.
+  4. Navigation dropdowns previously hid under the map canvas; header layering has been corrected.
+  5. Map pages now occupy the full viewport height beneath the fixed header with scrolling disabled.
+  6. Floating controls (locate button and filters) have elevated z-indexes so they stay visible above map tiles.
+
 ### Refactor Goals:
 1. **Consistency**: Unify map components to share common styling, functionality, and structure
 2. **Enhanced Interactivity**: Add new interactive features like:

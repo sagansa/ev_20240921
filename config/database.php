@@ -64,12 +64,31 @@ return [
 
         'ev' => [
             'driver' => 'mysql',
-            'url' => env('DB_URL'),
+            'url' => env('DB_EV_URL', env('DB_URL')),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_DATABASE', 'ev'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        'sagansa' => [
+            'driver' => 'mysql',
+            'url' => env('DB_SAGANSA_URL', env('DB_URL')),
             'host' => env('DB_SAGANSA_HOST', '127.0.0.1'),
             'port' => env('DB_SAGANSA_PORT', '3306'),
-            'database' => env('DB_SAGANSA_DATABASE', 'ev'),
+            'database' => env('DB_SAGANSA_DATABASE', 'sagansa'),
             'username' => env('DB_SAGANSA_USERNAME', 'root'),
-            'password' => env('DB_SAGANSA_PASSWORD', 'root'),
+            'password' => env('DB_SAGANSA_PASSWORD', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
             'prefix' => '',
@@ -147,6 +166,7 @@ return [
     'migrations' => [
         'table' => 'migrations',
         'update_date_on_publish' => true,
+        'connection' => env('DB_MIGRATIONS_CONNECTION', env('DB_CONNECTION', 'mysql')),
     ],
 
     /*

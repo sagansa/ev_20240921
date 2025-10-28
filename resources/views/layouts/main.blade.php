@@ -33,6 +33,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @yield('additional_head')
     @livewireStyles
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
 
     <!-- Google Tag Manager -->
         <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -54,7 +55,7 @@
     @endif
 </head>
 
-<body class="flex flex-col min-h-screen bg-ev-white text-ev-gray-800">
+<body class="flex flex-col min-h-screen bg-ev-white text-ev-gray-800 @yield('body_class')">
     <nav class="fixed top-0 z-50 w-full bg-opacity-90 bg-ev-blue-800">
         <div class="container px-4 mx-auto">
             <div class="flex items-center justify-between py-4">
@@ -125,7 +126,7 @@
                             class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('products') ? 'font-bold text-ev-green-400' : '' }}">Products</a>
                     </li>
                     <li><a href="{{ route('youtube.index') }}"
-                            class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('youtube.index') ? 'font-bold text-ev-green-400' : '' }}">YouTube Collection</a>
+                            class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('youtube.index') ? 'font-bold text-ev-green-400' : '' }}">Insights & Stories</a>
                     </li>
                     <li><a href="{{ route('contact') }}"
                             class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('contact') ? 'font-bold text-ev-green-400' : '' }}">Contact
@@ -207,7 +208,7 @@
                         class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('products') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Products</a>
                 </li>
                 <li><a href="{{ route('youtube.index') }}"
-                        class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('youtube.index') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">YouTube Collection</a>
+                        class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('youtube.index') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Insights & Stories</a>
                 </li>
                 <li><a href="{{ route('contact') }}"
                         class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('contact') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Contact
@@ -240,7 +241,11 @@
         </div>
     </nav>
 
-    <div class="flex-grow pt-16 md:pt-16">
+    @php
+        $contentClasses = trim($__env->yieldContent('content_classes', 'flex-grow pt-16 md:pt-16'));
+    @endphp
+
+    <div class="{{ $contentClasses }}">
         @yield('content')
     </div>
 

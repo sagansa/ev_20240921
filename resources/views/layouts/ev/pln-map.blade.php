@@ -1,5 +1,8 @@
 @extends('layouts.main')
 
+@section('body_class', 'map-page')
+@section('content_classes', 'flex-grow pt-0 md:pt-0 overflow-hidden')
+
 @section('title', 'Lokasi Charging Station EV di Indonesia | Peta Stasiun Pengisian Kendaraan Listrik')
 
 @section('additional_head')
@@ -27,12 +30,13 @@
 @endsection
 
 @section('content')
-    <div class="relative w-full h-screen bg-white">
+    <div class="relative w-full bg-white">
         <x-map.interactive 
             :locations="$plnLocations"
             :providers="$providers"
             :charging-types="$chargingTypes"
             :location-categories="$locationCategories"
+            map-type="pln"
         />
     </div>
     
