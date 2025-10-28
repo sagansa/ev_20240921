@@ -411,73 +411,97 @@
 
             .custom-marker {
                 position: relative;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
+                display: inline-block;
                 transition: transform 0.2s ease;
             }
 
             .custom-marker:hover {
-                transform: scale(1.08);
+                transform: scale(1.05);
                 z-index: 1002;
             }
 
             .marker-pin {
                 position: relative;
-                width: var(--pin-width, 30px);
-                height: var(--pin-height, 42px);
+                width: var(--pin-width, 44px);
+                height: var(--pin-height, 60px);
             }
 
-            .marker-pin__body {
-                position: absolute;
-                inset: 0;
-                background-color: var(--pin-fill, #3b82f6);
-                mask: url('/svg/pinpoint.svg') no-repeat center;
-                mask-size: contain;
-                -webkit-mask: url('/svg/pinpoint.svg') no-repeat center;
-                -webkit-mask-size: contain;
+            .marker-pin__shape {
+                display: block;
+                width: 100%;
+                height: 100%;
             }
 
-            .marker-pin__logo {
+            .marker-pin__avatar {
                 position: absolute;
-                top: 40%;
+                top: calc(var(--pin-height, 60px) * 0.38);
                 left: 50%;
                 transform: translate(-50%, -50%);
-                width: var(--pin-logo, 16px);
-                height: var(--pin-logo, 16px);
+                width: var(--pin-avatar, 28px);
+                height: var(--pin-avatar, 28px);
                 border-radius: 9999px;
                 background-color: #ffffff;
-                border: 1.5px solid var(--pin-stroke, #1d4ed8);
+                box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--pin-stroke, #1d4ed8);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 overflow: hidden;
             }
 
-            .marker-pin__logo img {
+            .marker-pin__avatar img {
                 width: 100%;
                 height: 100%;
                 object-fit: contain;
             }
 
-            .marker-pin__logo span {
+            .marker-pin__avatar span {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                font-size: calc(var(--pin-logo, 16px) * 0.55);
+                font-size: calc(var(--pin-avatar, 28px) * 0.42);
                 font-weight: 600;
                 color: var(--pin-stroke, #1d4ed8);
                 text-transform: uppercase;
-                letter-spacing: 0.02em;
+                letter-spacing: 0.04em;
             }
 
-            .marker-pin__logo.marker-pin__logo--initials {
+            .marker-pin__avatar--initials {
                 background-color: #eff6ff;
             }
 
-            .map-user-location .custom-marker-image {
-                border-color: #3b82f6;
+            .custom-marker.map-user-location {
+                width: 32px;
+                height: 48px;
+                display: flex;
+                align-items: flex-start;
+                justify-content: center;
+            }
+
+            .custom-marker.map-user-location .custom-marker-image {
+                position: absolute;
+                top: 4px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                border: 3px solid #ffffff;
+                box-shadow: 0 0 0 2px #3b82f6;
                 background-color: #ffffff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .custom-marker.map-user-location .custom-marker-pointer {
+                position: absolute;
+                bottom: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 18px;
+                height: 18px;
+                background-color: #3b82f6;
+                clip-path: polygon(50% 100%, 0 0, 100% 0);
             }
 
             .map-user-dot {
@@ -1006,18 +1030,24 @@
                         const isPln = this.mapType === 'pln';
                         const fillColor = isPln ? '#10b981' : '#3b82f6';
                         const strokeColor = isPln ? '#047857' : '#1d4ed8';
-                        const iconSize = isPln ? [28, 42] : [30, 44];
-                        const iconAnchor = [iconSize[0] / 2, iconSize[1]];
-                        const popupAnchor = [0, -iconSize[1] + 12];
-                        const logoSize = Math.max(16, Math.round(iconSize[0] * 0.55));
+                        const iconWidth = isPln ? 42 : 44;
+                        const iconHeight = Math.round(iconWidth * 1.35);
+                        const avatarSize = Math.round(iconWidth * 0.58);
+                        const iconAnchor = [iconWidth / 2, iconHeight];
+                        const popupAnchor = [0, -iconHeight + 12];
                         const providerLogo = this.getProviderLogo(location);
-                        const markerStyle = `--pin-width:${iconSize[0]}px;--pin-height:${iconSize[1]}px;--pin-fill:${fillColor};--pin-stroke:${strokeColor};--pin-logo:${logoSize}px;`;
+                        const markerStyle = `--pin-width:${iconWidth}px;--pin-height:${iconHeight}px;--pin-stroke:${strokeColor};--pin-avatar:${avatarSize}px;`;
                         const providerInitials = this.getInitials(providerNameRaw);
                         const hasLogo = !!providerLogo;
-                        const logoMarkup = `
-                            <div class="marker-pin__logo ${hasLogo ? '' : 'marker-pin__logo--initials'}">
+                        const svgMarkup = `
+                            <svg class="marker-pin__shape" viewBox="0 0 32 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M16 1C7.725 1 1 7.725 1 16c0 10.021 10.388 23.494 14.555 28.43a1.5 1.5 0 002.29 0C22.012 39.494 32 26.021 32 16 32 7.725 24.275 1 16 1Z" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2" />
+                            </svg>
+                        `;
+                        const avatarMarkup = `
+                            <div class="marker-pin__avatar ${hasLogo ? '' : 'marker-pin__avatar--initials'}">
                                 ${hasLogo
-                                    ? `<img src="${this.escapeHtml(providerLogo)}" alt="${providerName}" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">`
+                                    ? `<img src="${this.escapeHtml(providerLogo)}" alt="${providerName}" loading="lazy" onerror="this.style.display='none'; const span=this.nextElementSibling; if(span){span.style.display='inline-flex';}">`
                                     : ''}
                                 <span style="display:${hasLogo ? 'none' : 'inline-flex'};">${providerInitials}</span>
                             </div>
@@ -1027,20 +1057,14 @@
                             className: `custom-marker ${markerVariant}`,
                             html: `
                                 <div class="marker-pin" style="${markerStyle}">
-                                    <div class="marker-pin__body"></div>
-                                    ${logoMarkup}
+                                    ${svgMarkup}
+                                    ${avatarMarkup}
                                 </div>
                             `,
-                            iconSize,
+                            iconSize: [iconWidth, iconHeight],
                             iconAnchor,
                             popupAnchor,
                         });
-                    },
-                    
-                    getMarkerSize() {
-                        return this.mapType === 'pln'
-                            ? [24, 34]
-                            : [26, 36];
                     },
                     
                     getProviderLogo(location) {
