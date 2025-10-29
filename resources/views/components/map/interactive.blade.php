@@ -1083,26 +1083,10 @@
                     },
 
                     getProviderLogo(location) {
-                        const provider = location.provider || {};
-                        const candidates = [
-                            location.image,
-                            provider.marker_icon,
-                            provider.logo,
-                            provider.image,
-                            location.provider_logo,
-                            location.logo,
-                            '/images/placeholder.jpg',
-                            '/images/ev-charging.png',
-                        ];
+                        const provider = location?.provider;
+                        const normalized = this.normalizeStoragePath(provider?.image);
 
-                        for (const candidate of candidates) {
-                            const normalized = this.normalizeStoragePath(candidate);
-                            if (normalized) {
-                                return normalized;
-                            }
-                        }
-
-                        return '/images/ev-charging.png';
+                        return normalized || '/images/ev-charging.png';
                     },
 
                     getInitials(name) {
