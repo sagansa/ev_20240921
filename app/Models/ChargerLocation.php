@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Str;
 
 class ChargerLocation extends Model
 {
@@ -40,6 +42,13 @@ class ChargerLocation extends Model
     ];
 
     protected $withCount = ['charges'];
+
+    protected function image(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $this->resolveMediaPath($value) ?? '/images/ev-station.png',
+        );
+    }
 
     public function provider()
     {
@@ -128,6 +137,32 @@ class ChargerLocation extends Model
     public function getChargerLocationNameAttribute()
     {
         return $this->provider->name . ' - ' . $this->name;
+    }
+
+    protected function resolveMediaPath($path): ?string
+    {
+        if (!is_string($path)) {
+            return null;
+        }
+
+        $trimmed = trim($path);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (Str::startsWith($trimmed, ['http://', 'https://'])) {
+            return $trimmed;
+        }
+
+        if (Str::startsWith($trimmed, ['/'])) {
+            return $trimmed;
+        }
+
+        if (Str::startsWith($trimmed, ['storage/'])) {
+            return '/' . ltrim($trimmed, '/');
+        }
+
+        return '/storage/' . ltrim($trimmed, '/');
     }
 
     /**
