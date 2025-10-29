@@ -28,11 +28,9 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-
     <style>
-        .map-container {
+        #mapContainer {
             position: relative;
             width: 100%;
             height: calc(100vh - 64px);
@@ -45,71 +43,153 @@
             height: 100%;
             width: 100%;
             transition: all 0.3s ease;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
         }
 
-        .map-controls {
+        #mapControls {
             position: absolute;
             top: 80px;
             right: 30px;
             z-index: 1000;
             background-color: white;
-            padding: 10px;
+            padding: 15px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             display: flex;
-            align-items: center;
+            flex-direction: column;
             gap: 10px;
             transition: all 0.3s ease;
-            opacity: 1;
-            transform: translateY(0);
+            max-width: 300px;
+            width: 100%;
         }
 
-        .map-controls-toggle {
+        #mapControlsToggle {
             display: none;
             position: absolute;
-            top: 130px;
+            top: 20px;
             right: 20px;
             z-index: 1001;
             background-color: white;
             padding: 10px;
             border-radius: 50%;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
             cursor: pointer;
         }
 
-        .map-controls-toggle:hover {
+        #mapControlsToggle:hover {
             background-color: #f3f4f6;
             transform: scale(1.05);
         }
 
-        .map-locate-button {
+        .map-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #374151;
+            background-color: white;
+            transition: all 0.2s;
+        }
+
+        .map-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            ring: 2px solid #3b82f6;
+        }
+
+        #mapControls .map-search {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        #mapControls .map-search-input {
+            display: flex;
+            gap: 8px;
+        }
+
+        #mapControls .map-search-input input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        #mapControls .map-search-input input:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        #mapControls .map-search-input button {
+            padding: 8px 12px;
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        #mapControls .map-search-input button:hover {
+            background-color: #2563eb;
+        }
+
+        #mapControls .map-search-results {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background-color: white;
+            margin-top: 4px;
+            display: none;
+            box-shadow: 0 8px 12px -8px rgba(15, 23, 42, 0.15);
+        }
+
+        #mapControls .map-search-results ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        #mapControls .map-search-results li {
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        #mapControls .map-search-results li:hover {
+            background-color: #f3f4f6;
+        }
+
+        #locateMe {
             position: absolute;
-            bottom: 120px;
+            bottom: 30px;
             right: 30px;
             z-index: 1000;
-            width: 40px;
-            height: 40px;
             background-color: white;
-            border: 2px solid #3b82f6;
+            border: none;
             border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        .map-locate-button:hover {
+        #locateMe:hover {
             transform: scale(1.1);
-            background-color: #3b82f6;
-            color: white;
+            background-color: #f3f4f6;
         }
 
-        .map-locate-button.locating {
-            background-color: #3b82f6;
-            color: white;
+        #locateMe.locating {
             animation: spin 1s linear infinite;
         }
 
@@ -134,8 +214,8 @@
             border-radius: 50%;
             border: 2px solid #3b82f6;
             overflow: hidden;
-            z-index: 2;
             background-color: white;
+            z-index: 2;
         }
 
         .map-marker-image img {
@@ -156,154 +236,179 @@
             z-index: 1;
         }
 
-        .map-user-location .map-marker-image {
-            border-color: #3b82f6;
-            background-color: #ffffff;
+        .popup-content {
+            padding: 16px;
+            max-width: 320px;
         }
 
-        .map-user-dot {
-            width: 16px;
-            height: 16px;
-            background-color: #3b82f6;
-            border-radius: 50%;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            animation: pulse 2s infinite;
+        .popup-content h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
         }
 
-        @keyframes pulse {
-            0% {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 1;
-            }
-
-            70% {
-                transform: translate(-50%, -50%) scale(2);
-                opacity: 0;
-            }
-
-            100% {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 0;
-            }
+        .popup-content p {
+            font-size: 14px;
+            color: #4b5563;
+            margin-bottom: 6px;
         }
 
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
-
-            to {
-                transform: rotate(360deg);
-            }
+        .popup-content .charger-details {
+            margin-top: 12px;
+            padding-left: 16px;
+            list-style: disc;
         }
 
-        .location-error {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #ef4444;
+        .popup-content .charger-details li {
+            font-size: 14px;
+            color: #4b5563;
+            margin-bottom: 4px;
+        }
+
+        .popup-content .maps-link {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 8px 16px;
+            background-color: #10b981;
             color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-            animation: slideUp 0.3s ease-out;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background-color 0.2s;
         }
 
-        @keyframes slideUp {
-            from {
-                transform: translate(-50%, 100%);
+        .popup-content .maps-link:hover {
+            background-color: #059669;
+        }
+
+        @media (max-width: 767px) {
+            #mapContainer {
+                padding: 0;
+            }
+
+            #mapControls {
+                top: auto;
+                bottom: 80px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+                background-color: rgba(255, 255, 255, 0.95);
+                transform: translateY(120%);
                 opacity: 0;
+                pointer-events: none;
             }
 
-            to {
-                transform: translate(-50%, 0);
+            #mapControls.show {
+                transform: translateY(0);
                 opacity: 1;
+                pointer-events: auto;
+            }
+
+            #mapControlsToggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            #mapid {
+                border-radius: 0;
+                border: none;
+            }
+
+            #locateMe {
+                bottom: 20px;
+                right: 20px;
             }
         }
 
-        .map-controls {
-            background-color: white;
-            color: #1f2937;
+        .dark #mapControls {
+            background-color: #1f2937;
+            color: white;
         }
 
-        .map-controls select,
-        .map-controls option {
-            background-color: white;
-            color: #1f2937;
-            border-color: #e5e7eb;
+        .dark .map-select {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: white;
         }
 
-        .map-controls select:focus {
-            border-color: #3b82f6;
-            outline: none;
+        .dark .popup-content {
+            background-color: #1f2937;
+            color: white;
         }
 
-        .map-controls-toggle {
-            background-color: white;
-            color: #1f2937;
+        .dark .popup-content h3 {
+            color: #e5e7eb;
         }
 
-        .map-controls-toggle:hover {
-            background-color: #f3f4f6;
+        .dark .popup-content .charger-details li {
+            color: #d1d5db;
         }
 
         #mapid .leaflet-top {
             top: 20px;
         }
-
-        @media (max-width: 767px) {
-            .map-container {
-                padding: 0;
-            }
-
-            .map-controls {
-                display: flex;
-                top: 70px;
-                right: 20px;
-                flex-direction: column;
-                width: 80%;
-                max-width: 300px;
-                background-color: rgba(255, 255, 255, 0.95);
-                opacity: 0;
-                transform: translateY(-20px);
-                pointer-events: none;
-            }
-
-            .map-controls.show {
-                opacity: 1;
-                transform: translateY(0);
-                pointer-events: auto;
-            }
-
-            .map-controls-toggle {
-                display: block;
-            }
-
-            .map-locate-button {
-                bottom: 60px;
-            }
-
-            #mapid {
-                border-radius: 0;
-            }
-        }
     </style>
 @endsection
 
 @section('content')
-    <div class="relative w-full h-screen bg-white">
-        <x-map.container>
-            <x-map.controls :providers="$providers" :charging-types="$chargingTypes" :location-categories="$locationCategories" />
+    <div class="relative">
+        <div id="mapContainer">
+            <div id="mapid"></div>
 
-            <div id="mapid" class="w-full h-full rounded-lg border-2 border-ev-blue-500"></div>
+            <div id="mapControls">
+                <div class="map-search">
+                    <label for="mapSearchInput" class="text-xs font-medium tracking-wide text-gray-500 uppercase">Cari Lokasi</label>
+                    <div class="map-search-input">
+                        <input id="mapSearchInput" type="text" placeholder="Masukkan alamat atau nama tempat">
+                        <button id="mapSearchButton">Cari</button>
+                    </div>
+                    <div id="mapSearchResults" class="map-search-results">
+                        <ul></ul>
+                    </div>
+                </div>
 
-            <x-map.locate-button />
-        </x-map.container>
+                <select id="providerSelect" class="map-select">
+                    <option value="">Semua Provider</option>
+                    @foreach ($providers as $provider)
+                        <option value="{{ $provider->id }}">{{ $provider->name }}</option>
+                    @endforeach
+                </select>
+
+                <select id="chargingTypeSelect" class="map-select">
+                    <option value="">Semua Tipe Charging</option>
+                    @foreach ($chargingTypes as $type)
+                        <option value="{{ $type->id }}">{{ $type->name }}</option>
+                    @endforeach
+                </select>
+
+                <select id="locationCategorySelect" class="map-select">
+                    <option value="">Semua Kategori Lokasi</option>
+                    @foreach ($locationCategories as $category)
+                        <option value="{{ $category->id }}">{{ $category->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <button id="mapControlsToggle" class="hover:bg-gray-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+            </button>
+
+            <button id="locateMe" title="Temukan lokasi saya">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+        </div>
     </div>
 
     <x-mobile.youtube-section :ev-youtube-video-id="$evYoutubeVideoId ?? null" />
@@ -317,15 +422,39 @@
             const defaultView = [-6.200000, 106.816666];
             const map = L.map('mapid').setView(defaultView, 13);
             let markers = [];
-            let userMarker;
+            let userMarker = null;
 
+            const mapControls = document.getElementById('mapControls');
             const mapControlsToggle = document.getElementById('mapControlsToggle');
-            const mapControls = document.querySelector('.map-controls');
+            const locateButton = document.getElementById('locateMe');
 
-            if (mapControlsToggle && mapControls) {
-                mapControlsToggle.addEventListener('click', () => {
-                    mapControls.classList.toggle('show');
-                });
+            const mobileBreakpoint = window.matchMedia('(max-width: 767px)');
+            let controlsVisible = !mobileBreakpoint.matches;
+
+            function setControlsVisibility(visible) {
+                controlsVisible = visible;
+                if (controlsVisible) {
+                    mapControls.classList.add('show');
+                } else {
+                    mapControls.classList.remove('show');
+                }
+            }
+
+            setControlsVisibility(controlsVisible);
+
+            mapControlsToggle.addEventListener('click', (event) => {
+                event.stopPropagation();
+                setControlsVisibility(!controlsVisible);
+            });
+
+            const handleBreakpointChange = (event) => {
+                setControlsVisibility(!event.matches);
+            };
+
+            if (typeof mobileBreakpoint.addEventListener === 'function') {
+                mobileBreakpoint.addEventListener('change', handleBreakpointChange);
+            } else if (typeof mobileBreakpoint.addListener === 'function') {
+                mobileBreakpoint.addListener(handleBreakpointChange);
             }
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -333,9 +462,9 @@
                 attribution: '© OpenStreetMap'
             }).addTo(map);
 
-            const chargerLocations = @json($plnLocations);
+            const plnLocations = @json($plnLocations);
 
-            function resolveImagePath(path) {
+            function normalizeImagePath(path) {
                 if (!path || typeof path !== 'string') {
                     return null;
                 }
@@ -381,148 +510,258 @@
                 return '/images/no-image.png';
             }
 
+            function formatDetail(detail) {
+                const merk = detail.merk_charger?.name || 'Tidak Diketahui';
+                const power = detail.power ? `${detail.power}` : '0';
+                const connectors = detail.count_connector_charger || '0';
+                const status = detail.is_active_charger ? 'Aktif' : 'Tidak Aktif';
+                const operationDate = detail.operation_date ? new Date(detail.operation_date).toLocaleDateString('id-ID', {
+                    day: '2-digit', month: 'short', year: 'numeric'
+                }) : 'Tidak diketahui';
+
+                return `
+                    <li>
+                        <strong>${detail.charger_category?.name || 'Charger'}</strong> -
+                        ${detail.charging_type?.name || detail.charging_type_name || 'Tipe tidak diketahui'}
+                        <br>
+                        Daya: ${power} | Konektor: ${connectors} | Status: ${status}
+                        <br>
+                        Operasi: ${operationDate}
+                    </li>
+                `;
+            }
+
             function createMarkers(selectedProvider = '', selectedChargingType = '', selectedLocationCategory = '') {
                 markers.forEach(marker => map.removeLayer(marker));
                 markers = [];
 
-                const bounds = map.getBounds();
-
-                chargerLocations.forEach(location => {
+                plnLocations.forEach(location => {
                     if (!location) return;
 
-                    const latlng = L.latLng(location.latitude, location.longitude);
-                    if (!bounds.contains(latlng)) return;
-
-                    const hasMatchingChargingType = !selectedChargingType ||
+                    const matchesProvider = !selectedProvider || location.provider?.id?.toString() === selectedProvider;
+                    const matchesCategory = !selectedLocationCategory || location.location_category?.id?.toString() === selectedLocationCategory;
+                    const matchesChargingType = !selectedChargingType ||
                         location.pln_charger_location_details?.some(detail =>
                             detail.charging_type_id?.toString() === selectedChargingType
                         );
 
-                    const hasMatchingProvider = !selectedProvider ||
-                        location.provider?.id?.toString() === selectedProvider;
-
-                    const hasMatchingCategory = !selectedLocationCategory ||
-                        location.location_category?.id?.toString() === selectedLocationCategory;
-
-                    if (hasMatchingProvider && hasMatchingChargingType && hasMatchingCategory) {
-                        const providerImagePath = resolveImagePath(location.provider?.image);
-                        const locationImagePath = resolveImagePath(location.image);
-                        const providerFallbacks = [
-                            providerImagePath,
-                            locationImagePath,
-                            '/images/ev-charging.png',
-                            '/images/ev-default.png',
-                            '/images/placeholder.jpg'
-                        ].filter(Boolean);
-
-                        const providerName = location.provider?.name || 'Provider Tidak Diketahui';
-
-                        getFirstValidImage(providerFallbacks).then(providerImage => {
-                            const customIcon = L.divIcon({
-                                className: 'map-marker',
-                                html: `
-                                    <div class="map-marker-pointer"></div>
-                                    <div class="map-marker-image">
-                                        <img src="${providerImage}"
-                                             alt="${providerName}"
-                                             loading="lazy">
-                                    </div>
-                                `,
-                                iconSize: [40, 50],
-                                iconAnchor: [20, 50],
-                                popupAnchor: [0, -50]
-                            });
-
-                            const marker = L.marker([location.latitude, location.longitude], {
-                                icon: customIcon
-                            }).bindPopup(`
-                                <div class="p-4 max-w-xs bg-white rounded-lg shadow-md">
-                                    <h3 class="mb-2 text-lg font-bold text-blue-800">
-                                        ${location.name || 'Lokasi Tidak Diketahui'}
-                                    </h3>
-                                    <p class="text-sm text-gray-500 mb-1">
-                                        ${location.address || 'Alamat tidak tersedia'}
-                                    </p>
-                                    <p class="text-sm text-gray-500 mb-2">
-                                        Provider: ${providerName}
-                                    </p>
-                                    <p class="text-sm text-gray-500 mb-2">
-                                        Kategori Lokasi: ${location.location_category?.name || 'Tidak Diketahui'}
-                                    </p>
-                                    ${location.pln_charger_location_details?.length ? `
-                                        <div class="mt-3">
-                                            <h4 class="font-semibold text-blue-700 mb-2">Detail Charger:</h4>
-                                            <ul class="space-y-2">
-                                                ${location.pln_charger_location_details.map(detail => `
-                                                    <li class="text-gray-600">
-                                                        <div class="flex flex-col space-y-1">
-                                                            <span><strong>Merk:</strong> ${detail.merk_charger?.name || 'Tidak Diketahui'}</span>
-                                                            <span><strong>Daya:</strong> ${detail.power || '0'}</span>
-                                                            <span><strong>Jumlah Konektor:</strong> ${detail.count_connector_charger || '0'}</span>
-                                                        </div>
-                                                    </li>
-                                                `).join('')}
-                                            </ul>
-                                        </div>
-                                    ` : '<p class="mt-2 text-gray-500">Tidak ada detail charger</p>'}
-                                    <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
-                                        class="inline-block px-4 py-2 mt-4 text-sm text-white bg-green-500 rounded transition duration-300 hover:bg-green-600"
-                                        target="_blank" rel="noopener noreferrer">
-                                        Buka di Google Maps
-                                    </a>
-                                </div>
-                            `);
-
-                            markers.push(marker);
-                            marker.addTo(map);
-                        });
+                    if (!(matchesProvider && matchesCategory && matchesChargingType)) {
+                        return;
                     }
+
+                    const providerImagePath = normalizeImagePath(location.provider?.image);
+                    const locationImagePath = normalizeImagePath(location.image);
+                    const providerFallbacks = [
+                        providerImagePath,
+                        locationImagePath,
+                        '/images/ev-charging.png',
+                        '/images/ev-default.png',
+                        '/images/placeholder.jpg'
+                    ].filter(Boolean);
+
+                    const providerName = location.provider?.name || 'Provider Tidak Diketahui';
+
+                    getFirstValidImage(providerFallbacks).then(providerImage => {
+                        const markerIcon = L.divIcon({
+                            className: 'map-marker',
+                            html: `
+                                <div class="map-marker-pointer"></div>
+                                <div class="map-marker-image">
+                                    <img src="${providerImage}"
+                                         alt="${providerName}"
+                                         loading="lazy">
+                                </div>
+                            `,
+                            iconSize: [40, 50],
+                            iconAnchor: [20, 50],
+                            popupAnchor: [0, -50]
+                        });
+
+                        const detailItems = Array.isArray(location.pln_charger_location_details)
+                            ? location.pln_charger_location_details
+                                .filter(detail => !selectedChargingType || detail.charging_type_id?.toString() === selectedChargingType)
+                                .map(formatDetail)
+                                .join('')
+                            : '';
+
+                        const popupContent = `
+                            <div class="popup-content">
+                                <h3>${location.name || 'Lokasi Tidak Diketahui'}</h3>
+                                <p>${location.address || 'Alamat tidak tersedia'}</p>
+                                <p>Provider: ${providerName}</p>
+                                <p>Kategori Lokasi: ${location.location_category?.name || 'Tidak Diketahui'}</p>
+                                ${detailItems ? `<ul class="charger-details">${detailItems}</ul>` : '<p>Detail charger belum tersedia</p>'}
+                                <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
+                                   class="maps-link"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    Buka di Google Maps
+                                </a>
+                            </div>
+                        `;
+
+                        const marker = L.marker([location.latitude, location.longitude], {
+                            icon: markerIcon
+                        }).bindPopup(popupContent);
+
+                        markers.push(marker);
+                        marker.addTo(map);
+                    });
                 });
             }
 
             const providerSelect = document.getElementById('providerSelect');
             const chargingTypeSelect = document.getElementById('chargingTypeSelect');
             const locationCategorySelect = document.getElementById('locationCategorySelect');
+            const searchInput = document.getElementById('mapSearchInput');
+            const searchButton = document.getElementById('mapSearchButton');
+            const searchResultsContainer = document.getElementById('mapSearchResults');
+            const searchResultsList = searchResultsContainer.querySelector('ul');
 
-            function updateMarkers() {
-                createMarkers(
-                    providerSelect.value,
-                    chargingTypeSelect.value,
-                    locationCategorySelect.value
-                );
+            function clearSearchResults() {
+                searchResultsList.innerHTML = '';
+                searchResultsContainer.style.display = 'none';
             }
 
-            providerSelect.addEventListener('change', updateMarkers);
-            chargingTypeSelect.addEventListener('change', updateMarkers);
-            locationCategorySelect.addEventListener('change', updateMarkers);
-
-            map.on('moveend', updateMarkers);
-            map.on('zoomend', updateMarkers);
-
-            window.addEventListener('userLocation', function(event) {
-                const userLatLng = [event.detail.latitude, event.detail.longitude];
-
-                if (userMarker) {
-                    map.removeLayer(userMarker);
+            async function performSearch(query) {
+                const trimmedQuery = query.trim();
+                if (!trimmedQuery) {
+                    clearSearchResults();
+                    return;
                 }
 
-                const userIcon = L.divIcon({
-                    className: 'map-marker map-user-location',
-                    html: `
-                        <div class="map-marker-image">
-                            <div class="map-user-dot"></div>
-                        </div>
-                    `,
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 20]
+                try {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(trimmedQuery)}`);
+                    if (!response.ok) {
+                        throw new Error('Gagal mengambil data pencarian');
+                    }
+
+                    const results = await response.json();
+                    renderSearchResults(results);
+                } catch (error) {
+                    console.error('Kesalahan saat melakukan pencarian lokasi:', error);
+                }
+            }
+
+            function renderSearchResults(results) {
+                searchResultsList.innerHTML = '';
+
+                if (!Array.isArray(results) || results.length === 0) {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = 'Lokasi tidak ditemukan. Coba kata kunci lain.';
+                    listItem.style.cursor = 'default';
+                    searchResultsList.appendChild(listItem);
+                    searchResultsContainer.style.display = 'block';
+                    return;
+                }
+
+                results.slice(0, 10).forEach(result => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = result.display_name;
+                    listItem.addEventListener('click', () => {
+                        if (!result.lat || !result.lon) {
+                            return;
+                        }
+
+                        const lat = parseFloat(result.lat);
+                        const lon = parseFloat(result.lon);
+
+                        if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
+                            map.setView([lat, lon], 16);
+                        }
+
+                        clearSearchResults();
+                    });
+                    searchResultsList.appendChild(listItem);
                 });
 
-                userMarker = L.marker(userLatLng, {
-                    icon: userIcon
-                }).addTo(map);
+                searchResultsContainer.style.display = 'block';
+            }
 
-                map.setView(userLatLng, 15);
-                updateMarkers();
+            locateButton.addEventListener('click', function() {
+                if (!navigator.geolocation) {
+                    alert('Geolokasi tidak didukung oleh browser Anda');
+                    return;
+                }
+
+                locateButton.classList.add('locating');
+
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const userLatLng = [position.coords.latitude, position.coords.longitude];
+
+                        if (userMarker) {
+                            map.removeLayer(userMarker);
+                        }
+
+                        userMarker = L.marker(userLatLng, {
+                            icon: L.divIcon({
+                                className: 'map-marker',
+                                html: `
+                                    <div class="map-marker-pointer" style="background-color:#ef4444"></div>
+                                    <div class="map-marker-image" style="border-color:#ef4444; background-color:#ef4444;">
+                                        <div style="width: 12px; height: 12px; background-color: white; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+                                    </div>
+                                `,
+                                iconSize: [40, 50],
+                                iconAnchor: [20, 50],
+                                popupAnchor: [0, -50]
+                            })
+                        }).addTo(map);
+
+                        map.setView(userLatLng, 15);
+                        locateButton.classList.remove('locating');
+                        createMarkers(
+                            providerSelect.value,
+                            chargingTypeSelect.value,
+                            locationCategorySelect.value
+                        );
+                    },
+                    function(error) {
+                        locateButton.classList.remove('locating');
+                        let message = 'Terjadi kesalahan saat mencoba mendapatkan lokasi Anda';
+
+                        switch (error.code) {
+                            case error.PERMISSION_DENIED:
+                                message = 'Anda menolak permintaan geolokasi';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                message = 'Informasi lokasi tidak tersedia';
+                                break;
+                            case error.TIMEOUT:
+                                message = 'Permintaan untuk mendapatkan lokasi pengguna habis waktu';
+                                break;
+                        }
+
+                        alert(message);
+                    }
+                );
+            });
+
+            providerSelect.addEventListener('change', () => createMarkers(
+                providerSelect.value,
+                chargingTypeSelect.value,
+                locationCategorySelect.value
+            ));
+
+            chargingTypeSelect.addEventListener('change', () => createMarkers(
+                providerSelect.value,
+                chargingTypeSelect.value,
+                locationCategorySelect.value
+            ));
+
+            locationCategorySelect.addEventListener('change', () => createMarkers(
+                providerSelect.value,
+                chargingTypeSelect.value,
+                locationCategorySelect.value
+            ));
+
+            searchButton.addEventListener('click', () => performSearch(searchInput.value));
+            searchInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    performSearch(searchInput.value);
+                }
             });
 
             createMarkers();
@@ -530,6 +769,10 @@
             setTimeout(() => {
                 map.invalidateSize();
             }, 100);
+
+            window.addEventListener('resize', () => {
+                map.invalidateSize();
+            });
         });
     </script>
 @endpush
