@@ -16,8 +16,6 @@ class Charge extends Model
     protected $connection = 'ev'; // Use the sagansa database connection
     protected $table = 'charges';
 
-    // protected $guarded = [];
-
     protected $fillable = [
         'image_start',
         'image_finish',

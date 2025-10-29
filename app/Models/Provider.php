@@ -16,7 +16,7 @@ class Provider extends Model
 
     protected $connection = 'ev'; // Use the sagansa database connection
 
-    protected $build = [
+    protected $fillable = [
         'id',
         'name',
         'image',

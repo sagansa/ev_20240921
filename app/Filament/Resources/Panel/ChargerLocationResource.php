@@ -321,7 +321,7 @@ class ChargerLocationResource extends Resource
                             ->where('city_id', $cityId)
                             ->where('district_id', $districtId)
                             ->where('subdistrict_id', $subdistrictId)
-                            ->pluck('postal_code', 'id');
+                            ->pluck('name', 'id');
                     }),
 
             ]),
