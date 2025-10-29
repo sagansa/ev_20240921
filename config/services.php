@@ -42,7 +42,7 @@ return [
 
 
     'analytics' => [
-        'tracking_id' => env('GOOGLE_ANALYTICS_ID'),
+        'tracking_id' => env('GOOGLE_ANALYTICS_ID', 'G-5C30JTCW0S'),
     ],
 
 ];
