@@ -23,12 +23,12 @@ class StateOfHealthFactory extends Factory
     public function definition(): array
     {
         return [
-            'image' => fake()->optional(),
+            'image' => fake()->optional()->imageUrl(640, 480, 'transport', true, 'soh'),
             'date' => fake()->date(),
-            'km' => fake()->randomNumber(),
-            'percentage' => fake()->randomNumber(),
-            'remaining_battery' => fake()->randomNumber(),
-            'deleted_at' => fake()->dateTime(),
+            'km' => fake()->numberBetween(1000, 200000),
+            'percentage' => fake()->numberBetween(40, 100),
+            'remaining_battery' => fake()->numberBetween(10, 90),
+            'deleted_at' => null,
             'vehicle_id' => \App\Models\Vehicle::factory(),
             'user_id' => \App\Models\User::factory(),
         ];

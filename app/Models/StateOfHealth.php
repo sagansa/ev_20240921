@@ -15,7 +15,18 @@ class StateOfHealth extends Model
 
     protected $connection = 'ev'; // Use the sagansa database connection
 
-    protected $guarded = [];
+    protected $fillable = [
+        'image',
+        'date',
+        'vehicle_id',
+        'km',
+        'percentage',
+        'remaining_battery',
+        'user_id',
+        'created_at',
+        'updated_at',
+        'deleted_at',
+    ];
 
     public function vehicle()
     {

@@ -11,7 +11,10 @@ class TypeCharger extends Model
 
     protected $connection = 'ev'; // Use the sagansa database connection
 
-    protected $guarded = [];
+    protected $fillable = [
+        'name',
+        'current_charger_id',
+    ];
 
     public function currentCharger()
     {

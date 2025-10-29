@@ -11,7 +11,10 @@ class PowerCharger extends Model
 
     protected $connection = 'ev'; // Use the sagansa database connection
 
-    protected $guarded = [];
+    protected $fillable = [
+        'name',
+        'type_charger_id',
+    ];
 
     public function typeCharger()
     {

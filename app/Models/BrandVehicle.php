@@ -11,7 +11,10 @@ class BrandVehicle extends Model
 
     protected $connection = 'ev'; // Use the sagansa database connection
 
-    protected $guarded = [];
+    protected $fillable = [
+        'image',
+        'name',
+    ];
 
     public function modelVehicles()
     {

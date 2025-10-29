@@ -23,10 +23,10 @@ class ProviderFactory extends Factory
     public function definition(): array
     {
         return [
-            'image' => fake()->optional(),
-            'name' => fake()->name(),
+            'image' => fake()->optional()->imageUrl(320, 320, 'business', true, 'provider'),
+            'name' => fake()->company(),
             'status' => fake()->numberBetween(1, 2),
-            'contact' => fake()->randomNumber(),
+            'contact' => fake()->phoneNumber(),
             'address' => fake()->address(),
             'province_id' => \App\Models\Province::factory(),
             'city_id' => \App\Models\City::factory(),

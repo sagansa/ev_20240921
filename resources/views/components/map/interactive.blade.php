@@ -15,7 +15,7 @@
     'locationConsentMessage' => 'Izinkan aplikasi mendeteksi lokasi Anda untuk menampilkan stasiun terdekat?',
 ])
 
-<div 
+<div
     x-data="interactiveMap({
         locations: @js($locations),
         defaultLocation: @js($defaultLocation),
@@ -35,12 +35,12 @@
     <!-- Desktop Filters -->
     <div class="map-controls absolute z-[1200] bg-white rounded-lg shadow-lg p-4 flex flex-col gap-3 transition-all duration-300 hidden md:block"
          x-bind:style="{ top: controlsOffset, right: '20px' }">
-        <div class="map-search w-full">
+        <div class="w-full map-search">
             <div class="flex items-center justify-between gap-2">
-                <label for="mapSearchInput" class="text-xs font-medium text-gray-500 uppercase tracking-wide">Cari Lokasi</label>
+                <label for="mapSearchInput" class="text-xs font-medium tracking-wide text-gray-500 uppercase">Cari Lokasi</label>
                 <button
                     type="button"
-                    class="text-xs text-gray-400 hover:text-gray-600 transition"
+                    class="text-xs text-gray-400 transition hover:text-gray-600"
                     x-show="searchResults.length > 0 || searchQuery"
                     x-on:click="clearSearchResults(true)"
                 >
@@ -54,11 +54,11 @@
                     x-model="searchQuery"
                     x-on:keydown.enter.prevent="performSearch()"
                     placeholder="Masukkan alamat atau tempat"
-                    class="px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ev-blue-400 flex-1"
+                    class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ev-blue-400"
                 >
                 <button
                     type="button"
-                    class="px-3 py-2 text-sm font-medium text-white bg-ev-blue-500 rounded-lg hover:bg-ev-blue-600 transition disabled:opacity-60"
+                    class="px-3 py-2 text-sm font-medium text-white transition rounded-lg bg-ev-blue-500 hover:bg-ev-blue-600 disabled:opacity-60"
                     x-bind:disabled="searchPending"
                     x-on:click="performSearch()"
                 >
@@ -84,9 +84,9 @@
                 </ul>
             </div>
         </div>
-        <select 
-            id="providerSelect" 
-            class="map-select px-3 py-2 w-full text-sm rounded-lg border border-gray-300"
+        <select
+            id="providerSelect"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg map-select"
             x-on:change="filterMarkers()"
         >
             <option value="">Semua Provider</option>
@@ -95,9 +95,9 @@
             @endforeach
         </select>
 
-        <select 
+        <select
             id="chargingTypeSelect"
-            class="map-select px-3 py-2 w-full text-sm rounded-lg border border-gray-300"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg map-select"
             x-on:change="filterMarkers()"
         >
             <option value="">Semua Tipe Charging</option>
@@ -106,21 +106,23 @@
             @endforeach
         </select>
 
-        <select 
-            id="locationCategorySelect"
-            class="map-select px-3 py-2 w-full text-sm rounded-lg border border-gray-300"
-            x-on:change="filterMarkers()"
-        >
-            <option value="">Semua Kategori Lokasi</option>
-            @foreach ($locationCategories as $category)
-                <option value="{{ $category->id }}">{{ $category->name }}</option>
-            @endforeach
-        </select>
+        @if ($mapType !== 'pln')
+            <select
+                id="locationCategorySelect"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg map-select"
+                x-on:change="filterMarkers()"
+            >
+                <option value="">Semua Kategori Lokasi</option>
+                @foreach ($locationCategories as $category)
+                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                @endforeach
+            </select>
+        @endif
     </div>
 
     <!-- Mobile Filter Toggle Button -->
-    <button 
-        id="mobileFilterToggle" 
+    <button
+        id="mobileFilterToggle"
         class="mobile-filter-toggle absolute z-[1200] bg-white border border-gray-300 rounded-lg shadow-lg w-12 h-12 flex items-center justify-center cursor-pointer transition-all duration-300 md:hidden"
         x-bind:style="{ top: controlsOffset, right: '20px' }"
         x-on:click="toggleMobileFilters()"
@@ -129,15 +131,15 @@
     </button>
 
     <!-- Mobile Filters - Initially Hidden -->
-    <div 
-        id="mobileFilters" 
+    <div
+        id="mobileFilters"
         class="mobile-filters absolute z-[1200] bg-white rounded-lg shadow-lg p-4 flex flex-col gap-2 transition-all duration-300 md:hidden"
         x-bind:style="{ top: mobileControlsOffset, right: '20px', width: '280px', maxWidth: 'calc(100% - 40px)' }"
         x-show="showMobileFilters"
         x-cloak
     >
-        <div class="map-search w-full">
-            <label for="mapSearchInputMobile" class="text-xs font-medium text-gray-500 uppercase tracking-wide">Cari Lokasi</label>
+        <div class="w-full map-search">
+            <label for="mapSearchInputMobile" class="text-xs font-medium tracking-wide text-gray-500 uppercase">Cari Lokasi</label>
             <div class="map-search-input">
                 <input
                     id="mapSearchInputMobile"
@@ -145,11 +147,11 @@
                     x-model="searchQuery"
                     x-on:keydown.enter.prevent="performSearch()"
                     placeholder="Masukkan alamat atau tempat"
-                    class="px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ev-blue-400 flex-1"
+                    class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ev-blue-400"
                 >
                 <button
                     type="button"
-                    class="px-3 py-2 text-sm font-medium text-white bg-ev-blue-500 rounded-lg hover:bg-ev-blue-600 transition disabled:opacity-60"
+                    class="px-3 py-2 text-sm font-medium text-white transition rounded-lg bg-ev-blue-500 hover:bg-ev-blue-600 disabled:opacity-60"
                     x-bind:disabled="searchPending"
                     x-on:click="performSearch()"
                 >
@@ -169,9 +171,9 @@
             </div>
         </div>
 
-        <select 
-            id="mobileProviderSelect" 
-            class="map-select px-3 py-2 w-full text-sm rounded-lg border border-gray-300"
+        <select
+            id="mobileProviderSelect"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg map-select"
             x-on:change="filterMarkers()"
         >
             <option value="">Semua Provider</option>
@@ -180,9 +182,9 @@
             @endforeach
         </select>
 
-        <select 
+        <select
             id="mobileChargingTypeSelect"
-            class="map-select px-3 py-2 w-full text-sm rounded-lg border border-gray-300"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg map-select"
             x-on:change="filterMarkers()"
         >
             <option value="">Semua Tipe Charging</option>
@@ -191,21 +193,23 @@
             @endforeach
         </select>
 
-        <select 
-            id="mobileLocationCategorySelect"
-            class="map-select px-3 py-2 w-full text-sm rounded-lg border border-gray-300"
-            x-on:change="filterMarkers()"
-        >
-            <option value="">Semua Kategori Lokasi</option>
-            @foreach ($locationCategories as $category)
-                <option value="{{ $category->id }}">{{ $category->name }}</option>
-            @endforeach
-        </select>
+        @if ($mapType !== 'pln')
+            <select
+                id="mobileLocationCategorySelect"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg map-select"
+                x-on:change="filterMarkers()"
+            >
+                <option value="">Semua Kategori Lokasi</option>
+                @foreach ($locationCategories as $category)
+                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                @endforeach
+            </select>
+        @endif
     </div>
 
     <!-- Locate Me Button - Positioned bottom right -->
-    <button 
-        id="locateMe" 
+    <button
+        id="locateMe"
         title="Temukan lokasi saya"
         class="locate-me-button absolute z-[1200] bg-white border-2 border-ev-blue-500 rounded-full w-12 h-12 flex items-center justify-center shadow-lg cursor-pointer transition-all duration-300 hover:scale-110"
         style="bottom: 30px; right: 30px;"
@@ -219,7 +223,7 @@
     </button>
 
     <!-- Error Message Container -->
-    <div id="locationError" class="location-error fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded shadow-lg z-50" style="display: none;">
+    <div id="locationError" class="fixed z-50 px-4 py-2 text-white transform -translate-x-1/2 bg-red-500 rounded shadow-lg location-error bottom-4 left-1/2" style="display: none;">
         <span id="errorMessage"></span>
     </div>
 
@@ -681,11 +685,20 @@
                 margin-bottom: 6px;
             }
 
+            .charger-details .detail-headline {
+                font-size: 0.85rem;
+                color: #111827;
+            }
+
             .charger-details .detail-grid {
                 display: grid;
                 grid-template-columns: auto 1fr;
                 gap: 4px 12px;
                 font-size: 0.8rem;
+            }
+
+            .charger-details .detail-grid--meta {
+                margin-top: 6px;
             }
 
             .charger-details .detail-label {
@@ -785,7 +798,7 @@
                     searchPending: false,
                     searchError: '',
                     searchMarker: null,
-                    
+
                     init() {
                         this.updateLayout();
                         this.resizeListener = () => {
@@ -800,7 +813,7 @@
                                 window.removeEventListener('resize', this.resizeListener);
                             }
                         });
-                        
+
                         // Wait for DOM to be fully loaded before initializing map
                         this.$nextTick(() => {
                             this.initMap();
@@ -817,19 +830,19 @@
                                 this.clearSearchResults(false);
                             }
                         });
-                        
+
                         // Watch for user location events
                         window.addEventListener('userLocation', (event) => {
                             this.setUserLocation(event.detail.latitude, event.detail.longitude);
                         });
-                        
+
                         // Request location permission on initialization
                         this.requestLocationPermission();
                         setTimeout(() => {
                             this.autoLocateUser();
                         }, 1000);
                     },
-                    
+
                     toggleMobileFilters() {
                         this.showMobileFilters = !this.showMobileFilters;
                         this.$nextTick(() => {
@@ -921,25 +934,25 @@
                         this.clearSearchResults(false);
                         this.showMobileFilters = false;
                     },
-                    
+
                     initMap() {
                         // Verify that Leaflet is available
                         if (typeof L === 'undefined') {
                             console.error('Leaflet is not loaded');
                             return;
                         }
-                        
+
                         // Initialize the map with a small delay to ensure DOM is ready
                         setTimeout(() => {
                             const { defaultLocation, defaultZoom, enableClustering } = this.mapOptions;
                             this.map = L.map('mapid').setView(defaultLocation, defaultZoom);
-                            
+
                             // Add tile layer
                             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                                 maxZoom: 19,
                                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             }).addTo(this.map);
-                            
+
                             // Initialize marker cluster group if enabled
                             if (enableClustering) {
                                 this.markerClusterGroup = L.markerClusterGroup({
@@ -949,22 +962,22 @@
                                 });
                                 this.map.addLayer(this.markerClusterGroup);
                             }
-                            
+
                             // Create markers
                             this.createMarkers();
-                            
+
                             // Handle map events
                             this.map.on('moveend', () => this.filterMarkers());
                             this.map.on('zoomend', () => this.filterMarkers());
                             this.map.on('click', () => this.clearSearchResults(false));
-                            
+
                             // Trigger map resize after initialization
                             setTimeout(() => {
                                 this.map.invalidateSize();
                             }, 100);
                         }, 100);
                     },
-                    
+
                     updateLayout() {
                         const navHeight = this.calculateHeaderOffset();
                         this.containerHeight = navHeight > 0
@@ -977,15 +990,15 @@
                         this.controlsOffset = `${controlsTop}px`;
                         this.mobileControlsOffset = `${controlsTop + 48}px`;
                     },
-                    
+
                     calculateHeaderOffset() {
                         const nav = document.querySelector('nav');
                         return nav ? Math.round(nav.getBoundingClientRect().height) : 0;
                     },
-                    
+
                     createMarkers() {
                         const { locations = [], enableClustering } = this.mapOptions;
-                        
+
                         // Clear existing markers
                         if (this.markerClusterGroup) {
                             this.markerClusterGroup.clearLayers();
@@ -997,34 +1010,34 @@
                             });
                         }
                         this.markers = [];
-                        
+
                         // Create markers for all locations
                         locations.forEach(location => {
                             if (!location || location.status === 3) return;
-                            
+
                             const markerIcon = this.buildMarkerIcon(location);
-                            
+
                             // Create marker
                             const marker = L.marker([location.latitude, location.longitude], {
                                 icon: markerIcon,
                                 locationData: location
                             });
-                            
+
                             // Bind popup
                             marker.bindPopup(this.createPopupContent(location));
-                            
+
                             // Add to map
                             if (enableClustering && this.markerClusterGroup) {
                                 this.markerClusterGroup.addLayer(marker);
                             } else {
                                 marker.addTo(this.map);
                             }
-                            
+
                             // Store marker reference
                             this.markers.push(marker);
                         });
                     },
-                    
+
                     buildMarkerIcon(location) {
                         const markerVariant = this.mapType === 'pln' ? 'marker-pln' : 'marker-community';
                         const providerNameRaw = location.provider?.name || location.name || 'Lokasi Charger';
@@ -1068,7 +1081,7 @@
                             popupAnchor,
                         });
                     },
-                    
+
                     getProviderLogo(location) {
                         const provider = location.provider || {};
                         const candidates = [
@@ -1081,22 +1094,22 @@
                             '/images/placeholder.jpg',
                             '/images/ev-charging.png',
                         ];
-                        
+
                         for (const candidate of candidates) {
                             const normalized = this.normalizeStoragePath(candidate);
                             if (normalized) {
                                 return normalized;
                             }
                         }
-                        
+
                         return '/images/ev-charging.png';
                     },
-                    
+
                     getInitials(name) {
                         if (!name) {
                             return '';
                         }
-                        
+
                         return name
                             .toString()
                             .trim()
@@ -1107,91 +1120,138 @@
                             .join('')
                             .toUpperCase();
                     },
-                    
+
                     buildLocationMeta(location) {
                         const meta = [];
-                        
+
                         if (location.address) {
                             meta.push({ label: 'Alamat', value: location.address });
                         }
-                        
-                        if (location.city?.name) {
-                            meta.push({ label: 'Kota', value: location.city.name });
-                        } else if (location.city_name) {
-                            meta.push({ label: 'Kota', value: location.city_name });
-                        }
-                        
-                        if (location.province?.name) {
-                            meta.push({ label: 'Provinsi', value: location.province.name });
-                        } else if (location.province_name) {
-                            meta.push({ label: 'Provinsi', value: location.province_name });
-                        }
-                        
-                        if (location.location_category?.name) {
-                            meta.push({ label: 'Kategori', value: location.location_category.name });
-                        }
-                        
-                        if (location.operator) {
-                            meta.push({ label: 'Operator', value: location.operator });
-                        }
-                        
+
+                        // if (location.city?.name) {
+                        //     meta.push({ label: 'Kota', value: location.city.name });
+                        // } else if (location.city_name) {
+                        //     meta.push({ label: 'Kota', value: location.city_name });
+                        // }
+
+                        // if (location.province?.name) {
+                        //     meta.push({ label: 'Provinsi', value: location.province.name });
+                        // } else if (location.province_name) {
+                        //     meta.push({ label: 'Provinsi', value: location.province_name });
+                        // }
+
+                        // if (location.location_category?.name) {
+                        //     meta.push({ label: 'Kategori', value: location.location_category.name });
+                        // }
+
+                        // if (location.operator) {
+                        //     meta.push({ label: 'Operator', value: location.operator });
+                        // }
+
                         return meta;
                     },
-                    
+
                     renderPlnDetail(detail) {
                         if (!detail) {
                             return '';
                         }
-                        
-                        const category = this.escapeHtml(detail.charger_category?.name || 'Charger');
-                        const connectors = detail.count_connector_charger ?? '-';
-                        const rawPower = detail.power ? detail.power.toString() : '';
-                        const powerValue = rawPower
-                            ? (/kW/i.test(rawPower) ? rawPower : `${rawPower} kW`)
-                            : 'N/A';
-                        const chargingTypeName = detail.charging_type?.name || detail.charging_type_name || detail.charger_category?.name || 'N/A';
-                        const merkName = detail.merk_charger?.name || detail.merk_name;
-                        
-                        const rows = [
-                            { label: 'Konektor', value: connectors },
-                            { label: 'Daya', value: powerValue },
-                            { label: 'Tipe Charging', value: chargingTypeName },
-                        ];
-                        
-                        if (merkName) {
-                            rows.push({ label: 'Merk', value: merkName });
+
+                        const rawTypeName = detail.charging_type?.name
+                            || detail.charging_type_name
+                            || detail.charger_category?.name
+                            || 'Tipe tidak diketahui';
+                        const rawPowerName = detail.power_charger?.name
+                            || detail.power_charger_name
+                            || null;
+                        const rawPowerValue = detail.power;
+                        const powerText = (() => {
+                            if (rawPowerValue !== undefined && rawPowerValue !== null && rawPowerValue !== '') {
+                                const value = rawPowerValue.toString();
+                                return /kW$/i.test(value.trim()) ? value : `${value} kW`;
+                            }
+
+                            return rawPowerName;
+                        })();
+
+                        const unitValue = detail.unit ?? detail.count_connector_charger ?? null;
+                        const unitText = unitValue !== null && unitValue !== undefined && unitValue !== ''
+                            ? `${unitValue} unit`
+                            : null;
+
+                        const headlineParts = [rawTypeName, powerText, unitText]
+                            .filter(part => part !== null && part !== undefined && String(part).trim().length > 0);
+                        const headline = headlineParts.length
+                            ? headlineParts.map(part => this.escapeHtml(part)).join(' - ')
+                            : 'Detail charger tidak tersedia';
+
+                        const infoRows = [];
+                        if (detail.count_connector_charger !== undefined && detail.count_connector_charger !== null) {
+                            infoRows.push({
+                                label: 'Konektor',
+                                value: `${detail.count_connector_charger}`,
+                            });
                         }
-                        
-                        return `
-                            <li>
-                                <div class="detail-title">${category}</div>
-                                <div class="detail-grid">
-                                    ${rows.map(row => `
+
+                        if (detail.is_active_charger !== undefined && detail.is_active_charger !== null) {
+                            const isActive = detail.is_active_charger === true
+                                || detail.is_active_charger === 1
+                                || detail.is_active_charger === '1';
+                            infoRows.push({
+                                label: 'Status',
+                                value: isActive ? 'Aktif' : 'Tidak Aktif',
+                            });
+                        }
+
+                        if (detail.operation_date) {
+                            infoRows.push({
+                                label: 'Operasi',
+                                value: this.formatDate(detail.operation_date),
+                            });
+                        }
+
+                        if (detail.year) {
+                            infoRows.push({
+                                label: 'Tahun',
+                                value: detail.year,
+                            });
+                        }
+
+                        const rowsHtml = infoRows.length
+                            ? `
+                                <div class="detail-grid detail-grid--meta">
+                                    ${infoRows.map(row => `
                                         <span class="detail-label">${this.escapeHtml(row.label)}</span>
                                         <span class="detail-value">${this.escapeHtml(row.value ?? '-')}</span>
                                     `).join('')}
                                 </div>
+                            `
+                            : '';
+
+                        return `
+                            <li>
+                                <div class="detail-title detail-headline">${headline}</div>
+                                ${rowsHtml}
                             </li>
                         `;
                     },
-                    
+
                     renderCommunityDetail(charger) {
                         if (!charger) {
                             return '';
                         }
-                        
+
                         const typeNameRaw = charger.type_charger?.name || 'Tipe tidak diketahui';
                         const currentNameRaw = charger.current_charger?.name || 'Arus tidak diketahui';
                         const powerNameRaw = charger.power_charger?.name || 'Daya tidak diketahui';
                         const unitCount = charger.unit || 1;
-                        
+
                         const rows = [
                             { label: 'Tipe Charging', value: typeNameRaw },
                             { label: 'Arus', value: currentNameRaw },
                             { label: 'Daya', value: powerNameRaw },
                             { label: 'Unit', value: `${unitCount} unit` },
                         ];
-                        
+
                         return `
                             <li>
                                 <div class="detail-title">${this.escapeHtml(typeNameRaw)}</div>
@@ -1204,49 +1264,49 @@
                             </li>
                         `;
                     },
-                    
+
                     normalizeStoragePath(path) {
                         if (!path) {
                             return null;
                         }
-                        
+
                         if (typeof path !== 'string') {
                             return null;
                         }
-                        
+
                         const trimmed = path.trim();
                         if (!trimmed.length) {
                             return null;
                         }
-                        
+
                         if (/^https?:\/\//i.test(trimmed)) {
                             return trimmed;
                         }
-                        
+
                         if (trimmed.startsWith('/')) {
                             return trimmed;
                         }
-                        
+
                         if (/^storage\//i.test(trimmed)) {
                             return `/storage/${trimmed.replace(/^storage\/+/, '')}`;
                         }
-                        
+
                         if (/^(images|img|svg|icons)\//i.test(trimmed)) {
                             return `/${trimmed.replace(/^\/+/, '')}`;
                         }
-                        
+
                         if (/^\/?storage\//i.test(trimmed)) {
                             return `/${trimmed.replace(/^\/+/, '')}`;
                         }
-                        
+
                         return `/storage/${trimmed.replace(/^\/+/, '')}`;
                     },
-                    
+
                     escapeHtml(value) {
                         if (value === null || value === undefined) {
                             return '';
                         }
-                        
+
                         return value
                             .toString()
                             .replace(/&/g, '&amp;')
@@ -1255,19 +1315,19 @@
                             .replace(/"/g, '&quot;')
                             .replace(/'/g, '&#039;');
                     },
-                    
+
                     escapeForCssUrl(value) {
                         if (value === null || value === undefined) {
                             return '';
                         }
-                        
+
                         return value
                             .toString()
                             .replace(/\\/g, '\\\\')
                             .replace(/'/g, "\\'")
                             .replace(/\)/g, '\\)');
                     },
-                    
+
                     createPopupContent(location) {
                         const locationName = this.escapeHtml(location.name || 'Lokasi Tidak Diketahui');
                         const providerNameRaw = location.provider?.name || '';
@@ -1283,7 +1343,7 @@
                         const googleMapsUrl = (latitude && longitude)
                             ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${latitude},${longitude}`)}`
                             : null;
-                        
+
                         const locationMetaHtml = locationMeta.length
                             ? `
                                 <ul class="popup-meta">
@@ -1296,13 +1356,13 @@
                                 </ul>
                             `
                             : '';
-                        
+
                         let detailsHtml = '';
                         if (this.mapType === 'pln') {
                             const details = Array.isArray(location.pln_charger_location_details)
                                 ? location.pln_charger_location_details
                                 : [];
-                            
+
                             if (details.length) {
                                 detailsHtml = `
                                     <div class="popup-section">
@@ -1323,7 +1383,7 @@
                                 </div>
                             `;
                         }
-                        
+
                         const usageHtml = this.mapType !== 'pln'
                             ? `
                                 <div class="usage-info">
@@ -1331,11 +1391,11 @@
                                 </div>
                             `
                             : '';
-                        
+
                         const providerLogoHtml = providerLogoUrl
                             ? `<div class="popup-provider-logo" ${providerLogoStyle}></div>`
                             : `<div class="popup-provider-logo popup-provider-logo--initials">${providerInitials}</div>`;
-                        
+
                         return `
                             <div class="interactive-map-popup">
                                 <div class="popup-provider">
@@ -1345,11 +1405,11 @@
                                         <p class="popup-provider-name">${providerName}</p>
                                     </div>
                                 </div>
-                                
+
                                 ${locationMetaHtml}
                                 ${detailsHtml}
                                 ${usageHtml}
-                                
+
                                 ${googleMapsUrl ? `
                                     <a href="${googleMapsUrl}"
                                        class="maps-link"
@@ -1361,30 +1421,47 @@
                             </div>
                         `;
                     },
-                    
+
+                    formatDate(value) {
+                        if (!value) {
+                            return '';
+                        }
+
+                        const date = new Date(value);
+                        if (Number.isNaN(date.getTime())) {
+                            return String(value);
+                        }
+
+                        return date.toLocaleDateString('id-ID', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                        });
+                    },
+
                     filterMarkers() {
                         // Get selected filter values
-                        const selectedProvider = document.getElementById('providerSelect')?.value || 
+                        const selectedProvider = document.getElementById('providerSelect')?.value ||
                                                 document.getElementById('mobileProviderSelect')?.value || '';
-                        const selectedChargingType = document.getElementById('chargingTypeSelect')?.value || 
+                        const selectedChargingType = document.getElementById('chargingTypeSelect')?.value ||
                                                      document.getElementById('mobileChargingTypeSelect')?.value || '';
-                        const selectedLocationCategory = document.getElementById('locationCategorySelect')?.value || 
+                        const selectedLocationCategory = document.getElementById('locationCategorySelect')?.value ||
                                                          document.getElementById('mobileLocationCategorySelect')?.value || '';
                         const { enableClustering } = this.mapOptions;
-                        
+
                         // Filter markers based on selections
                         this.markers.forEach(marker => {
                             const location = marker.options.locationData;
-                            
+
                             // Check filters
                             const matchesProvider = !selectedProvider || location.provider?.id?.toString() === selectedProvider;
-                            const matchesChargingType = !selectedChargingType || 
-                                location.chargers?.some(charger => 
+                            const matchesChargingType = !selectedChargingType ||
+                                location.chargers?.some(charger =>
                                     charger.current_charger?.id?.toString() === selectedChargingType
                                 );
-                            const matchesLocationCategory = !selectedLocationCategory || 
+                            const matchesLocationCategory = !selectedLocationCategory ||
                                 location.location_category?.id?.toString() === selectedLocationCategory;
-                            
+
                             // Show/hide marker based on filters
                             if (matchesProvider && matchesChargingType && matchesLocationCategory) {
                                 if (enableClustering && this.markerClusterGroup) {
@@ -1409,15 +1486,15 @@
                             }
                         });
                     },
-                    
+
                     setUserLocation(latitude, longitude) {
                         const userLatLng = [latitude, longitude];
-                        
+
                         // Remove existing user marker
                         if (this.userMarker) {
                             this.map.removeLayer(this.userMarker);
                         }
-                        
+
                         // Create new user marker
                         const userIcon = L.divIcon({
                             className: 'custom-marker map-user-location',
@@ -1430,33 +1507,33 @@
                             iconSize: [40, 50],
                             iconAnchor: [20, 50]
                         });
-                        
+
                         this.userMarker = L.marker(userLatLng, {
                             icon: userIcon,
                             isUserMarker: true
                         }).addTo(this.map);
-                        
+
                         // Center map on user location
                         this.map.setView(userLatLng, 15);
-                        
+
                         // Refresh markers
                         this.filterMarkers();
                     },
-                    
+
                     autoLocateUser() {
                         if (this.autoLocationAttempted) {
                             return;
                         }
                         this.autoLocationAttempted = true;
-                        
+
                         if (!navigator.geolocation) {
                             this.showLocationError('Geolokasi tidak didukung oleh browser Anda');
                             return;
                         }
-                        
+
                         const locateButton = this.$refs.locateButton;
                         locateButton?.classList.add('locating');
-                        
+
                         navigator.geolocation.getCurrentPosition(
                             (position) => {
                                 const userLatLng = [position.coords.latitude, position.coords.longitude];
@@ -1467,7 +1544,7 @@
                             (error) => {
                                 locateButton?.classList.remove('locating');
                                 let message = 'Terjadi kesalahan saat mencoba mendapatkan lokasi Anda';
-                                
+
                                 switch (error.code) {
                                     case error.PERMISSION_DENIED:
                                         message = 'Anda menolak permintaan geolokasi';
@@ -1480,7 +1557,7 @@
                                         message = 'Waktu permintaan lokasi habis';
                                         break;
                                 }
-                                
+
                                 this.showLocationError(message);
                             },
                             {
@@ -1490,15 +1567,15 @@
                             }
                         );
                     },
-                    
+
                     locateUser() {
                         const locateButton = this.$refs.locateButton;
-                        
+
                         if (!navigator.geolocation) {
                             this.showLocationError('Geolokasi tidak didukung oleh browser Anda');
                             return;
                         }
-                        
+
                         if (!this.locationConsentAcknowledged) {
                             const consentGranted = window.confirm(this.locationConsentMessage || 'Izinkan kami mengakses lokasi Anda?');
                             if (!consentGranted) {
@@ -1506,9 +1583,9 @@
                             }
                             this.locationConsentAcknowledged = true;
                         }
-                        
+
                         locateButton?.classList.add('locating');
-                        
+
                         navigator.geolocation.getCurrentPosition(
                             (position) => {
                                 const userLatLng = [position.coords.latitude, position.coords.longitude];
@@ -1518,7 +1595,7 @@
                             (error) => {
                                 locateButton?.classList.remove('locating');
                                 let message = 'Terjadi kesalahan saat mencoba mendapatkan lokasi Anda';
-                                
+
                                 switch (error.code) {
                                     case error.PERMISSION_DENIED:
                                         message = 'Anda menolak permintaan geolokasi';
@@ -1531,7 +1608,7 @@
                                         message = 'Waktu permintaan lokasi habis';
                                         break;
                                 }
-                                
+
                                 this.showLocationError(message);
                             },
                             {
@@ -1541,7 +1618,7 @@
                             }
                         );
                     },
-                    
+
                     requestLocationPermission() {
                         // Request location permission on initialization
                         if (navigator.permissions && navigator.permissions.query) {
@@ -1560,19 +1637,19 @@
                                 });
                         }
                     },
-                    
+
                     showLocationError(message) {
                         const errorDiv = document.getElementById('locationError');
                         const errorMessage = document.getElementById('errorMessage');
-                        
+
                         errorMessage.textContent = message;
                         errorDiv.style.display = 'block';
-                        
+
                         setTimeout(() => {
                             errorDiv.style.display = 'none';
                         }, 3000);
                     },
-                    
+
                     loadFavorites() {
                         // Load favorites from localStorage
                         const favorites = localStorage.getItem('ev-charger-favorites');
@@ -1580,12 +1657,12 @@
                             this.favorites = JSON.parse(favorites);
                         }
                     },
-                    
+
                     saveFavorites() {
                         // Save favorites to localStorage
                         localStorage.setItem('ev-charger-favorites', JSON.stringify(this.favorites));
                     },
-                    
+
                     toggleFavorite(locationId) {
                         // Toggle favorite status for a location
                         const index = this.favorites.indexOf(locationId);
@@ -1596,7 +1673,7 @@
                         }
                         this.saveFavorites();
                     },
-                    
+
                     isFavorite(locationId) {
                         // Check if a location is favorited
                         return this.favorites.includes(locationId);

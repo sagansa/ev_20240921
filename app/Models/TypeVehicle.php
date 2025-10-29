@@ -11,7 +11,12 @@ class TypeVehicle extends Model
 
     protected $connection = 'ev'; // Use the sagansa database connection
 
-    protected $guarded = [];
+    protected $fillable = [
+        'name',
+        'model_vehicle_id',
+        'type_charger',
+        'battery_capacity',
+    ];
 
     public function modelVehicle()
     {

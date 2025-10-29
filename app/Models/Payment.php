@@ -11,7 +11,10 @@ class Payment extends Model
 
     protected $connection = 'ev'; // Use the sagansa database connection
 
-    protected $guarded = [];
+    protected $fillable = [
+        'name',
+        'image',
+    ];
 
     public function providers()
     {

@@ -23,8 +23,8 @@ class ChargerLocationFactory extends Factory
     public function definition(): array
     {
         return [
-            'image' => fake()->optional(),
-            'name' => fake()->name(),
+            'image' => fake()->optional()->imageUrl(640, 480, 'business', true, 'charger'),
+            'name' => fake()->company() . ' Charging Station',
             'location_on' => fake()->numberBetween(1, 2),
             'status' => fake()->numberBetween(1, 2),
             'description' => fake()->sentence(15),
@@ -32,7 +32,7 @@ class ChargerLocationFactory extends Factory
             'longitude' => fake()->longitude(),
             'parking' => fake()->boolean(),
             'address' => fake()->address(),
-            'deleted_at' => fake()->dateTime(),
+            'deleted_at' => null,
             'provider_id' => \App\Models\Provider::factory(),
             'province_id' => \App\Models\Province::factory(),
             'city_id' => \App\Models\City::factory(),

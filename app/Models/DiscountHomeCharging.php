@@ -13,6 +13,15 @@ class DiscountHomeCharging extends Model
 
     protected $guarded = [];
 
+    protected $fillable = [
+        'charger_location_id',
+        'month',
+        'total_kWh',
+        'discount_kWh',
+        'discount_total',
+        'user_id',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

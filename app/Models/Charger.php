@@ -15,7 +15,14 @@ class Charger extends Model
 
     protected $connection = 'ev'; // Use the sagansa database connection
 
-    protected $guarded = [];
+    protected $fillable = [
+        'charger_location_id',
+        'current_charger_id',
+        'type_charger_id',
+        'power_charger_id',
+        'merk_charger_id',
+        'unit'
+    ];
 
     protected $withCount = ['charges'];
 

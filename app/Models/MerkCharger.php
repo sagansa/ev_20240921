@@ -13,7 +13,9 @@ class MerkCharger extends Model
 
     protected $connection = 'ev'; // Use the sagansa database connection
 
-    protected $guarded = [];
+    protected $fillable = [
+        'name',
+    ];
 
     public function chargers()
     {
