@@ -28,6 +28,8 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         #mapContainer {
@@ -417,12 +419,28 @@
 @push('scripts')
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const defaultView = [-6.200000, 106.816666];
-            const map = L.map('mapid').setView(defaultView, 13);
+            const map = L.map('mapid', {
+                zoomControl: true,
+                maxZoom: 19,
+                minZoom: 3,
+            }).setView(defaultView, 13);
             let markers = [];
             let userMarker = null;
+            const clusterFactory = typeof L.markerClusterGroup === 'function'
+                ? () => L.markerClusterGroup({
+                    showCoverageOnHover: false,
+                    disableClusteringAtZoom: 15,
+                    spiderfyOnMaxZoom: true,
+                    maxClusterRadius: 48,
+                })
+                : () => L.layerGroup();
+
+            let markerCluster = clusterFactory();
+            map.addLayer(markerCluster);
 
             const mapControls = document.getElementById('mapControls');
             const mapControlsToggle = document.getElementById('mapControlsToggle');
@@ -532,7 +550,7 @@
             }
 
             function createMarkers(selectedProvider = '', selectedChargingType = '', selectedLocationCategory = '') {
-                markers.forEach(marker => map.removeLayer(marker));
+                markerCluster.clearLayers();
                 markers = [];
 
                 plnLocations.forEach(location => {
@@ -605,7 +623,7 @@
                         }).bindPopup(popupContent);
 
                         markers.push(marker);
-                        marker.addTo(map);
+                        markerCluster.addLayer(marker);
                     });
                 });
             }
