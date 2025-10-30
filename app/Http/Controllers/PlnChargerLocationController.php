@@ -15,7 +15,15 @@ class PlnChargerLocationController extends Controller
 
     public function map()
     {
-        $plnLocations = PlnChargerLocation::all();
+        $plnLocations = PlnChargerLocation::with([
+            'provider',
+            'locationCategory',
+            'plnChargerLocationDetails',
+            'plnChargerLocationDetails.chargerCategory',
+            'plnChargerLocationDetails.merkCharger',
+            'plnChargerLocationDetails.chargingType',
+        ])->get();
+
         return view('layouts.ev.pln-map', compact('plnLocations'));
     }
 }

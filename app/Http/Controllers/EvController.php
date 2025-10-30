@@ -33,7 +33,8 @@ class EvController extends Controller
             'locationCategory',
             'plnChargerLocationDetails',
             'plnChargerLocationDetails.chargerCategory',
-            'plnChargerLocationDetails.merkCharger'
+            'plnChargerLocationDetails.merkCharger',
+            'plnChargerLocationDetails.chargingType',
         ])->get();
 
         $latestOperationDate = PlnChargerLocationDetail::orderBy('operation_date', 'desc')

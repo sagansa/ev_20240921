@@ -326,6 +326,89 @@
 
                 const chargerLocations = @json($plnLocations);
 
+                const resolveLocationCategory = (location) => {
+                    return location?.location_category?.name
+                        || location?.location_category_name
+                        || 'Tidak Diketahui';
+                };
+
+                const formatDetail = (detail) => {
+                    if (!detail) {
+                        return '';
+                    }
+
+                    const categoryName = detail.charger_category?.name
+                        || detail.charger_category_name
+                        || detail.category_charger?.name
+                        || 'Charger';
+
+                    const chargingTypeName = detail.charging_type?.name
+                        || detail.charging_type_name
+                        || 'Tipe tidak diketahui';
+
+                    const merkName = detail.merk_charger?.name
+                        || detail.merk_charger_name
+                        || 'Tidak Diketahui';
+
+                    const rawPower = detail.power ?? detail.power_charger?.name ?? '';
+                    const powerValue = (() => {
+                        if (rawPower === null || rawPower === undefined) {
+                            return '0 kW';
+                        }
+
+                        const stringValue = rawPower.toString().trim();
+                        if (!stringValue) {
+                            return '0 kW';
+                        }
+
+                        return /kW$/i.test(stringValue) ? stringValue : `${stringValue} kW`;
+                    })();
+
+                    const connectorsRaw = detail.count_connector_charger ?? detail.unit ?? 0;
+                    const connectors = Number.isFinite(Number(connectorsRaw))
+                        ? Number(connectorsRaw)
+                        : connectorsRaw || '0';
+
+                    const isActive = (() => {
+                        if (typeof detail.is_active_charger === 'boolean') {
+                            return detail.is_active_charger;
+                        }
+
+                        if (typeof detail.is_active_charger === 'number') {
+                            return detail.is_active_charger === 1;
+                        }
+
+                        if (typeof detail.is_active_charger === 'string') {
+                            return ['1', 'true', 'aktif'].includes(detail.is_active_charger.toLowerCase());
+                        }
+
+                        return false;
+                    })();
+
+                    const status = isActive ? 'Aktif' : 'Tidak Aktif';
+
+                    let operationDate = 'Tidak diketahui';
+                    if (detail.operation_date) {
+                        const parsedDate = new Date(detail.operation_date);
+                        if (!Number.isNaN(parsedDate.getTime())) {
+                            operationDate = parsedDate.toLocaleDateString('id-ID', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                            });
+                        }
+                    }
+
+                    return `
+                        <li>
+                            <strong>${categoryName}</strong> - ${chargingTypeName}<br>
+                            Merk: ${merkName}<br>
+                            Daya: ${powerValue} | Konektor: ${connectors} | Status: ${status}<br>
+                            Operasi: ${operationDate}
+                        </li>
+                    `;
+                };
+
                 function createMarkers(selectedProvider = '', selectedChargingType = '', selectedLocationCategory =
                     '') {
                     // Hapus marker yang ada
@@ -443,26 +526,20 @@
                                     </a>
 
                                     <p class="mb-1 text-gray-600">
-                                        Kategori Lokasi: ${location.location_category?.name || 'Tidak Diketahui'}
+                                        Kategori Lokasi: ${resolveLocationCategory(location)}
                                     </p>
 
-                                    ${location.pln_charger_location_details?.length ? `
-                                                                                                                                        <div class="mt-4">
-                                                                                                                                            <h4 class="font-semibold text-blue-700">Detail Charger:</h4>
-                                                                                                                                            <ul class="pl-4 list-disc">
-                                                                                                                                                ${location.pln_charger_location_details.map(detail => `
-                                                    <li class="text-gray-600">
-                                                        <div class="flex flex-col space-y-1">
-                                                            <span class="font-medium">Merk: ${detail.merk_charger?.name || 'Tidak Diketahui'}</span>
-                                                            <span>Daya: ${detail.power || '0'}</span>
-                                                            <span>Jumlah Konektor: ${detail.count_connector_charger || '0'}</span>
-
-                                                        </div>
-                                                    </li>
-                                                `).join('')}
-                                                                                                                                            </ul>
-                                                                                                                                        </div>
-                                                                                                                                    ` : '<p class="mt-2 text-gray-500">Tidak ada detail charger</p>'}
+                                    ${Array.isArray(location.pln_charger_location_details) && location.pln_charger_location_details.length
+                                        ? `
+                                            <div class="mt-4">
+                                                <h4 class="font-semibold text-blue-700">Detail Charger:</h4>
+                                                <ul class="pl-4 list-disc space-y-2 text-gray-600">
+                                                    ${location.pln_charger_location_details.map(formatDetail).join('')}
+                                                </ul>
+                                            </div>
+                                        `
+                                        : '<p class="mt-2 text-gray-500">Tidak ada detail charger</p>'
+                                    }
                                 </div>
                             `);
                             markers.push(marker);

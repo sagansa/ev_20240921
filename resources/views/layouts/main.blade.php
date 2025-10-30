@@ -96,7 +96,7 @@
                             </a>
                         </div>
                     </li>
-                    <li class="relative group">
+                    {{-- <li class="relative group">
                         <button onclick="toggleDesktopDropdown()"
                             class="flex items-center transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs(['chargers', 'pln-chargers']) ? 'font-bold text-ev-green-400' : '' }}">
                             Chargers
@@ -118,7 +118,7 @@
                                 PLN Chargers
                             </a>
                         </div>
-                    </li>
+                    </li> --}}
                     <li><a href="{{ route('providers') }}"
                             class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('providers') ? 'font-bold text-ev-green-400' : '' }}">Providers</a>
                     </li>

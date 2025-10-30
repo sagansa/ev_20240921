@@ -15,21 +15,28 @@ class PlnChargerLocationDetail extends Model
         'count_connector_charger',
         'operation_date',
         'year',
-        'category_charger_id',
+        'charger_category_id',
         'merk_charger_id',
         'charging_type_id',
-        ];
+    ];
 
     public function plnChargerLocation()
     {
         return $this->belongsTo(PlnChargerLocation::class, 'pln_charger_location_id');
     }
+
     public function chargerCategory()
     {
         return $this->belongsTo(ChargerCategory::class, 'charger_category_id');
     }
+
     public function merkCharger()
     {
         return $this->belongsTo(MerkCharger::class, 'merk_charger_id');
+    }
+
+    public function chargingType()
+    {
+        return $this->belongsTo(ChargingType::class, 'charging_type_id');
     }
 }

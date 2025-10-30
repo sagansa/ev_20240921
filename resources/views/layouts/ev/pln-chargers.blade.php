@@ -17,35 +17,80 @@
                                 <x-table.header>Kategori</x-table.header>
                                 <x-table.header>Merk</x-table.header>
                                 <x-table.header>Daya</x-table.header>
-                                <x-table.header>Jumlah Konektor</x-table.header>
+                                <x-table.header>Jmlh Konektor (Unit)</x-table.header>
                                 <x-table.header>Status</x-table.header>
-                                <x-table.header>Tanggal Operasi</x-table.header>
-                                <x-table.header>Tahun</x-table.header>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                            @foreach ($plnChargerDetails as $detail)
+                            @forelse ($plnChargerDetails as $detail)
+                                @php
+                                    $locationName = data_get($detail, 'plnChargerLocation.name');
+                                    $providerName = data_get($detail, 'plnChargerLocation.provider.name');
+                                    $categoryName = data_get($detail, 'plnChargerLocation.locationCategory.name');
+                                    $merkName = data_get($detail, 'merkCharger.name');
+
+                                    $powerRaw = $detail->power;
+                                    $hasPower = ! is_null($powerRaw) && $powerRaw !== '';
+                                    $powerValue = $hasPower ? (float) $powerRaw : null;
+                                    $powerDisplay = $hasPower
+                                        ? rtrim(rtrim(number_format($powerValue, 2, '.', ''), '0'), '.') . ' kW'
+                                        : 'N/A';
+
+                                    $connectorCount = is_numeric($detail->count_connector_charger)
+                                        ? (int) $detail->count_connector_charger
+                                        : 0;
+
+                                    $isActive = (bool) data_get($detail, 'is_active_charger');
+                                    $statusClasses = $isActive
+                                        ? 'text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-900'
+                                        : 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900';
+                                    $statusLabel = $isActive ? 'Aktif' : 'Tidak Aktif';
+
+                                    $operationDate = 'N/A';
+                                    if (! empty($detail->operation_date)) {
+                                        try {
+                                            $operationDate = \Illuminate\Support\Carbon::parse($detail->operation_date)->translatedFormat('d M Y');
+                                        } catch (\Throwable $exception) {
+                                            $operationDate = 'N/A';
+                                        }
+                                    }
+
+                                    $year = $detail->year ?? 'N/A';
+                                @endphp
+
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
-                                    <x-table.cell>{{ $detail->plnChargerLocation->name ?? 'N/A' }}</x-table.cell>
-                                    <x-table.cell>{{ $detail->plnChargerLocation->provider->name ?? 'N/A' }}</x-table.cell>
-                                    <x-table.cell>{{ $detail->chargerCategory->name ?? 'N/A' }}</x-table.cell>
-                                    <x-table.cell>{{ $detail->merkCharger->name ?? 'N/A' }}</x-table.cell>
-                                    <x-table.cell>{{ $detail->power ?? 'N/A' }} kW</x-table.cell>
-                                    <x-table.cell>{{ $detail->count_connector_charger ?? '0' }}</x-table.cell>
+                                    <x-table.cell wrap variant="emphasis">
+                                        {{ $locationName ?? 'N/A' }}
+                                    </x-table.cell>
+                                    <x-table.cell variant="normal">
+                                        {{ $providerName ?? 'N/A' }}
+                                    </x-table.cell>
                                     <x-table.cell>
-                                        <span @class([
-                                            'px-2 py-1 text-sm font-medium rounded-full',
-                                            'text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-900' =>
-                                                $detail->is_active_charger,
-                                            'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900' => !$detail->is_active_charger,
-                                        ])>
-                                            {{ $detail->is_active_charger ? 'Aktif' : 'Tidak Aktif' }}
+                                        {{ $categoryName ?? 'N/A' }}
+                                    </x-table.cell>
+                                    <x-table.cell>
+                                        {{ $merkName ?? 'N/A' }}
+                                    </x-table.cell>
+                                    <x-table.cell variant="normal">
+                                        {{ $powerDisplay }}
+                                    </x-table.cell>
+                                    <x-table.cell variant="normal" class="text-center">
+                                        {{ $connectorCount }}
+                                    </x-table.cell>
+                                    <x-table.cell variant="plain" class="text-center">
+                                        <span class="px-2 py-1 text-sm font-medium rounded-full {{ $statusClasses }}">
+                                            {{ $statusLabel }}
                                         </span>
                                     </x-table.cell>
-                                    <x-table.cell>{{ $detail->operation_date ? date('d M Y', strtotime($detail->operation_date)) : 'N/A' }}</x-table.cell>
-                                    <x-table.cell>{{ $detail->year ?? 'N/A' }}</x-table.cell>
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <x-table.cell colspan="9" wrap variant="plain"
+                                        class="text-center text-gray-500 dark:text-gray-400">
+                                        Data charger PLN tidak tersedia.
+                                    </x-table.cell>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>

@@ -529,21 +529,77 @@
             }
 
             function formatDetail(detail) {
-                const merk = detail.merk_charger?.name || 'Tidak Diketahui';
-                const power = detail.power ? `${detail.power}` : '0';
-                const connectors = detail.count_connector_charger || '0';
-                const status = detail.is_active_charger ? 'Aktif' : 'Tidak Aktif';
-                const operationDate = detail.operation_date ? new Date(detail.operation_date).toLocaleDateString('id-ID', {
-                    day: '2-digit', month: 'short', year: 'numeric'
-                }) : 'Tidak diketahui';
+                if (!detail) {
+                    return '';
+                }
+
+                const categoryName = detail.charger_category?.name
+                    || detail.charger_category_name
+                    || detail.category_charger?.name
+                    || 'Charger';
+
+                const chargingTypeName = detail.charging_type?.name
+                    || detail.charging_type_name
+                    || 'Tipe tidak diketahui';
+
+                const merkName = detail.merk_charger?.name
+                    || detail.merk_charger_name
+                    || 'Tidak Diketahui';
+
+                const rawPower = detail.power ?? detail.power_charger?.name ?? '';
+                const powerValue = (() => {
+                    if (rawPower === null || rawPower === undefined) {
+                        return '0 kW';
+                    }
+
+                    const stringValue = rawPower.toString().trim();
+                    if (!stringValue) {
+                        return '0 kW';
+                    }
+
+                    return /kW$/i.test(stringValue) ? stringValue : `${stringValue} kW`;
+                })();
+
+                const connectorsRaw = detail.count_connector_charger ?? detail.unit ?? 0;
+                const connectors = Number.isFinite(Number(connectorsRaw))
+                    ? Number(connectorsRaw)
+                    : connectorsRaw || '0';
+
+                const isActive = (() => {
+                    if (typeof detail.is_active_charger === 'boolean') {
+                        return detail.is_active_charger;
+                    }
+
+                    if (typeof detail.is_active_charger === 'number') {
+                        return detail.is_active_charger === 1;
+                    }
+
+                    if (typeof detail.is_active_charger === 'string') {
+                        return ['1', 'true', 'aktif'].includes(detail.is_active_charger.toLowerCase());
+                    }
+
+                    return false;
+                })();
+
+                const status = isActive ? 'Aktif' : 'Tidak Aktif';
+
+                let operationDate = 'Tidak diketahui';
+                if (detail.operation_date) {
+                    const parsedDate = new Date(detail.operation_date);
+                    if (!Number.isNaN(parsedDate.getTime())) {
+                        operationDate = parsedDate.toLocaleDateString('id-ID', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                        });
+                    }
+                }
 
                 return `
                     <li>
-                        <strong>${detail.charger_category?.name || 'Charger'}</strong> -
-                        ${detail.charging_type?.name || detail.charging_type_name || 'Tipe tidak diketahui'}
-                        <br>
-                        Daya: ${power} | Konektor: ${connectors} | Status: ${status}
-                        <br>
+                        <strong>${categoryName}</strong> - ${chargingTypeName}<br>
+                        Merk: ${merkName}<br>
+                        Daya: ${powerValue} | Konektor: ${connectors} | Status: ${status}<br>
                         Operasi: ${operationDate}
                     </li>
                 `;
@@ -607,7 +663,11 @@
                                 <h3>${location.name || 'Lokasi Tidak Diketahui'}</h3>
                                 <p>${location.address || 'Alamat tidak tersedia'}</p>
                                 <p>Provider: ${providerName}</p>
-                                <p>Kategori Lokasi: ${location.location_category?.name || 'Tidak Diketahui'}</p>
+                                <p>Kategori Lokasi: ${
+                                    location.location_category?.name
+                                    || location.location_category_name
+                                    || 'Tidak Diketahui'
+                                }</p>
                                 ${detailItems ? `<ul class="charger-details">${detailItems}</ul>` : '<p>Detail charger belum tersedia</p>'}
                                 <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
                                    class="maps-link"
