@@ -2,6 +2,41 @@
 
 @section('title', 'Providers - EV Charger')
 
+@php
+    use Illuminate\Support\Facades\Storage;
+    use Illuminate\Support\Str;
+
+    $resolveProviderImage = static function ($provider): string {
+        $rawImage = trim((string) data_get($provider, 'image', ''));
+
+        if ($rawImage === '') {
+            return asset('images/no-image.png');
+        }
+
+        if (Str::startsWith($rawImage, ['http://', 'https://'])) {
+            return $rawImage;
+        }
+
+        $normalized = preg_replace('#^(storage/|public/)+#', '', ltrim($rawImage, '/'));
+
+        if (Storage::disk('public')->exists($normalized)) {
+            return Storage::disk('public')->url($normalized);
+        }
+
+        if (file_exists(public_path('storage/' . $normalized))) {
+            return asset('storage/' . $normalized);
+        }
+
+        if (file_exists(public_path($normalized))) {
+            return asset($normalized);
+        }
+
+        return asset('images/no-image.png');
+    };
+
+    $fallbackImage = asset('images/no-image.png');
+@endphp
+
 @section('content')
     <div class="p-4 lg:p-8">
         <h2 class="mb-6 text-3xl font-bold text-ev-blue-800">Providers</h2>
@@ -82,18 +117,16 @@
                                 <tbody class="divide-y divide-gray-200">
                                     @foreach ($providers as $provider)
                                         <tr>
+                                            @php
+                                                $providerImageUrl = $resolveProviderImage($provider);
+                                            @endphp
                                             <td
                                                 class="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 whitespace-nowrap sm:pl-0">
-                                                @if ($provider->image)
-                                                    <img src="{{ asset('storage/' . $provider->image) }}"
-                                                        alt="{{ $provider->name }}"
-                                                        class="object-cover w-12 h-12 rounded-full">
-                                                @else
-                                                    <div
-                                                        class="flex items-center justify-center w-12 h-12 bg-gray-200 rounded-full">
-                                                        <span class="text-xs text-gray-500">No Image</span>
-                                                    </div>
-                                                @endif
+                                                <img src="{{ $providerImageUrl }}"
+                                                    alt="{{ $provider->name }}"
+                                                    loading="lazy"
+                                                    class="object-cover w-12 h-12 rounded-full"
+                                                    onerror="this.onerror=null;this.src='{{ $fallbackImage }}';">
                                             </td>
                                             <td
                                                 class="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 whitespace-nowrap sm:pl-0">
@@ -171,15 +204,13 @@
                     @foreach ($providers as $provider)
                         <div class="p-4 bg-white rounded-lg shadow">
                             <div class="flex min-w-0 gap-x-4">
-                                @if ($provider->image)
-                                    <img src="{{ asset('storage/' . $provider->image) }}" alt="{{ $provider->name }}"
-                                        class="flex-none object-cover w-12 h-12 rounded-full">
-                                @else
-                                    <div
-                                        class="flex items-center justify-center flex-none w-12 h-12 bg-gray-200 rounded-full">
-                                        <span class="text-xs text-gray-500">No Image</span>
-                                    </div>
-                                @endif
+                                @php
+                                    $providerImageUrl = $resolveProviderImage($provider);
+                                @endphp
+                                <img src="{{ $providerImageUrl }}" alt="{{ $provider->name }}"
+                                    loading="lazy"
+                                    class="flex-none object-cover w-12 h-12 rounded-full"
+                                    onerror="this.onerror=null;this.src='{{ $fallbackImage }}';">
                                 <div class="flex-auto min-w-0">
                                     <p class="text-sm font-semibold leading-6 text-gray-900">
                                         {{ $provider->name }}
