@@ -30,6 +30,7 @@ Route::get('/map', [EvController::class, 'map'])->name('map');
 Route::get('/providers', [EvController::class, 'providers'])->name('providers');
 Route::get('/products', [EvController::class, 'products'])->name('products');
 Route::get('/contact', [EvController::class, 'contact'])->name('contact');
+Route::get('/training', [EvController::class, 'training'])->name('training');
 Route::get('/chargers', [EvController::class, 'chargers'])->name('chargers');
 Route::get('/pln-chargers', [EvController::class, 'plnChargers'])->name('pln-chargers');
 Route::get('/get-cities/{province}', [EvController::class, 'getCities'])->name('get.cities');

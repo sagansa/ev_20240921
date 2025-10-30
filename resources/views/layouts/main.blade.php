@@ -125,6 +125,9 @@
                     <li><a href="{{ route('products') }}"
                             class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('products') ? 'font-bold text-ev-green-400' : '' }}">Products</a>
                     </li>
+                    <li><a href="{{ route('training') }}"
+                            class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('training') ? 'font-bold text-ev-green-400' : '' }}">Seminar EV</a>
+                    </li>
                     <li><a href="{{ route('youtube.index') }}"
                             class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('youtube.index') ? 'font-bold text-ev-green-400' : '' }}">Insights & Stories</a>
                     </li>
@@ -206,6 +209,9 @@
                 </li>
                 <li><a href="{{ route('products') }}"
                         class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('products') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Products</a>
+                </li>
+                <li><a href="{{ route('training') }}"
+                        class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('training') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Seminar EV</a>
                 </li>
                 <li><a href="{{ route('youtube.index') }}"
                         class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('youtube.index') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Insights & Stories</a>

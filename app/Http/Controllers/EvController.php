@@ -113,6 +113,11 @@ class EvController extends Controller
         return view('layouts.ev.contact');
     }
 
+    public function training()
+    {
+        return view('layouts.ev.training');
+    }
+
     public function chargers(Request $request)
     {
         $query = Charger::with(['chargerLocation.province', 'chargerLocation.city', 'powerCharger', 'currentCharger', 'typeCharger', 'merkCharger', 'chargerLocation.provider'])
