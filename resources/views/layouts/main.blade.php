@@ -179,7 +179,7 @@
                         </a>
                     </div>
                 </li>
-                <li class="relative">
+                {{-- <li class="relative">
                     <button onclick="toggleMobileDropdown()"
                         class="flex items-center justify-between w-full px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs(['chargers', 'pln-chargers']) ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
                         Chargers
@@ -200,7 +200,7 @@
                             Community Chargers
                         </a>
                     </div>
-                </li>
+                </li> --}}
                 <li><a href="{{ route('providers') }}"
                         class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('providers') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Providers</a>
                 </li>
