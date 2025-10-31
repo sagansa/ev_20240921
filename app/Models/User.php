@@ -25,7 +25,7 @@ class User extends Authenticatable // implements FilamentUser
     use HasProfilePhoto;
     use TwoFactorAuthenticatable;
 
-    protected $connection = 'mysql'; // Use the sagansa database connection
+    protected $connection = 'sagansa'; // Use the sagansa database connection
     protected $table = 'users';
 
     // protected $connection = 'sagansa'; // Use the sagansa database connection
@@ -123,6 +123,36 @@ class User extends Authenticatable // implements FilamentUser
     public function discountHomeChargings()
     {
         return $this->hasMany(DiscountHomeCharging::class);
+    }
+
+    public function contributorProfile()
+    {
+        return $this->hasOne(ContributorProfile::class);
+    }
+
+    public function locationReports()
+    {
+        return $this->hasMany(LocationReport::class, 'reporter_id');
+    }
+
+    public function locationUpdates()
+    {
+        return $this->hasMany(LocationUpdate::class, 'contributor_id');
+    }
+
+    public function verifiedLocations()
+    {
+        return $this->hasMany(ChargerLocation::class, 'verified_by');
+    }
+
+    public function processedReports()
+    {
+        return $this->hasMany(LocationReport::class, 'processed_by');
+    }
+
+    public function approvedUpdates()
+    {
+        return $this->hasMany(LocationUpdate::class, 'approved_by');
     }
 
     public function canAccessPanel(Panel $panel): bool
