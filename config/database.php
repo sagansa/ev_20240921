@@ -2,6 +2,9 @@
 
 use Illuminate\Support\Str;
 
+$sagansaDriver = env('DB_SAGANSA_DRIVER', 'mysql');
+$evDriver = env('DB_EV_DRIVER', 'mysql');
+
 return [
 
     /*
@@ -16,7 +19,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => env('DB_CONNECTION', 'sagansa'),
 
     /*
     |--------------------------------------------------------------------------
@@ -63,11 +66,14 @@ return [
         ],
 
         'sagansa' => [
-            'driver' => 'mysql',
+            'driver' => $sagansaDriver,
             'url' => env('DB_SAGANSA_URL', env('DB_URL')),
             'host' => env('DB_SAGANSA_HOST', '127.0.0.1'),
             'port' => env('DB_SAGANSA_PORT', '3306'),
-            'database' => env('DB_SAGANSA_DATABASE', 'sagansa'),
+            'database' => env(
+                'DB_SAGANSA_DATABASE',
+                $sagansaDriver === 'sqlite' ? database_path('database.sqlite') : 'sagansa'
+            ),
             'username' => env('DB_SAGANSA_USERNAME', env('DB_USERNAME', 'root')),
             'password' => env('DB_SAGANSA_PASSWORD', env('DB_PASSWORD', 'root')),
             'charset' => env('DB_SAGANSA_CHARSET', env('DB_CHARSET', 'utf8mb4')),
@@ -76,17 +82,20 @@ return [
             'prefix_indexes' => true,
             'strict' => false,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
+            'options' => ($sagansaDriver === 'mysql' && extension_loaded('pdo_mysql')) ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('DB_SAGANSA_SSL_CA', env('MYSQL_ATTR_SSL_CA')),
             ]) : [],
         ],
 
         'ev' => [
-            'driver' => 'mysql',
+            'driver' => $evDriver,
             'url' => env('DB_EV_URL', env('DB_URL')),
             'host' => env('DB_EV_HOST', '127.0.0.1'),
             'port' => env('DB_EV_PORT', '3306'),
-            'database' => env('DB_EV_DATABASE', 'ev'),
+            'database' => env(
+                'DB_EV_DATABASE',
+                $evDriver === 'sqlite' ? database_path('database.sqlite') : 'ev'
+            ),
             'username' => env('DB_EV_USERNAME', 'root'),
             'password' => env('DB_EV_PASSWORD', 'root'),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
@@ -95,7 +104,7 @@ return [
             'prefix_indexes' => true,
             'strict' => false,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
+            'options' => ($evDriver === 'mysql' && extension_loaded('pdo_mysql')) ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
@@ -186,7 +195,7 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_') . '_database_'),
+            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
         ],
 
         'default' => [

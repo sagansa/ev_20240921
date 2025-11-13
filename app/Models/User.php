@@ -2,21 +2,25 @@
 
 namespace App\Models;
 
-use Filament\Panel;
-use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Support\Facades\Auth;
-use Spatie\Permission\Traits\HasRoles;
-use Laravel\Jetstream\HasProfilePhoto;
-use Illuminate\Notifications\Notifiable;
-use Filament\Models\Contracts\FilamentUser;
-use Laravel\Fortify\TwoFactorAuthenticatable;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Concerns\UsesDefaultConnectionWhenTesting;
+
 use BezhanSalleh\FilamentShield\Traits\HasPanelShield;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
+use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Jetstream\HasProfilePhoto;
+use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable // implements FilamentUser
 {
+    use UsesDefaultConnectionWhenTesting;
+
     use HasRoles;
     use HasFactory;
     use Notifiable;
@@ -166,12 +170,44 @@ class User extends Authenticatable // implements FilamentUser
         return false;
     }
 
-    protected static function boot()
+    protected static function boot(): void
     {
         parent::boot();
 
-        static::created(function (User $user) {
-            $user->assignRole('user');
+        static::creating(function () {
+            static::ensureDefaultRoleExists();
         });
+
+        static::created(function (User $user) {
+            static::assignDefaultRole($user);
+        });
+    }
+
+    protected static function ensureDefaultRoleExists(): void
+    {
+        if (! Schema::hasTable('roles')) {
+            return;
+        }
+
+        $guard = config('auth.defaults.guard', 'web');
+        $role = Role::query()->firstOrCreate([
+            'name' => 'user',
+            'guard_name' => $guard,
+        ]);
+
+        if ($role->wasRecentlyCreated) {
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+        }
+    }
+
+    protected static function assignDefaultRole(User $user): void
+    {
+        if (! Schema::hasTable('roles')) {
+            return;
+        }
+
+        if (! $user->hasRole('user')) {
+            $user->assignRole('user');
+        }
     }
 }

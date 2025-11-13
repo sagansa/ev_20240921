@@ -1,102 +1,137 @@
 <?php
 
-use App\Models\User;
+namespace Tests\Feature\Api;
+
 use App\Models\Charge;
-use App\Models\Vehicle;
 use App\Models\Charger;
-use Laravel\Sanctum\Sanctum;
 use App\Models\ChargerLocation;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\Vehicle;
+use Illuminate\Support\Carbon;
 
-uses(RefreshDatabase::class, WithFaker::class);
+class ChargeTest extends ApiTestCase
+{
+    private function endpoint(string $path = ''): string
+    {
+        $base = '/api/v1/charging-sessions';
 
-beforeEach(function () {
-    $this->withoutExceptionHandling();
+        return $path ? "{$base}/{$path}" : $base;
+    }
 
-    $user = User::factory()->create(['email' => 'admin@admin.com']);
+    public function test_it_gets_charges_list(): void
+    {
+        $vehicle = Vehicle::factory()
+            ->for($this->authUser, 'user')
+            ->create();
 
-    Sanctum::actingAs($user, [], 'web');
-});
+        $charges = Charge::factory()
+            ->count(2)
+            ->for($vehicle)
+            ->create([
+                'user_id' => $this->authUser->id,
+            ]);
 
-test('it gets charges list', function () {
-    $charges = Charge::factory()
-        ->count(5)
-        ->create();
+        $response = $this->getJson($this->endpoint());
 
-    $response = $this->get(route('api.charges.index'));
+        $response->assertOk()
+            ->assertJsonFragment([
+                'id' => $charges->first()->id,
+            ]);
+    }
 
-    $response->assertOk()->assertSee($charges[0]->id);
-});
+    public function test_it_stores_the_charge(): void
+    {
+        $vehicle = Vehicle::factory()
+            ->for($this->authUser, 'user')
+            ->create();
 
-test('it stores the charge', function () {
-    $data = Charge::factory()
-        ->make()
-        ->toArray();
+        $chargerLocation = ChargerLocation::factory()->create();
+        $charger = Charger::factory()
+            ->for($chargerLocation)
+            ->create();
 
-    $response = $this->postJson(route('api.charges.store'), $data);
+        $payload = [
+            'vehicle_id' => $vehicle->id,
+            'charger_location_id' => $chargerLocation->id,
+            'charger_id' => $charger->id,
+            'date' => Carbon::now()->toDateString(),
+            'km_before' => 100,
+            'km_now' => 150,
+            'start_charging_now' => 60,
+            'finish_charging_now' => 90,
+            'finish_charging_before' => 50,
+            'parking' => 10,
+        ];
 
-    unset($data['created_at']);
-    unset($data['updated_at']);
-    unset($data['deleted_at']);
-    unset($data['image_start']);
-    unset($data['image_finish']);
+        $response = $this->postJson($this->endpoint(), $payload);
 
-    $this->assertDatabaseHas('charges', $data);
+        $response->assertCreated()
+            ->assertJsonFragment([
+                'vehicle_id' => $vehicle->id,
+                'charger_location_id' => $chargerLocation->id,
+                'charger_id' => $charger->id,
+                'user_id' => $this->authUser->id,
+            ]);
 
-    $response->assertStatus(201)->assertJsonFragment($data);
-});
+        $this->assertDatabaseHas('charges', [
+            'vehicle_id' => $vehicle->id,
+            'charger_location_id' => $chargerLocation->id,
+            'charger_id' => $charger->id,
+            'user_id' => $this->authUser->id,
+        ]);
+    }
 
-test('it updates the charge', function () {
-    $charge = Charge::factory()->create();
+    public function test_it_updates_the_charge(): void
+    {
+        $vehicle = Vehicle::factory()
+            ->for($this->authUser, 'user')
+            ->create();
 
-    $vehicle = Vehicle::factory()->create();
-    $chargerLocation = ChargerLocation::factory()->create();
-    $user = User::factory()->create();
-    $charger = Charger::factory()->create();
+        $charge = Charge::factory()
+            ->for($vehicle)
+            ->create([
+                'user_id' => $this->authUser->id,
+            ]);
+        $this->assertSame($this->authUser->id, $charge->user_id);
 
-    $data = [
-        'date' => fake()->date(),
-        'km_now' => fake()->randomNumber(),
-        'km_before' => fake()->randomNumber(),
-        'start_charging_now' => fake()->randomNumber(),
-        'finish_charging_now' => fake()->randomNumber(),
-        'finish_charging_before' => fake()->randomNumber(),
-        'parking' => fake()->randomNumber(),
-        'kWh' => fake()->randomFloat(0, 9999),
-        'street_lighting_tax' => fake()->randomNumber(),
-        'value_added_tax' => fake()->randomNumber(),
-        'admin_cost' => fake()->randomNumber(),
-        'total_cost' => fake()->randomNumber(),
-        'image_start' => fake()->text(255),
-        'image_finish' => fake()->word(),
-        'vehicle_id' => $vehicle->id,
-        'charger_location_id' => $chargerLocation->id,
-        'user_id' => $user->id,
-        'charger_id' => $charger->id,
-    ];
+        $payload = [
+            'km_now' => 250,
+            'km_before' => 200,
+            'start_charging_now' => 120,
+            'finish_charging_before' => 80,
+            'total_cost' => 75000,
+        ];
 
-    $response = $this->putJson(route('api.charges.update', $charge), $data);
+        $response = $this->putJson($this->endpoint($charge->id), $payload);
 
-    unset($data['created_at']);
-    unset($data['updated_at']);
-    unset($data['deleted_at']);
-    unset($data['image_start']);
-    unset($data['image_finish']);
+        $response->assertOk()
+            ->assertJsonFragment([
+                'id' => $charge->id,
+                'km_now' => $payload['km_now'],
+                'total_cost' => $payload['total_cost'],
+            ]);
 
-    $data['id'] = $charge->id;
+        $this->assertDatabaseHas('charges', [
+            'id' => $charge->id,
+            'km_now' => $payload['km_now'],
+            'km_before' => $payload['km_before'],
+            'total_cost' => $payload['total_cost'],
+        ]);
+    }
 
-    $this->assertDatabaseHas('charges', $data);
+    public function test_it_deletes_the_charge(): void
+    {
+        $charge = Charge::factory()
+            ->for(Vehicle::factory()->for($this->authUser, 'user'))
+            ->create([
+                'user_id' => $this->authUser->id,
+            ]);
+        $this->assertSame($this->authUser->id, $charge->user_id);
 
-    $response->assertStatus(200)->assertJsonFragment($data);
-});
+        $response = $this->deleteJson($this->endpoint($charge->id));
 
-test('it deletes the charge', function () {
-    $charge = Charge::factory()->create();
+        $response->assertOk()
+            ->assertJsonFragment(['success' => true]);
 
-    $response = $this->deleteJson(route('api.charges.destroy', $charge));
-
-    $this->assertSoftDeleted($charge);
-
-    $response->assertNoContent();
-});
+        $this->assertSoftDeleted('charges', ['id' => $charge->id]);
+    }
+}

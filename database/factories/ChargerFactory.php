@@ -24,7 +24,7 @@ class ChargerFactory extends Factory
     {
         return [
             'unit' => fake()->numberBetween(1, 2),
-            'deleted_at' => fake()->dateTime(),
+            'deleted_at' => null,
             'current_charger_id' => \App\Models\CurrentCharger::factory(),
             'type_charger_id' => \App\Models\TypeCharger::factory(),
             'power_charger_id' => \App\Models\PowerCharger::factory(),

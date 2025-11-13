@@ -1,60 +1,51 @@
 <?php
 
-use App\Models\User;
-use App\Models\Vehicle;
-use Laravel\Sanctum\Sanctum;
+namespace Tests\Feature\Api;
+
 use App\Models\StateOfHealth;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\Vehicle;
 
-uses(RefreshDatabase::class, WithFaker::class);
+class VehicleStateOfHealthsTest extends ApiTestCase
+{
+    public function test_it_gets_vehicle_state_of_healths(): void
+    {
+        $vehicle = Vehicle::factory()->create();
+        $stateOfHealths = StateOfHealth::factory()
+            ->count(2)
+            ->create([
+                'vehicle_id' => $vehicle->id,
+            ]);
 
-beforeEach(function () {
-    $this->withoutExceptionHandling();
+        $response = $this->getJson(
+            route('api.vehicles.state-of-healths.index', $vehicle)
+        );
 
-    $user = User::factory()->create(['email' => 'admin@admin.com']);
+        $response->assertOk()->assertSee($stateOfHealths[0]->id);
+    }
 
-    Sanctum::actingAs($user, [], 'web');
-});
+    public function test_it_stores_the_vehicle_state_of_healths(): void
+    {
+        $vehicle = Vehicle::factory()->create();
+        $data = StateOfHealth::factory()
+            ->make([
+                'vehicle_id' => $vehicle->id,
+            ])
+            ->toArray();
 
-test('it gets vehicle state_of_healths', function () {
-    $vehicle = Vehicle::factory()->create();
-    $stateOfHealths = StateOfHealth::factory()
-        ->count(2)
-        ->create([
-            'vehicle_id' => $vehicle->id,
-        ]);
+        $response = $this->postJson(
+            route('api.vehicles.state-of-healths.store', $vehicle),
+            $data
+        );
 
-    $response = $this->getJson(
-        route('api.vehicles.state-of-healths.index', $vehicle)
-    );
+        unset($data['date'], $data['created_at'], $data['updated_at'], $data['deleted_at']);
 
-    $response->assertOk()->assertSee($stateOfHealths[0]->id);
-});
+        $this->assertDatabaseHas('state_of_healths', $data);
 
-test('it stores the vehicle state_of_healths', function () {
-    $vehicle = Vehicle::factory()->create();
-    $data = StateOfHealth::factory()
-        ->make([
-            'vehicle_id' => $vehicle->id,
-        ])
-        ->toArray();
+        $response->assertStatus(201)->assertJsonFragment($data);
 
-    $response = $this->postJson(
-        route('api.vehicles.state-of-healths.store', $vehicle),
-        $data
-    );
+        $stateOfHealth = StateOfHealth::latest('id')->first();
 
-    unset($data['date']);
-    unset($data['created_at']);
-    unset($data['updated_at']);
-    unset($data['deleted_at']);
+        $this->assertEquals($vehicle->id, $stateOfHealth->vehicle_id);
+    }
+}
 
-    $this->assertDatabaseHas('state_of_healths', $data);
-
-    $response->assertStatus(201)->assertJsonFragment($data);
-
-    $stateOfHealth = StateOfHealth::latest('id')->first();
-
-    $this->assertEquals($vehicle->id, $stateOfHealth->vehicle_id);
-});

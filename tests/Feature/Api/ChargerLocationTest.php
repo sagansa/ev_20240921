@@ -1,112 +1,99 @@
 <?php
 
-use App\Models\User;
+namespace Tests\Feature\Api;
+
+use App\Models\ChargerLocation;
 use App\Models\City;
-use App\Models\Provider;
-use App\Models\Province;
 use App\Models\District;
 use App\Models\PostalCode;
+use App\Models\Provider;
+use App\Models\Province;
 use App\Models\Subdistrict;
-use Laravel\Sanctum\Sanctum;
-use App\Models\ChargerLocation;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\User;
 
-uses(RefreshDatabase::class, WithFaker::class);
+class ChargerLocationTest extends ApiTestCase
+{
+    public function test_it_gets_charger_locations_list(): void
+    {
+        $chargerLocations = ChargerLocation::factory()
+            ->count(5)
+            ->create();
 
-beforeEach(function () {
-    $this->withoutExceptionHandling();
+        $response = $this->get(route('api.charger-locations.index'));
 
-    $user = User::factory()->create(['email' => 'admin@admin.com']);
+        $response->assertOk()->assertSee($chargerLocations[0]->name);
+    }
 
-    Sanctum::actingAs($user, [], 'web');
-});
+    public function test_it_stores_the_charger_location(): void
+    {
+        $data = ChargerLocation::factory()
+            ->make()
+            ->toArray();
 
-test('it gets charger_locations list', function () {
-    $chargerLocations = ChargerLocation::factory()
-        ->count(5)
-        ->create();
+        $response = $this->postJson(route('api.charger-locations.store'), $data);
 
-    $response = $this->get(route('api.charger-locations.index'));
+        unset($data['address'], $data['created_at'], $data['updated_at'], $data['deleted_at'], $data['name'], $data['location']);
 
-    $response->assertOk()->assertSee($chargerLocations[0]->name);
-});
+        $this->assertDatabaseHas('charger_locations', $data);
 
-test('it stores the charger_location', function () {
-    $data = ChargerLocation::factory()
-        ->make()
-        ->toArray();
+        $response->assertStatus(201)->assertJsonFragment($data);
+    }
 
-    $response = $this->postJson(route('api.charger-locations.store'), $data);
+    public function test_it_updates_the_charger_location(): void
+    {
+        $chargerLocation = ChargerLocation::factory()->create();
 
-    unset($data['address']);
-    unset($data['created_at']);
-    unset($data['updated_at']);
-    unset($data['deleted_at']);
-    unset($data['name']);
-    unset($data['location']);
+        $provider = Provider::factory()->create();
+        $province = Province::factory()->create();
+        $city = City::factory()->create();
+        $district = District::factory()->create();
+        $subdistrict = Subdistrict::factory()->create();
+        $postalCode = PostalCode::factory()->create();
+        $user = User::factory()->create();
 
-    $this->assertDatabaseHas('charger_locations', $data);
+        $data = [
+            'image' => fake()->optional(),
+            'name' => fake()->name(),
+            'location_on' => fake()->numberBetween(1, 2),
+            'status' => fake()->numberBetween(1, 2),
+            'description' => fake()->sentence(15),
+            'latitude' => fake()->latitude(),
+            'longitude' => fake()->longitude(),
+            'parking' => fake()->boolean(),
+            'provider_id' => $provider->id,
+            'province_id' => $province->id,
+            'city_id' => $city->id,
+            'district_id' => $district->id,
+            'subdistrict_id' => $subdistrict->id,
+            'postal_code_id' => $postalCode->id,
+            'user_id' => $user->id,
+        ];
 
-    $response->assertStatus(201)->assertJsonFragment($data);
-});
+        $response = $this->putJson(
+            route('api.charger-locations.update', $chargerLocation),
+            $data
+        );
 
-test('it updates the charger_location', function () {
-    $chargerLocation = ChargerLocation::factory()->create();
+        unset($data['address'], $data['created_at'], $data['updated_at'], $data['deleted_at'], $data['name'], $data['location']);
 
-    $provider = Provider::factory()->create();
-    $province = Province::factory()->create();
-    $city = City::factory()->create();
-    $district = District::factory()->create();
-    $subdistrict = Subdistrict::factory()->create();
-    $postalCode = PostalCode::factory()->create();
-    $user = User::factory()->create();
+        $data['id'] = $chargerLocation->id;
 
-    $data = [
-        'image' => fake()->optional(),
-        'name' => fake()->name(),
-        'location_on' => fake()->numberBetween(1, 2),
-        'status' => fake()->numberBetween(1, 2),
-        'description' => fake()->sentence(15),
-        'latitude' => fake()->latitude(),
-        'longitude' => fake()->longitude(),
-        'parking' => fake()->boolean(),
-        'provider_id' => $provider->id,
-        'province_id' => $province->id,
-        'city_id' => $city->id,
-        'district_id' => $district->id,
-        'subdistrict_id' => $subdistrict->id,
-        'postal_code_id' => $postalCode->id,
-        'user_id' => $user->id,
-    ];
+        $this->assertDatabaseHas('charger_locations', $data);
 
-    $response = $this->putJson(
-        route('api.charger-locations.update', $chargerLocation),
-        $data
-    );
+        $response->assertStatus(200)->assertJsonFragment($data);
+    }
 
-    unset($data['address']);
-    unset($data['created_at']);
-    unset($data['updated_at']);
-    unset($data['deleted_at']);
-    unset($data['name']);
-    unset($data['location']);
+    public function test_it_deletes_the_charger_location(): void
+    {
+        $chargerLocation = ChargerLocation::factory()->create();
 
-    $data['id'] = $chargerLocation->id;
+        $response = $this->deleteJson(
+            route('api.charger-locations.destroy', $chargerLocation)
+        );
 
-    $this->assertDatabaseHas('charger_locations', $data);
+        $this->assertSoftDeleted($chargerLocation);
 
-    $response->assertStatus(200)->assertJsonFragment($data);
-});
+        $response->assertNoContent();
+    }
+}
 
-test('it deletes the charger_location', function () {
-    $chargerLocation = ChargerLocation::factory()->create();
-
-    $response = $this->deleteJson(
-        route('api.charger-locations.destroy', $chargerLocation)
-    );
-
-    $this->assertSoftDeleted($chargerLocation);
-
-    $response->assertNoContent();
-});

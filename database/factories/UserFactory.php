@@ -3,8 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\User;
-use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Laravel\Jetstream\Features;
 
 class UserFactory extends Factory
 {
@@ -45,5 +45,17 @@ class UserFactory extends Factory
                 'email_verified_at' => null,
             ];
         });
+    }
+
+    /**
+     * Provide compatibility with Jetstream's personal team expectation.
+     */
+    public function withPersonalTeam(): Factory
+    {
+        if (! Features::hasTeamFeatures()) {
+            return $this->state(fn (array $attributes) => $attributes);
+        }
+
+        return $this;
     }
 }

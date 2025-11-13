@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesDefaultConnectionWhenTesting;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -11,6 +13,8 @@ use Illuminate\Support\Str;
 
 class ChargerLocation extends Model
 {
+    use UsesDefaultConnectionWhenTesting;
+
     use HasUuids;
     use HasFactory;
     use SoftDeletes;
@@ -20,6 +24,7 @@ class ChargerLocation extends Model
     protected $fillable = [
         'image',
         'name',
+        'is_rest_area',
         'provider_id',
         'location_on',
         'status',
@@ -27,13 +32,19 @@ class ChargerLocation extends Model
         'latitude',
         'longitude',
         'parking',
+        'address',
         'province_id',
         'city_id',
         'district_id',
         'subdistrict_id',
         'postal_code_id',
         'user_id',
-        'location',
+        'data_source',
+        'verification_status',
+        'master_location_id',
+        'is_master',
+        'verified_by',
+        'verified_at',
     ];
 
     protected $appends = [
@@ -98,6 +109,46 @@ class ChargerLocation extends Model
     public function discountHomeChargings()
     {
         return $this->hasMany(DiscountHomeCharging::class);
+    }
+
+    public function locationReports()
+    {
+        return $this->hasMany(LocationReport::class, 'location_id');
+    }
+
+    public function locationUpdates()
+    {
+        return $this->hasMany(LocationUpdate::class, 'location_id');
+    }
+
+    public function duplicationsAsPrimary()
+    {
+        return $this->hasMany(LocationDuplication::class, 'primary_location_id');
+    }
+
+    public function duplicationsAsDuplicate()
+    {
+        return $this->hasMany(LocationDuplication::class, 'duplicate_location_id');
+    }
+
+    public function auditLogs()
+    {
+        return $this->hasMany(LocationAuditLog::class, 'location_id');
+    }
+
+    public function verifiedBy()
+    {
+        return $this->belongsTo(User::class, 'verified_by'); // This will work even with the ID type mismatch
+    }
+
+    public function masterLocation()
+    {
+        return $this->belongsTo(ChargerLocation::class, 'master_location_id');
+    }
+
+    public function childLocations()
+    {
+        return $this->hasMany(ChargerLocation::class, 'master_location_id');
     }
 
     // Define the accessor
@@ -176,22 +227,22 @@ class ChargerLocation extends Model
      */
     public function scopeNear($query, $latitude, $longitude, $distanceInKm = 10)
     {
-        return $query->selectRaw("
-            *,
+        return $query->select('charger_locations.*')
+        ->selectRaw("
             (6371 * acos(
-                cos(radians(?)) * 
-                cos(radians(latitude)) * 
-                cos(radians(longitude) - radians(?)) + 
-                sin(radians(?)) * 
+                cos(radians(?)) *
+                cos(radians(latitude)) *
+                cos(radians(longitude) - radians(?)) +
+                sin(radians(?)) *
                 sin(radians(latitude))
             )) AS distance
         ", [$latitude, $longitude, $latitude])
         ->whereRaw("
             (6371 * acos(
-                cos(radians(?)) * 
-                cos(radians(latitude)) * 
-                cos(radians(longitude) - radians(?)) + 
-                sin(radians(?)) * 
+                cos(radians(?)) *
+                cos(radians(latitude)) *
+                cos(radians(longitude) - radians(?)) +
+                sin(radians(?)) *
                 sin(radians(latitude))
             )) < ?", [$latitude, $longitude, $latitude, $distanceInKm])
         ->orderBy('distance');

@@ -1,59 +1,49 @@
 <?php
 
-use App\Models\User;
+namespace Tests\Feature\Api;
+
 use App\Models\Charge;
 use App\Models\Charger;
-use Laravel\Sanctum\Sanctum;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(RefreshDatabase::class, WithFaker::class);
+class ChargerChargesTest extends ApiTestCase
+{
+    public function test_it_gets_charger_charges(): void
+    {
+        $charger = Charger::factory()->create();
+        $charges = Charge::factory()
+            ->count(2)
+            ->create([
+                'charger_id' => $charger->id,
+            ]);
 
-beforeEach(function () {
-    $this->withoutExceptionHandling();
+        $response = $this->getJson(route('api.chargers.charges.index', $charger));
 
-    $user = User::factory()->create(['email' => 'admin@admin.com']);
+        $response->assertOk()->assertSee($charges[0]->id);
+    }
 
-    Sanctum::actingAs($user, [], 'web');
-});
+    public function test_it_stores_the_charger_charges(): void
+    {
+        $charger = Charger::factory()->create();
+        $data = Charge::factory()
+            ->make([
+                'charger_id' => $charger->id,
+            ])
+            ->toArray();
 
-test('it gets charger charges', function () {
-    $charger = Charger::factory()->create();
-    $charges = Charge::factory()
-        ->count(2)
-        ->create([
-            'charger_id' => $charger->id,
-        ]);
+        $response = $this->postJson(
+            route('api.chargers.charges.store', $charger),
+            $data
+        );
 
-    $response = $this->getJson(route('api.chargers.charges.index', $charger));
+        unset($data['created_at'], $data['updated_at'], $data['deleted_at'], $data['image_start'], $data['image_finish']);
 
-    $response->assertOk()->assertSee($charges[0]->id);
-});
+        $this->assertDatabaseHas('charges', $data);
 
-test('it stores the charger charges', function () {
-    $charger = Charger::factory()->create();
-    $data = Charge::factory()
-        ->make([
-            'charger_id' => $charger->id,
-        ])
-        ->toArray();
+        $response->assertStatus(201)->assertJsonFragment($data);
 
-    $response = $this->postJson(
-        route('api.chargers.charges.store', $charger),
-        $data
-    );
+        $charge = Charge::latest('id')->first();
 
-    unset($data['created_at']);
-    unset($data['updated_at']);
-    unset($data['deleted_at']);
-    unset($data['image_start']);
-    unset($data['image_finish']);
+        $this->assertEquals($charger->id, $charge->charger_id);
+    }
+}
 
-    $this->assertDatabaseHas('charges', $data);
-
-    $response->assertStatus(201)->assertJsonFragment($data);
-
-    $charge = Charge::latest('id')->first();
-
-    $this->assertEquals($charger->id, $charge->charger_id);
-});

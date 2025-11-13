@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\ChargerLocation;
+use App\Models\LocationReport;
+use App\Observers\ChargerLocationObserver;
+use App\Observers\LocationReportObserver;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -23,7 +27,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-
         Select::configureUsing(function (Select $select) {
             $select->preload()->native(false);
         });
@@ -39,6 +42,9 @@ class AppServiceProvider extends ServiceProvider
         // Section::configureUsing(function(Section $section) {
         //     $section->columns()->compact();
         // });
-
+        
+        // Register model observers
+        ChargerLocation::observe(ChargerLocationObserver::class);
+        LocationReport::observe(LocationReportObserver::class);
     }
 }

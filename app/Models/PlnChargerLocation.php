@@ -2,10 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesDefaultConnectionWhenTesting;
+
 use Illuminate\Database\Eloquent\Model;
 
 class PlnChargerLocation extends Model
 {
+    use UsesDefaultConnectionWhenTesting;
+
     protected $connection = 'ev'; // Use the sagansa database connection
     protected $table = 'pln_charger_locations'; // Specify the table name
 
@@ -53,6 +57,16 @@ class PlnChargerLocation extends Model
     {
         // Return the name attribute or any transformation you need
         return $this->attributes['name'] ?? 'Default Name';
+    }
+
+    public function getDataSourceAttribute(): string
+    {
+        return $this->attributes['data_source'] ?? 'pln';
+    }
+
+    public function getVerificationStatusAttribute(): string
+    {
+        return $this->attributes['verification_status'] ?? 'pln_verified';
     }
 
     public function getLocationAttribute(): array

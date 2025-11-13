@@ -1,95 +1,84 @@
 <?php
 
-use App\Models\User;
-use App\Models\Vehicle;
-use App\Models\TypeVehicle;
+namespace Tests\Feature\Api;
+
 use App\Models\BrandVehicle;
 use App\Models\ModelVehicle;
-use Laravel\Sanctum\Sanctum;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\TypeVehicle;
+use App\Models\User;
+use App\Models\Vehicle;
 
-uses(RefreshDatabase::class, WithFaker::class);
+class VehicleTest extends ApiTestCase
+{
+    public function test_it_gets_vehicles_list(): void
+    {
+        $vehicles = Vehicle::factory()
+            ->count(5)
+            ->create();
 
-beforeEach(function () {
-    $this->withoutExceptionHandling();
+        $response = $this->get(route('api.vehicles.index'));
 
-    $user = User::factory()->create(['email' => 'admin@admin.com']);
+        $response->assertOk()->assertSee($vehicles[0]->id);
+    }
 
-    Sanctum::actingAs($user, [], 'web');
-});
+    public function test_it_stores_the_vehicle(): void
+    {
+        $data = Vehicle::factory()
+            ->make()
+            ->toArray();
 
-test('it gets vehicles list', function () {
-    $vehicles = Vehicle::factory()
-        ->count(5)
-        ->create();
+        $response = $this->postJson(route('api.vehicles.store'), $data);
 
-    $response = $this->get(route('api.vehicles.index'));
+        unset($data['image'], $data['user_id'], $data['created_at'], $data['updated_at'], $data['deleted_at']);
 
-    $response->assertOk()->assertSee($vehicles[0]->id);
-});
+        $this->assertDatabaseHas('vehicles', $data);
 
-test('it stores the vehicle', function () {
-    $data = Vehicle::factory()
-        ->make()
-        ->toArray();
+        $response->assertStatus(201)->assertJsonFragment($data);
+    }
 
-    $response = $this->postJson(route('api.vehicles.store'), $data);
+    public function test_it_updates_the_vehicle(): void
+    {
+        $vehicle = Vehicle::factory()->create();
 
-    unset($data['image']);
-    unset($data['user_id']);
-    unset($data['created_at']);
-    unset($data['updated_at']);
-    unset($data['deleted_at']);
+        $brandVehicle = BrandVehicle::factory()->create();
+        $modelVehicle = ModelVehicle::factory()->create();
+        $typeVehicle = TypeVehicle::factory()->create();
+        $user = User::factory()->create();
 
-    $this->assertDatabaseHas('vehicles', $data);
+        $data = [
+            'image' => fake()->word(),
+            'license_plate' => fake()->name(),
+            'ownership' => fake()->date(),
+            'status' => fake()->numberBetween(1, 2),
+            'created_at' => fake()->dateTime(),
+            'updated_at' => fake()->dateTime(),
+            'deleted_at' => fake()->dateTime(),
+            'brand_vehicle_id' => $brandVehicle->id,
+            'model_vehicle_id' => $modelVehicle->id,
+            'type_vehicle_id' => $typeVehicle->id,
+            'user_id' => $user->id,
+        ];
 
-    $response->assertStatus(201)->assertJsonFragment($data);
-});
+        $response = $this->putJson(route('api.vehicles.update', $vehicle), $data);
 
-test('it updates the vehicle', function () {
-    $vehicle = Vehicle::factory()->create();
+        unset($data['image'], $data['user_id'], $data['created_at'], $data['updated_at'], $data['deleted_at']);
 
-    $brandVehicle = BrandVehicle::factory()->create();
-    $modelVehicle = ModelVehicle::factory()->create();
-    $typeVehicle = TypeVehicle::factory()->create();
-    $user = User::factory()->create();
+        $data['id'] = $vehicle->id;
 
-    $data = [
-        'image' => fake()->word(),
-        'license_plate' => fake()->name(),
-        'ownership' => fake()->date(),
-        'status' => fake()->numberBetween(1, 2),
-        'created_at' => fake()->dateTime(),
-        'updated_at' => fake()->dateTime(),
-        'deleted_at' => fake()->dateTime(),
-        'brand_vehicle_id' => $brandVehicle->id,
-        'model_vehicle_id' => $modelVehicle->id,
-        'type_vehicle_id' => $typeVehicle->id,
-        'user_id' => $user->id,
-    ];
+        $this->assertDatabaseHas('vehicles', $data);
 
-    $response = $this->putJson(route('api.vehicles.update', $vehicle), $data);
+        $response->assertStatus(200)->assertJsonFragment($data);
+    }
 
-    unset($data['image']);
-    unset($data['user_id']);
-    unset($data['created_at']);
-    unset($data['updated_at']);
-    unset($data['deleted_at']);
+    public function test_it_deletes_the_vehicle(): void
+    {
+        $vehicle = Vehicle::factory()->create();
 
-    $data['id'] = $vehicle->id;
+        $response = $this->deleteJson(route('api.vehicles.destroy', $vehicle));
 
-    $this->assertDatabaseHas('vehicles', $data);
+        $this->assertSoftDeleted($vehicle);
 
-    $response->assertStatus(200)->assertJsonFragment($data);
-});
+        $response->assertNoContent();
+    }
+}
 
-test('it deletes the vehicle', function () {
-    $vehicle = Vehicle::factory()->create();
-
-    $response = $this->deleteJson(route('api.vehicles.destroy', $vehicle));
-
-    $this->assertSoftDeleted($vehicle);
-
-    $response->assertNoContent();
-});

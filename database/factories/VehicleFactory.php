@@ -27,7 +27,7 @@ class VehicleFactory extends Factory
             'license_plate' => fake()->name(),
             'ownership' => fake()->date(),
             'status' => fake()->numberBetween(1, 2),
-            'deleted_at' => fake()->dateTime(),
+            'deleted_at' => null,
             'brand_vehicle_id' => \App\Models\BrandVehicle::factory(),
             'model_vehicle_id' => \App\Models\ModelVehicle::factory(),
             'type_vehicle_id' => \App\Models\TypeVehicle::factory(),

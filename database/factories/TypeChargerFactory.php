@@ -23,7 +23,7 @@ class TypeChargerFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'name' => fake()->randomElement(['AC', 'DC']),
             'current_charger_id' => \App\Models\CurrentCharger::factory(),
         ];
     }

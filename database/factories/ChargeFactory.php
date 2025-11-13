@@ -37,7 +37,7 @@ class ChargeFactory extends Factory
             'total_cost' => fake()->randomNumber(),
             'image_start' => fake()->text(255),
             'image_finish' => fake()->word(),
-            'deleted_at' => fake()->dateTime(),
+            'deleted_at' => null,
             'vehicle_id' => \App\Models\Vehicle::factory(),
             'charger_location_id' => \App\Models\ChargerLocation::factory(),
             'user_id' => \App\Models\User::factory(),
