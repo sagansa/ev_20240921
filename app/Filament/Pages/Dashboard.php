@@ -25,6 +25,7 @@ class Dashboard extends BaseDashboard
                     ->schema([
                         Select::make('type_vehicle_id')
                             ->label('Type Vehicle')
+                            ->inlineLabel(false)
                             ->options(function () {
                                 return TypeVehicle::query()
                                     ->with(['modelVehicle.brandVehicle'])
@@ -51,6 +52,7 @@ class Dashboard extends BaseDashboard
                             ->placeholder('All Type Vehicles'),
                         Select::make('vehicle_id')
                             ->label('Vehicle')
+                            ->inlineLabel(false)
                             ->options(function (Get $get) {
                                 return Vehicle::query()
                                     ->with(['brandVehicle', 'modelVehicle', 'typeVehicle'])
@@ -80,6 +82,7 @@ class Dashboard extends BaseDashboard
                             ->placeholder('All Vehicles'),
                         DatePicker::make('startDate')
                             ->label('Start Date')
+                            ->inlineLabel(false)
                             ->default(now()->subMonthsNoOverflow(12)->startOfMonth())
                             ->native(false)
                             ->displayFormat('d M Y')
@@ -88,6 +91,7 @@ class Dashboard extends BaseDashboard
                             ->maxDate(fn (Get $get) => $get('endDate') ?: now()),
                         DatePicker::make('endDate')
                             ->label('End Date')
+                            ->inlineLabel(false)
                             ->default(now()->subMonthNoOverflow()->endOfMonth())
                             ->native(false)
                             ->displayFormat('d M Y')
