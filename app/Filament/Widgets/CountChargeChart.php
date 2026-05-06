@@ -2,13 +2,18 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\FiltersDashboardCharges;
 use App\Models\Charge;
 use Filament\Widgets\ChartWidget;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class CountChargeChart extends ChartWidget
 {
+    use FiltersDashboardCharges;
+    use InteractsWithPageFilters;
+
     protected static ?string $heading = 'Count Charge Each Provider';
 
     protected static ?int $sort = 2;
@@ -17,11 +22,14 @@ class CountChargeChart extends ChartWidget
     {
         $userId = Auth::id();
 
-        $charges = Charge::where('charges.user_id', $userId)
-            ->join('vehicles', 'charges.vehicle_id', '=', 'vehicles.id')
-            ->join('type_vehicles', 'vehicles.type_vehicle_id', '=', 'type_vehicles.id')
-            ->join('charger_locations', 'charges.charger_location_id', '=', 'charger_locations.id')
-            ->join('providers', 'charger_locations.provider_id', '=', 'providers.id')
+        $charges = $this->applyDashboardChargeFilters(
+            Charge::query()->where('charges.user_id', $userId)
+                ->join('vehicles', 'charges.vehicle_id', '=', 'vehicles.id')
+                ->join('type_vehicles', 'vehicles.type_vehicle_id', '=', 'type_vehicles.id')
+                ->join('charger_locations', 'charges.charger_location_id', '=', 'charger_locations.id')
+                ->join('providers', 'charger_locations.provider_id', '=', 'providers.id'),
+            hasVehiclesJoin: true,
+        )
             ->where('providers.status', '1')
             ->select(
                 DB::raw('providers.name as provider'),

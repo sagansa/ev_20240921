@@ -9,14 +9,14 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class KwhChart extends ChartWidget
+class ChargingFrequencyChart extends ChartWidget
 {
     use FiltersDashboardCharges;
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'kWh per Month & Average (kWh)';
+    protected static ?string $heading = 'Charging Frequency per Month';
 
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 4;
 
     protected function getData(): array
     {
@@ -35,60 +35,45 @@ class KwhChart extends ChartWidget
             12 => 'Dec',
         ];
 
-        $userId = Auth::id();
-
         $monthlyCharges = $this->applyDashboardChargeFilters(
-            Charge::query()->where('charges.user_id', $userId),
+            Charge::query()->where('charges.user_id', Auth::id()),
             appliesDateRange: true,
         )
-            ->select(DB::raw('YEAR(charges.date) as year'), DB::raw('MONTH(charges.date) as month'), DB::raw('SUM(kWh) as kWh'))
+            ->select(
+                DB::raw('YEAR(charges.date) as year'),
+                DB::raw('MONTH(charges.date) as month'),
+                DB::raw('COUNT(*) as total_charges'),
+            )
             ->groupBy(DB::raw('YEAR(charges.date)'), DB::raw('MONTH(charges.date)'))
             ->orderBy(DB::raw('YEAR(charges.date)'), 'asc')
             ->orderBy(DB::raw('MONTH(charges.date)'), 'asc')
             ->get()
             ->keyBy(fn ($charge): string => ((int) $charge->year).'-'.((int) $charge->month));
 
-        $charges = collect($this->dashboardMonths())
+        $rows = collect($this->dashboardMonths())
             ->map(function ($month) use ($monthNames, $monthlyCharges): array {
                 $charge = $monthlyCharges->get($month->year.'-'.$month->month);
 
                 return [
                     'label' => $month->year.' '.strtolower($monthNames[$month->month]),
-                    'kWh' => (float) ($charge?->kWh ?? 0),
+                    'total_charges' => (int) ($charge?->total_charges ?? 0),
                 ];
             })
             ->all();
 
-        $labels = array_column($charges, 'label');
-        $values = array_column($charges, 'kWh');
-
-        if (count($values) > 0) {
-            $average = floor(array_sum($values) / count($values));
-        } else {
-            $average = 'Tidak ada data'; // atau nilai default lainnya
-        }
-
         return [
             'datasets' => [
                 [
-                    'label' => 'kWh',
-                    'data' => $values,
-                ],
-                [
-                    'label' => 'Average',
-                    'data' => array_fill(0, count($values), $average),
-                    'borderColor' => 'rgba(255, 99, 132, 0.2)',
-                    'backgroundColor' => 'rgba(255, 99, 132, 0.2)',
-                    'type' => 'line',
-                    'borderWidth' => 2,
+                    'label' => 'Charging sessions',
+                    'data' => array_column($rows, 'total_charges'),
                 ],
             ],
-            'labels' => $labels,
+            'labels' => array_column($rows, 'label'),
         ];
     }
 
     protected function getType(): string
     {
-        return 'line';
+        return 'bar';
     }
 }

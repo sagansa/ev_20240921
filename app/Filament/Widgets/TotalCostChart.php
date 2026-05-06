@@ -2,13 +2,18 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\FiltersDashboardCharges;
 use App\Models\Charge;
 use Filament\Widgets\ChartWidget;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class TotalCostChart extends ChartWidget
 {
+    use FiltersDashboardCharges;
+    use InteractsWithPageFilters;
+
     protected static ?string $heading = 'Charging Cost per Month & Average (Rp)';
 
     protected static ?int $sort = 3;
@@ -32,21 +37,28 @@ class TotalCostChart extends ChartWidget
 
         $userId = Auth::id();
 
-        $charges = Charge::where('user_id', $userId)
+        $monthlyCharges = $this->applyDashboardChargeFilters(
+            Charge::query()->where('charges.user_id', $userId),
+            appliesDateRange: true,
+        )
             ->select(
-                DB::raw('YEAR(date) as year'),
-                DB::raw('MONTH(date) as month'),
+                DB::raw('YEAR(charges.date) as year'),
+                DB::raw('MONTH(charges.date) as month'),
                 DB::raw('SUM(total_cost) as total_cost')
             )
-            ->where('date', '>=', now()->subMonths(12)->startOfMonth())
-            ->groupBy(DB::raw('YEAR(date)'), DB::raw('MONTH(date)'))
-            ->orderBy(DB::raw('YEAR(date)'), 'asc')
-            ->orderBy(DB::raw('MONTH(date)'), 'asc')
+            ->groupBy(DB::raw('YEAR(charges.date)'), DB::raw('MONTH(charges.date)'))
+            ->orderBy(DB::raw('YEAR(charges.date)'), 'asc')
+            ->orderBy(DB::raw('MONTH(charges.date)'), 'asc')
             ->get()
-            ->map(function ($charge) use ($monthNames) {
+            ->keyBy(fn ($charge): string => ((int) $charge->year).'-'.((int) $charge->month));
+
+        $charges = collect($this->dashboardMonths())
+            ->map(function ($month) use ($monthNames, $monthlyCharges): array {
+                $charge = $monthlyCharges->get($month->year.'-'.$month->month);
+
                 return [
-                    'label' => $charge->year . ' ' . strtolower($monthNames[$charge->month]),
-                    'total_cost' => $charge->total_cost,
+                    'label' => $month->year.' '.strtolower($monthNames[$month->month]),
+                    'total_cost' => (float) ($charge?->total_cost ?? 0),
                 ];
             })
             ->all();
