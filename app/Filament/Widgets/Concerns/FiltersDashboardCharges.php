@@ -15,6 +15,7 @@ trait FiltersDashboardCharges
     ): Builder {
         $vehicleId = $this->dashboardVehicleId();
         $typeVehicleId = $this->dashboardTypeVehicleId();
+        $currentChargerId = $this->dashboardCurrentChargerId();
         $startDate = $this->dashboardStartDate();
         $endDate = $this->dashboardEndDate();
 
@@ -37,6 +38,13 @@ trait FiltersDashboardCharges
                 },
             )
             ->when(
+                $currentChargerId,
+                fn (Builder $query, string $currentChargerId): Builder => $query->whereHas(
+                    'charger',
+                    fn (Builder $query): Builder => $query->where('current_charger_id', $currentChargerId),
+                ),
+            )
+            ->when(
                 $appliesDateRange,
                 fn (Builder $query): Builder => $query->whereBetween('charges.date', [
                     $startDate->toDateString(),
@@ -57,6 +65,13 @@ trait FiltersDashboardCharges
         $vehicleId = $this->filters['vehicle_id'] ?? null;
 
         return filled($vehicleId) ? (string) $vehicleId : null;
+    }
+
+    protected function dashboardCurrentChargerId(): ?string
+    {
+        $currentChargerId = $this->filters['current_charger_id'] ?? null;
+
+        return filled($currentChargerId) ? (string) $currentChargerId : null;
     }
 
     protected function dashboardStartDate(): Carbon

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\CurrentCharger;
 use App\Models\TypeVehicle;
 use App\Models\Vehicle;
 use Filament\Forms\Components\DatePicker;
@@ -80,6 +81,16 @@ class Dashboard extends BaseDashboard
                             ->searchable()
                             ->preload()
                             ->placeholder('All Vehicles'),
+                        Select::make('current_charger_id')
+                            ->label('Charger Current')
+                            ->inlineLabel(false)
+                            ->options(fn () => CurrentCharger::query()
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all())
+                            ->searchable()
+                            ->preload()
+                            ->placeholder('All Currents'),
                         DatePicker::make('startDate')
                             ->label('Start Date')
                             ->inlineLabel(false)
@@ -100,7 +111,7 @@ class Dashboard extends BaseDashboard
                             ->minDate(fn (Get $get) => $get('startDate') ?: now()->subMonthsNoOverflow(12)->startOfMonth())
                             ->maxDate(now()),
                     ])
-                    ->columns(4),
+                    ->columns(5),
             ]);
     }
 }
