@@ -13,14 +13,22 @@ class PlnChargerLocationController extends Controller
      */
     public function index(Request $request)
     {
+        $activeChargerValues = $this->activeChargerValues();
+
         $query = PlnChargerLocation::with([
             'provider',
             'province',
             'locationCategory',
+            'plnChargerLocationDetails' => function ($detailQuery) use ($activeChargerValues) {
+                $detailQuery->whereIn('is_active_charger', $activeChargerValues);
+            },
             'plnChargerLocationDetails.chargerCategory',
             'plnChargerLocationDetails.merkCharger',
             'plnChargerLocationDetails.chargingType',
-        ]);
+        ])
+            ->whereHas('plnChargerLocationDetails', function ($detailQuery) use ($activeChargerValues) {
+                $detailQuery->whereIn('is_active_charger', $activeChargerValues);
+            });
 
         if ($request->filled('provider_id')) {
             $query->where('provider_id', $request->provider_id);
@@ -36,6 +44,10 @@ class PlnChargerLocationController extends Controller
 
         if ($request->filled('location_category_id')) {
             $query->where('location_category_id', $request->location_category_id);
+        }
+
+        if ($request->filled('kategori_tol')) {
+            $query->where('kategori_tol', $request->kategori_tol);
         }
 
         if ($request->filled('search')) {
@@ -71,6 +83,7 @@ class PlnChargerLocationController extends Controller
             'latitude' => (float) $location->latitude,
             'longitude' => (float) $location->longitude,
             'address' => $location->address ?? '',
+            'kategori_tol' => $location->kategori_tol,
             'province' => $location->province ? [
                 'name' => $location->province->name,
             ] : null,
@@ -85,7 +98,7 @@ class PlnChargerLocationController extends Controller
             'details' => $location->plnChargerLocationDetails->map(function ($detail) {
                 return [
                     'power' => $detail->power,
-                    'is_active_charger' => (bool) $detail->is_active_charger,
+                    'is_active_charger' => $this->isActiveCharger($detail->is_active_charger),
                     'count_connector_charger' => $detail->count_connector_charger,
                     'operation_date' => $detail->operation_date,
                     'year' => $detail->year,
@@ -95,5 +108,15 @@ class PlnChargerLocationController extends Controller
                 ];
             })->all(),
         ];
+    }
+
+    private function activeChargerValues(): array
+    {
+        return ['Y', 'y', '1', 1, true, 'true', 'TRUE', 'aktif', 'Aktif', 'AKTIF'];
+    }
+
+    private function isActiveCharger(mixed $value): bool
+    {
+        return in_array($value, $this->activeChargerValues(), true);
     }
 }

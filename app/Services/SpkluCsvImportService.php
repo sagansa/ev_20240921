@@ -459,6 +459,7 @@ class SpkluCsvImportService
             'owner_machine' => trim($row['Kepemilikan Mesin'] ?? ''),
             'provider_id' => $this->resolveProviderId($row['Provider'] ?? '', $row['Nama Spklu'] ?? '', $row['Kepemilikan Mesin'] ?? ''),
             'location_category_id' => $this->resolveLocationCategoryId($row),
+            'kategori_tol' => trim($row['Kategori Tol'] ?? '') ?: null,
             'updated_at' => now(),
         ];
     }

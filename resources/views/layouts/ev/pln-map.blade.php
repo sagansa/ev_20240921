@@ -54,16 +54,83 @@
             top: 80px;
             right: 30px;
             z-index: 1000;
-            background-color: white;
-            padding: 15px;
+            background: rgba(255, 255, 255, 0.96);
+            padding: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.28);
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 18px 48px -24px rgba(15, 23, 42, 0.45);
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 14px;
             transition: all 0.3s ease;
-            max-width: 300px;
+            max-width: 360px;
             width: 100%;
+            backdrop-filter: blur(12px);
+        }
+
+        .map-controls-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .map-controls-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1.25;
+        }
+
+        .map-controls-count {
+            margin-top: 3px;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .map-reset-button {
+            flex: 0 0 auto;
+            padding: 7px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            color: #374151;
+            font-size: 12px;
+            font-weight: 600;
+            background: #f8fafc;
+            transition: all 0.2s ease;
+        }
+
+        .map-reset-button:hover {
+            background: #eef2ff;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+
+        .map-filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .map-filter-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 0;
+        }
+
+        .map-filter-field.full {
+            grid-column: 1 / -1;
+        }
+
+        .map-filter-field label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            letter-spacing: 0;
+            text-transform: uppercase;
         }
 
         #mapControlsToggle {
@@ -86,19 +153,21 @@
 
         .map-select {
             width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #e5e7eb;
+            min-height: 39px;
+            padding: 8px 32px 8px 11px;
+            border: 1px solid #dbe3ef;
             border-radius: 6px;
             font-size: 14px;
             color: #374151;
             background-color: white;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
             transition: all 0.2s;
         }
 
         .map-select:focus {
             outline: none;
             border-color: #3b82f6;
-            ring: 2px solid #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
         }
 
         #mapControls .map-search {
@@ -258,14 +327,17 @@
 
         .popup-content .charger-details {
             margin-top: 12px;
-            padding-left: 16px;
-            list-style: disc;
+            padding-left: 0;
+            list-style: none;
         }
 
         .popup-content .charger-details li {
             font-size: 14px;
             color: #4b5563;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: #f8fafc;
         }
 
         .popup-content .maps-link {
@@ -305,6 +377,10 @@
                 transform: translateY(0);
                 opacity: 1;
                 pointer-events: auto;
+            }
+
+            .map-filter-grid {
+                grid-template-columns: 1fr;
             }
 
             #mapControlsToggle {
@@ -360,6 +436,14 @@
             <div id="mapid"></div>
 
             <div id="mapControls">
+                <div class="map-controls-header">
+                    <div>
+                        <div class="map-controls-title">Filter SPKLU PLN</div>
+                        <div id="mapResultCount" class="map-controls-count">Memuat lokasi aktif...</div>
+                    </div>
+                    <button id="resetMapFilters" type="button" class="map-reset-button">Reset</button>
+                </div>
+
                 <div class="map-search">
                     <label for="mapSearchInput" class="text-xs font-medium tracking-wide text-gray-500 uppercase">Cari Lokasi</label>
                     <div class="map-search-input">
@@ -371,26 +455,47 @@
                     </div>
                 </div>
 
-                <select id="providerSelect" class="map-select">
-                    <option value="">Semua Provider</option>
-                    @foreach ($providers as $provider)
-                        <option value="{{ $provider->id }}">{{ $provider->name }}</option>
-                    @endforeach
-                </select>
+                <div class="map-filter-grid">
+                    <div class="map-filter-field full">
+                        <label for="providerSelect">Provider</label>
+                        <select id="providerSelect" class="map-select">
+                            <option value="">Semua Provider</option>
+                            @foreach ($providers as $provider)
+                                <option value="{{ $provider->id }}">{{ $provider->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                <select id="chargingTypeSelect" class="map-select">
-                    <option value="">Semua Tipe Charging</option>
-                    @foreach ($chargingTypes as $type)
-                        <option value="{{ $type->id }}">{{ $type->name }}</option>
-                    @endforeach
-                </select>
+                    <div class="map-filter-field">
+                        <label for="chargingTypeSelect">Tipe Charging</label>
+                        <select id="chargingTypeSelect" class="map-select">
+                            <option value="">Semua Tipe</option>
+                            @foreach ($chargingTypes as $type)
+                                <option value="{{ $type->id }}">{{ $type->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                <select id="locationCategorySelect" class="map-select">
-                    <option value="">Semua Kategori Lokasi</option>
-                    @foreach ($locationCategories as $category)
-                        <option value="{{ $category->id }}">{{ $category->name }}</option>
-                    @endforeach
-                </select>
+                    <div class="map-filter-field">
+                        <label for="locationCategorySelect">Kategori Lokasi</label>
+                        <select id="locationCategorySelect" class="map-select">
+                            <option value="">Semua Lokasi</option>
+                            @foreach ($locationCategories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="map-filter-field full">
+                        <label for="kategoriTolSelect">Kategori Tol</label>
+                        <select id="kategoriTolSelect" class="map-select">
+                            <option value="">Semua Kategori Tol</option>
+                            @foreach (($kategoriTols ?? collect()) as $kategoriTol)
+                                <option value="{{ $kategoriTol }}">{{ $kategoriTol }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
             </div>
 
             <button id="mapControlsToggle" class="hover:bg-gray-100">
@@ -430,6 +535,7 @@
             }).setView(defaultView, 13);
             let markers = [];
             let userMarker = null;
+            let markerRenderId = 0;
             const clusterFactory = typeof L.markerClusterGroup === 'function'
                 ? () => L.markerClusterGroup({
                     showCoverageOnHover: false,
@@ -528,23 +634,30 @@
                 return '/images/no-image.png';
             }
 
-            function formatDetail(detail) {
+            function isDetailActive(detail) {
                 if (!detail) {
-                    return '';
+                    return false;
                 }
 
-                const categoryName = detail.charger_category?.name
-                    || detail.charger_category_name
-                    || detail.category_charger?.name
-                    || 'Charger';
+                if (typeof detail.is_active_charger === 'boolean') {
+                    return detail.is_active_charger;
+                }
 
-                const chargingTypeName = detail.charging_type?.name
-                    || detail.charging_type_name
-                    || 'Tipe tidak diketahui';
+                if (typeof detail.is_active_charger === 'number') {
+                    return detail.is_active_charger === 1;
+                }
 
-                const merkName = detail.merk_charger?.name
-                    || detail.merk_charger_name
-                    || 'Tidak Diketahui';
+                if (typeof detail.is_active_charger === 'string') {
+                    return ['1', 'true', 'aktif', 'y', 'yes'].includes(detail.is_active_charger.toLowerCase());
+                }
+
+                return false;
+            }
+
+            function formatDetail(detail) {
+                if (!detail || !isDetailActive(detail)) {
+                    return '';
+                }
 
                 const rawPower = detail.power ?? detail.power_charger?.name ?? '';
                 const powerValue = (() => {
@@ -565,63 +678,44 @@
                     ? Number(connectorsRaw)
                     : connectorsRaw || '0';
 
-                const isActive = (() => {
-                    if (typeof detail.is_active_charger === 'boolean') {
-                        return detail.is_active_charger;
-                    }
-
-                    if (typeof detail.is_active_charger === 'number') {
-                        return detail.is_active_charger === 1;
-                    }
-
-                    if (typeof detail.is_active_charger === 'string') {
-                        return ['1', 'true', 'aktif'].includes(detail.is_active_charger.toLowerCase());
-                    }
-
-                    return false;
-                })();
-
-                const status = isActive ? 'Aktif' : 'Tidak Aktif';
-
-                let operationDate = 'Tidak diketahui';
-                if (detail.operation_date) {
-                    const parsedDate = new Date(detail.operation_date);
-                    if (!Number.isNaN(parsedDate.getTime())) {
-                        operationDate = parsedDate.toLocaleDateString('id-ID', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                        });
-                    }
-                }
-
                 return `
                     <li>
-                        <strong>${categoryName}</strong> - ${chargingTypeName}<br>
-                        Merk: ${merkName}<br>
-                        Daya: ${powerValue} | Konektor: ${connectors} | Status: ${status}<br>
-                        Operasi: ${operationDate}
+                        <strong>Daya ${powerValue}</strong><br>
+                        ${connectors} konektor tersedia
                     </li>
                 `;
             }
 
-            function createMarkers(selectedProvider = '', selectedChargingType = '', selectedLocationCategory = '') {
+            function normalizeFilterValue(value) {
+                return (value ?? '').toString().trim().toLowerCase();
+            }
+
+            function createMarkers(selectedProvider = '', selectedChargingType = '', selectedLocationCategory = '', selectedKategoriTol = '') {
                 markerCluster.clearLayers();
                 markers = [];
+                const renderId = ++markerRenderId;
+                let visibleLocationCount = 0;
+                const normalizedKategoriTol = normalizeFilterValue(selectedKategoriTol);
 
                 plnLocations.forEach(location => {
                     if (!location) return;
 
                     const matchesProvider = !selectedProvider || location.provider?.id?.toString() === selectedProvider;
                     const matchesCategory = !selectedLocationCategory || location.location_category?.id?.toString() === selectedLocationCategory;
-                    const matchesChargingType = !selectedChargingType ||
-                        location.pln_charger_location_details?.some(detail =>
-                            detail.charging_type_id?.toString() === selectedChargingType
-                        );
+                    const matchesKategoriTol = !normalizedKategoriTol || normalizeFilterValue(location.kategori_tol) === normalizedKategoriTol;
+                    const activeDetails = Array.isArray(location.pln_charger_location_details)
+                        ? location.pln_charger_location_details.filter(isDetailActive)
+                        : [];
+                    const matchingDetails = activeDetails.filter(detail =>
+                        !selectedChargingType || detail.charging_type_id?.toString() === selectedChargingType
+                    );
+                    const matchesChargingType = !selectedChargingType || matchingDetails.length > 0;
 
-                    if (!(matchesProvider && matchesCategory && matchesChargingType)) {
+                    if (!(matchesProvider && matchesCategory && matchesKategoriTol && matchesChargingType) || matchingDetails.length === 0) {
                         return;
                     }
+
+                    visibleLocationCount += 1;
 
                     const providerImagePath = normalizeImagePath(location.provider?.image);
                     const locationImagePath = normalizeImagePath(location.image);
@@ -636,6 +730,10 @@
                     const providerName = location.provider?.name || 'Provider Tidak Diketahui';
 
                     getFirstValidImage(providerFallbacks).then(providerImage => {
+                        if (renderId !== markerRenderId) {
+                            return;
+                        }
+
                         const markerIcon = L.divIcon({
                             className: 'map-marker',
                             html: `
@@ -651,12 +749,7 @@
                             popupAnchor: [0, -50]
                         });
 
-                        const detailItems = Array.isArray(location.pln_charger_location_details)
-                            ? location.pln_charger_location_details
-                                .filter(detail => !selectedChargingType || detail.charging_type_id?.toString() === selectedChargingType)
-                                .map(formatDetail)
-                                .join('')
-                            : '';
+                        const detailItems = matchingDetails.map(formatDetail).join('');
 
                         const popupContent = `
                             <div class="popup-content">
@@ -668,6 +761,7 @@
                                     || location.location_category_name
                                     || 'Tidak Diketahui'
                                 }</p>
+                                ${location.kategori_tol ? `<p>Kategori Tol: ${location.kategori_tol}</p>` : ''}
                                 ${detailItems ? `<ul class="charger-details">${detailItems}</ul>` : '<p>Detail charger belum tersedia</p>'}
                                 <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
                                    class="maps-link"
@@ -686,11 +780,18 @@
                         markerCluster.addLayer(marker);
                     });
                 });
+
+                const resultCount = document.getElementById('mapResultCount');
+                if (resultCount) {
+                    resultCount.textContent = `${visibleLocationCount.toLocaleString('id-ID')} lokasi aktif ditampilkan`;
+                }
             }
 
             const providerSelect = document.getElementById('providerSelect');
             const chargingTypeSelect = document.getElementById('chargingTypeSelect');
             const locationCategorySelect = document.getElementById('locationCategorySelect');
+            const kategoriTolSelect = document.getElementById('kategoriTolSelect');
+            const resetMapFilters = document.getElementById('resetMapFilters');
             const searchInput = document.getElementById('mapSearchInput');
             const searchButton = document.getElementById('mapSearchButton');
             const searchResultsContainer = document.getElementById('mapSearchResults');
@@ -792,7 +893,8 @@
                         createMarkers(
                             providerSelect.value,
                             chargingTypeSelect.value,
-                            locationCategorySelect.value
+                            locationCategorySelect.value,
+                            kategoriTolSelect.value
                         );
                     },
                     function(error) {
@@ -819,20 +921,40 @@
             providerSelect.addEventListener('change', () => createMarkers(
                 providerSelect.value,
                 chargingTypeSelect.value,
-                locationCategorySelect.value
+                locationCategorySelect.value,
+                kategoriTolSelect.value
             ));
 
             chargingTypeSelect.addEventListener('change', () => createMarkers(
                 providerSelect.value,
                 chargingTypeSelect.value,
-                locationCategorySelect.value
+                locationCategorySelect.value,
+                kategoriTolSelect.value
             ));
 
             locationCategorySelect.addEventListener('change', () => createMarkers(
                 providerSelect.value,
                 chargingTypeSelect.value,
-                locationCategorySelect.value
+                locationCategorySelect.value,
+                kategoriTolSelect.value
             ));
+
+            kategoriTolSelect.addEventListener('change', () => createMarkers(
+                providerSelect.value,
+                chargingTypeSelect.value,
+                locationCategorySelect.value,
+                kategoriTolSelect.value
+            ));
+
+            resetMapFilters.addEventListener('click', () => {
+                providerSelect.value = '';
+                chargingTypeSelect.value = '';
+                locationCategorySelect.value = '';
+                kategoriTolSelect.value = '';
+                searchInput.value = '';
+                clearSearchResults();
+                createMarkers();
+            });
 
             searchButton.addEventListener('click', () => performSearch(searchInput.value));
             searchInput.addEventListener('keydown', (event) => {

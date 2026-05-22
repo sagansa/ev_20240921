@@ -22,6 +22,7 @@ class PlnChargerLocation extends Model
         'latitude',
         'longitude',
         'location_category_id',
+        'kategori_tol',
         'province_id',
         'cluster_island_id',
     ];

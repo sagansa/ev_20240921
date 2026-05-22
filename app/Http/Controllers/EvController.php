@@ -28,22 +28,32 @@ class EvController extends Controller
 
     public function plnMap()
     {
+        $activeChargerValues = $this->activeChargerValues();
+
         $plnLocations = PlnChargerLocation::with([
             'provider',
             'locationCategory',
-            'plnChargerLocationDetails',
+            'plnChargerLocationDetails' => function ($query) use ($activeChargerValues) {
+                $query->whereIn('is_active_charger', $activeChargerValues);
+            },
             'plnChargerLocationDetails.chargerCategory',
             'plnChargerLocationDetails.merkCharger',
             'plnChargerLocationDetails.chargingType',
-        ])->get();
-
-        $latestOperationDate = PlnChargerLocationDetail::orderBy('operation_date', 'desc')
-            ->whereNotNull('operation_date')
-            ->value('operation_date');
+        ])
+            ->whereHas('plnChargerLocationDetails', function ($query) use ($activeChargerValues) {
+                $query->whereIn('is_active_charger', $activeChargerValues);
+            })
+            ->get();
 
         $providers = Provider::all();
         $chargingTypes = ChargingType::all();
         $locationCategories = LocationCategory::all();
+        $kategoriTols = $plnLocations
+            ->pluck('kategori_tol')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
         $evYoutubeVideoId = config('services.youtube.ev_video_id');
 
         return view('layouts.ev.pln-map', compact(
@@ -51,9 +61,51 @@ class EvController extends Controller
             'providers',
             'chargingTypes',
             'locationCategories',
-            'latestOperationDate',
+            'kategoriTols',
             'evYoutubeVideoId'
         ));
+    }
+
+    public function filterPlnLocations(Request $request, ?string $chargingType = null, ?string $locationCategory = null)
+    {
+        $activeChargerValues = $this->activeChargerValues();
+
+        $query = PlnChargerLocation::with([
+            'provider',
+            'locationCategory',
+            'plnChargerLocationDetails' => function ($detailQuery) use ($activeChargerValues, $chargingType) {
+                $detailQuery->whereIn('is_active_charger', $activeChargerValues);
+
+                if ($chargingType) {
+                    $detailQuery->where('charging_type_id', $chargingType);
+                }
+            },
+            'plnChargerLocationDetails.chargerCategory',
+            'plnChargerLocationDetails.merkCharger',
+            'plnChargerLocationDetails.chargingType',
+        ])
+            ->whereHas('plnChargerLocationDetails', function ($detailQuery) use ($activeChargerValues, $chargingType) {
+                $detailQuery->whereIn('is_active_charger', $activeChargerValues);
+
+                if ($chargingType) {
+                    $detailQuery->where('charging_type_id', $chargingType);
+                }
+            });
+
+        if ($locationCategory) {
+            $query->where('location_category_id', $locationCategory);
+        }
+
+        if ($request->filled('kategori_tol')) {
+            $query->where('kategori_tol', $request->input('kategori_tol'));
+        }
+
+        return response()->json($query->get());
+    }
+
+    private function activeChargerValues(): array
+    {
+        return ['Y', 'y', '1', 1, true, 'true', 'TRUE', 'aktif', 'Aktif', 'AKTIF'];
     }
 
     public function map()
