@@ -29,11 +29,8 @@ class User extends Authenticatable // implements FilamentUser
     use HasProfilePhoto;
     use TwoFactorAuthenticatable;
 
-    protected $connection = 'sagansa'; // Use the sagansa database connection
+    protected $connection = 'sagansa_user';
     protected $table = 'users';
-
-    // protected $connection = 'sagansa'; // Use the sagansa database connection
-    // protected $table = 'users'; // Table name in the sagansa database
 
     /**
      * The attributes that are mass assignable.

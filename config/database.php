@@ -3,6 +3,7 @@
 use Illuminate\Support\Str;
 
 $sagansaDriver = env('DB_SAGANSA_DRIVER', 'mysql');
+$sagansaUserDriver = env('DB_SAGANSA_USER_DRIVER', 'mysql');
 $evDriver = env('DB_EV_DRIVER', 'mysql');
 
 return [
@@ -84,6 +85,28 @@ return [
             'engine' => null,
             'options' => ($sagansaDriver === 'mysql' && extension_loaded('pdo_mysql')) ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('DB_SAGANSA_SSL_CA', env('MYSQL_ATTR_SSL_CA')),
+            ]) : [],
+        ],
+
+        'sagansa_user' => [
+            'driver' => $sagansaUserDriver,
+            'url' => env('DB_SAGANSA_USER_URL', env('DB_URL')),
+            'host' => env('DB_SAGANSA_USER_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_SAGANSA_USER_PORT', env('DB_PORT', '3306')),
+            'database' => env(
+                'DB_SAGANSA_USER_DATABASE',
+                $sagansaUserDriver === 'sqlite' ? database_path('database.sqlite') : 'sagansa_user'
+            ),
+            'username' => env('DB_SAGANSA_USER_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('DB_SAGANSA_USER_PASSWORD', env('DB_PASSWORD', 'root')),
+            'charset' => env('DB_SAGANSA_USER_CHARSET', env('DB_CHARSET', 'utf8mb4')),
+            'collation' => env('DB_SAGANSA_USER_COLLATION', env('DB_COLLATION', 'utf8mb4_unicode_ci')),
+            'prefix' => env('DB_SAGANSA_USER_PREFIX', ''),
+            'prefix_indexes' => true,
+            'strict' => false,
+            'engine' => null,
+            'options' => ($sagansaUserDriver === 'mysql' && extension_loaded('pdo_mysql')) ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('DB_SAGANSA_USER_SSL_CA', env('MYSQL_ATTR_SSL_CA')),
             ]) : [],
         ],
 
