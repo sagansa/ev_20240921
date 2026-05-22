@@ -16,3 +16,60 @@ body.map-page {
 body.map-page nav {
     z-index: 1300;
 }
+
+.ev-site-nav {
+    background: rgba(255, 255, 255, 0.94) !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.92);
+    box-shadow: 0 14px 38px -28px rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(14px);
+}
+
+.ev-site-nav a,
+.ev-site-nav button {
+    color: #0f172a !important;
+}
+
+.ev-site-nav a:hover,
+.ev-site-nav button:hover {
+    color: #2563eb !important;
+}
+
+.ev-site-nav img {
+    filter: none;
+}
+
+.ev-site-nav .text-ev-green-400 {
+    color: #14b8a6 !important;
+}
+
+.ev-site-nav .bg-ev-blue-700 {
+    background-color: #eff6ff !important;
+    color: #2563eb !important;
+}
+
+.ev-site-nav .bg-ev-blue-800,
+.ev-site-nav .bg-ev-blue-900,
+.ev-site-nav #mobile-menu > ul,
+.ev-site-nav #map-mobile-dropdown,
+.ev-site-nav #mobile-dropdown {
+    background-color: rgba(255, 255, 255, 0.98) !important;
+}
+
+.ev-site-nav #map-desktop-dropdown,
+.ev-site-nav #desktop-dropdown {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 18px 48px -24px rgba(15, 23, 42, 0.45);
+}
+
+.ev-site-nav #map-desktop-dropdown a:hover,
+.ev-site-nav #desktop-dropdown a:hover,
+.ev-site-nav #mobile-menu a:hover,
+.ev-site-nav #mobile-menu button:hover {
+    background-color: #f1f5f9 !important;
+    color: #2563eb !important;
+}
+
+.ev-site-nav .border-ev-blue-700 {
+    border-color: #e2e8f0 !important;
+}

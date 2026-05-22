@@ -56,7 +56,7 @@
 </head>
 
 <body class="flex flex-col min-h-screen bg-ev-white text-ev-gray-800 @yield('body_class')">
-    <nav class="fixed top-0 z-50 w-full bg-opacity-90 bg-ev-blue-800">
+    <nav class="ev-site-nav fixed top-0 z-50 w-full bg-opacity-90 bg-ev-blue-800">
         <div class="container px-4 mx-auto">
             <div class="flex items-center justify-between py-4">
                 <a href="{{ route('home') }}" class="flex items-center text-xl font-bold text-ev-white">

@@ -32,12 +32,31 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
+        :root {
+            --ev-bg: #f8fafc;
+            --ev-surface: #ffffff;
+            --ev-surface-soft: #f1f5f9;
+            --ev-text: #0f172a;
+            --ev-text-muted: #64748b;
+            --ev-primary: #2563eb;
+            --ev-primary-hover: #1d4ed8;
+            --ev-accent: #14b8a6;
+            --ev-accent-hover: #0f766e;
+            --ev-border: #e2e8f0;
+            --ev-danger: #ef4444;
+        }
+
+        body.map-page {
+            background: var(--ev-bg);
+        }
+
         #mapContainer {
             position: relative;
             width: 100%;
             height: calc(100vh - 64px);
             margin: 64px 0 0 0;
             padding: 20px;
+            background: var(--ev-bg);
         }
 
         #mapid {
@@ -45,8 +64,9 @@
             height: 100%;
             width: 100%;
             transition: all 0.3s ease;
-            border: 2px solid #3b82f6;
+            border: 1px solid var(--ev-border);
             border-radius: 8px;
+            box-shadow: 0 24px 60px -32px rgba(15, 23, 42, 0.45);
         }
 
         #mapControls {
@@ -74,38 +94,38 @@
             align-items: flex-start;
             gap: 12px;
             padding-bottom: 10px;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--ev-border);
         }
 
         .map-controls-title {
             font-size: 15px;
             font-weight: 700;
-            color: #111827;
+            color: var(--ev-text);
             line-height: 1.25;
         }
 
         .map-controls-count {
             margin-top: 3px;
             font-size: 12px;
-            color: #64748b;
+            color: var(--ev-text-muted);
         }
 
         .map-reset-button {
             flex: 0 0 auto;
             padding: 7px 10px;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--ev-border);
             border-radius: 6px;
-            color: #374151;
+            color: #334155;
             font-size: 12px;
             font-weight: 600;
-            background: #f8fafc;
+            background: var(--ev-surface-soft);
             transition: all 0.2s ease;
         }
 
         .map-reset-button:hover {
-            background: #eef2ff;
-            border-color: #93c5fd;
-            color: #1d4ed8;
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: var(--ev-primary-hover);
         }
 
         .map-filter-grid {
@@ -128,7 +148,7 @@
         .map-filter-field label {
             font-size: 11px;
             font-weight: 700;
-            color: #64748b;
+            color: var(--ev-text-muted);
             letter-spacing: 0;
             text-transform: uppercase;
         }
@@ -139,15 +159,16 @@
             top: 20px;
             right: 20px;
             z-index: 1001;
-            background-color: white;
+            background-color: var(--ev-surface);
             padding: 10px;
             border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 18px 36px -20px rgba(15, 23, 42, 0.45);
             cursor: pointer;
+            color: var(--ev-text);
         }
 
         #mapControlsToggle:hover {
-            background-color: #f3f4f6;
+            background-color: var(--ev-surface-soft);
             transform: scale(1.05);
         }
 
@@ -155,19 +176,19 @@
             width: 100%;
             min-height: 39px;
             padding: 8px 32px 8px 11px;
-            border: 1px solid #dbe3ef;
+            border: 1px solid var(--ev-border);
             border-radius: 6px;
             font-size: 14px;
-            color: #374151;
-            background-color: white;
+            color: #334155;
+            background-color: var(--ev-surface);
             box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
             transition: all 0.2s;
         }
 
         .map-select:focus {
             outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+            border-color: var(--ev-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
         }
 
         #mapControls .map-search {
@@ -184,21 +205,22 @@
         #mapControls .map-search-input input {
             flex: 1;
             padding: 8px 12px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--ev-border);
             border-radius: 6px;
             font-size: 14px;
+            color: #334155;
             transition: all 0.2s ease;
         }
 
         #mapControls .map-search-input input:focus {
-            border-color: #3b82f6;
+            border-color: var(--ev-primary);
             outline: none;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
         }
 
         #mapControls .map-search-input button {
             padding: 8px 12px;
-            background-color: #3b82f6;
+            background-color: var(--ev-primary);
             color: white;
             border-radius: 6px;
             font-size: 14px;
@@ -207,15 +229,15 @@
         }
 
         #mapControls .map-search-input button:hover {
-            background-color: #2563eb;
+            background-color: var(--ev-primary-hover);
         }
 
         #mapControls .map-search-results {
             max-height: 200px;
             overflow-y: auto;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--ev-border);
             border-radius: 6px;
-            background-color: white;
+            background-color: var(--ev-surface);
             margin-top: 4px;
             display: none;
             box-shadow: 0 8px 12px -8px rgba(15, 23, 42, 0.15);
@@ -231,10 +253,11 @@
             padding: 10px 12px;
             cursor: pointer;
             transition: background-color 0.15s ease;
+            color: #334155;
         }
 
         #mapControls .map-search-results li:hover {
-            background-color: #f3f4f6;
+            background-color: var(--ev-surface-soft);
         }
 
         #locateMe {
@@ -242,22 +265,23 @@
             bottom: 30px;
             right: 30px;
             z-index: 1000;
-            background-color: white;
+            background-color: var(--ev-surface);
             border: none;
             border-radius: 50%;
             width: 44px;
             height: 44px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 18px 36px -20px rgba(15, 23, 42, 0.45);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.3s ease;
+            color: var(--ev-primary);
         }
 
         #locateMe:hover {
             transform: scale(1.1);
-            background-color: #f3f4f6;
+            background-color: #eff6ff;
         }
 
         #locateMe.locating {
@@ -283,10 +307,11 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            border: 2px solid #3b82f6;
+            border: 2px solid var(--ev-primary);
             overflow: hidden;
-            background-color: white;
+            background-color: var(--ev-surface);
             z-index: 2;
+            box-shadow: 0 10px 18px -10px rgba(15, 23, 42, 0.6);
         }
 
         .map-marker-image img {
@@ -302,7 +327,7 @@
             transform: translateX(-50%);
             width: 20px;
             height: 20px;
-            background-color: #3b82f6;
+            background-color: var(--ev-primary);
             clip-path: polygon(50% 100%, 0 0, 100% 0);
             z-index: 1;
         }
@@ -310,18 +335,19 @@
         .popup-content {
             padding: 16px;
             max-width: 320px;
+            color: var(--ev-text);
         }
 
         .popup-content h3 {
             font-size: 16px;
             font-weight: 600;
-            color: #1f2937;
+            color: var(--ev-text);
             margin-bottom: 8px;
         }
 
         .popup-content p {
             font-size: 14px;
-            color: #4b5563;
+            color: #475569;
             margin-bottom: 6px;
         }
 
@@ -333,18 +359,19 @@
 
         .popup-content .charger-details li {
             font-size: 14px;
-            color: #4b5563;
+            color: #334155;
             margin-bottom: 6px;
             padding: 8px 10px;
             border-radius: 6px;
-            background: #f8fafc;
+            background: var(--ev-surface-soft);
+            border: 1px solid var(--ev-border);
         }
 
         .popup-content .maps-link {
             display: inline-block;
             margin-top: 12px;
             padding: 8px 16px;
-            background-color: #10b981;
+            background-color: var(--ev-accent);
             color: white;
             border-radius: 6px;
             text-decoration: none;
@@ -353,7 +380,37 @@
         }
 
         .popup-content .maps-link:hover {
-            background-color: #059669;
+            background-color: var(--ev-accent-hover);
+        }
+
+        .marker-cluster-small {
+            background-color: rgba(20, 184, 166, 0.18);
+        }
+
+        .marker-cluster-small div {
+            background-color: var(--ev-accent);
+            color: white;
+            font-weight: 700;
+        }
+
+        .marker-cluster-medium {
+            background-color: rgba(245, 158, 11, 0.22);
+        }
+
+        .marker-cluster-medium div {
+            background-color: #f59e0b;
+            color: white;
+            font-weight: 700;
+        }
+
+        .marker-cluster-large {
+            background-color: rgba(239, 68, 68, 0.22);
+        }
+
+        .marker-cluster-large div {
+            background-color: var(--ev-danger);
+            color: white;
+            font-weight: 700;
         }
 
         @media (max-width: 767px) {
@@ -367,7 +424,7 @@
                 right: 10px;
                 left: 10px;
                 max-width: none;
-                background-color: rgba(255, 255, 255, 0.95);
+                background: rgba(255, 255, 255, 0.96);
                 transform: translateY(120%);
                 opacity: 0;
                 pointer-events: none;
@@ -401,18 +458,45 @@
         }
 
         .dark #mapControls {
-            background-color: #1f2937;
+            background: rgba(15, 23, 42, 0.94);
+            border-color: rgba(51, 65, 85, 0.9);
             color: white;
+        }
+
+        .dark .map-controls-header {
+            border-bottom-color: #334155;
+        }
+
+        .dark .map-controls-title {
+            color: #f8fafc;
+        }
+
+        .dark .map-controls-count,
+        .dark .map-filter-field label {
+            color: #94a3b8;
         }
 
         .dark .map-select {
-            background-color: #374151;
-            border-color: #4b5563;
-            color: white;
+            background-color: #1e293b;
+            border-color: #334155;
+            color: #f8fafc;
+        }
+
+        .dark .map-reset-button {
+            background: #1e293b;
+            border-color: #334155;
+            color: #cbd5e1;
+        }
+
+        .dark #mapControls .map-search-input input,
+        .dark #mapControls .map-search-results {
+            background-color: #1e293b;
+            border-color: #334155;
+            color: #f8fafc;
         }
 
         .dark .popup-content {
-            background-color: #1f2937;
+            background-color: #0f172a;
             color: white;
         }
 
@@ -421,7 +505,9 @@
         }
 
         .dark .popup-content .charger-details li {
-            color: #d1d5db;
+            background: #1e293b;
+            border-color: #334155;
+            color: #cbd5e1;
         }
 
         #mapid .leaflet-top {
@@ -877,8 +963,8 @@
                             icon: L.divIcon({
                                 className: 'map-marker',
                                 html: `
-                                    <div class="map-marker-pointer" style="background-color:#ef4444"></div>
-                                    <div class="map-marker-image" style="border-color:#ef4444; background-color:#ef4444;">
+                                    <div class="map-marker-pointer" style="background-color:var(--ev-danger)"></div>
+                                    <div class="map-marker-image" style="border-color:var(--ev-danger); background-color:var(--ev-danger);">
                                         <div style="width: 12px; height: 12px; background-color: white; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
                                     </div>
                                 `,
