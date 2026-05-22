@@ -108,11 +108,37 @@ class SpkluCsvImportService
         'MALUKU' => 'Papua & Maluku',
     ];
 
+    private array $providerAliasMap = [
+        'PLN' => 'PLN Mobile',
+        'PERTAMINA' => 'Pertamina',
+        'SHELL' => 'Shell',
+        'VOLTRON' => 'Voltron',
+        'STARVO' => 'Starvo',
+        'WULING' => 'Wuling',
+        'HYUNDAI' => 'Hyundai',
+        'TOYOTA' => 'Toyota Lexus',
+        'LEXUS' => 'Toyota Lexus',
+        'ASTRA' => 'Astra',
+        'PORSCHE' => 'Porsche',
+        'BLUECHARGE' => 'BlueCharge',
+        'CHARGE+' => 'Charge+',
+        'CHARGE POINT' => 'ChargePoint',
+        'CHARGEPOINT' => 'ChargePoint',
+        'TERRA' => 'Terra Charge',
+        'HVT' => 'HVT Charging',
+    ];
+
     private array $clusterIslandMap = [];
 
     private array $resolvedChargingTypes = [];
 
     private array $resolvedMerkChargers = [];
+
+    private array $resolvedProviders = [];
+
+    private array $resolvedLocationCategories = [];
+
+    private array $resolvedChargerCategories = [];
 
     private array $requiredHeaders = [
         'Chargebox ID',
@@ -130,6 +156,10 @@ class SpkluCsvImportService
         'Propinsi',
         'Cluster Pulau',
         'Kepemilikan Mesin',
+        'Kategori Tol',
+        'Kategori2',
+        'Kategori3',
+        'Cluster Peruntukan',
     ];
 
     public function import(string $filePath, bool $replaceExisting = true, bool $dryRun = false): array
@@ -220,6 +250,111 @@ class SpkluCsvImportService
         return $this->import($filePath, true, true);
     }
 
+    public function importFromFiles(string $locationFilePath, string $detailFilePath, bool $replaceExisting = true, bool $dryRun = false): array
+    {
+        if (! file_exists($locationFilePath)) {
+            throw new InvalidArgumentException("File lokasi tidak ditemukan: {$locationFilePath}");
+        }
+
+        if (! file_exists($detailFilePath)) {
+            throw new InvalidArgumentException("File detail charger tidak ditemukan: {$detailFilePath}");
+        }
+
+        $locationRows = $this->parseCsv($locationFilePath);
+        $detailRows = $this->parseCsv($detailFilePath);
+        $locationsBySpkluId = $this->uniqueRowsBySpkluId($locationRows);
+        $detailsBySpkluId = $this->groupRowsBySpkluId($detailRows);
+        $validDetailCount = array_sum(array_map('count', $detailsBySpkluId));
+        $missingLocationDetailCount = 0;
+
+        foreach ($detailsBySpkluId as $spkluId => $details) {
+            if (! array_key_exists($spkluId, $locationsBySpkluId)) {
+                $missingLocationDetailCount += count($details);
+            }
+        }
+
+        $summary = [
+            'total_rows' => count($locationRows) + count($detailRows),
+            'location_rows' => count($locationRows),
+            'detail_rows' => count($detailRows),
+            'locations' => count($locationsBySpkluId),
+            'details' => $validDetailCount - $missingLocationDetailCount,
+            'deleted_locations' => 0,
+            'deleted_details' => 0,
+            'inserted_locations' => 0,
+            'inserted_details' => 0,
+            'skipped_rows' => (count($locationRows) - count($locationsBySpkluId))
+                + (count($detailRows) - $validDetailCount)
+                + $missingLocationDetailCount,
+            'replace_existing' => $replaceExisting,
+            'dry_run' => $dryRun,
+        ];
+
+        if ($dryRun) {
+            return $summary;
+        }
+
+        return DB::connection('ev')->transaction(function () use ($locationsBySpkluId, $detailsBySpkluId, $replaceExisting, $summary) {
+            $this->ensureClusterIslands();
+
+            if ($replaceExisting) {
+                $summary['deleted_details'] = DB::connection('ev')
+                    ->table('pln_charger_location_details')
+                    ->delete();
+
+                $summary['deleted_locations'] = DB::connection('ev')
+                    ->table('pln_charger_locations')
+                    ->delete();
+            }
+
+            foreach ($locationsBySpkluId as $spkluId => $locationRow) {
+                $existingLocation = null;
+
+                if (! $replaceExisting) {
+                    $existingLocation = DB::connection('ev')
+                        ->table('pln_charger_locations')
+                        ->where('pln_id', $spkluId)
+                        ->first();
+                }
+
+                $locationId = $existingLocation?->id;
+                $locationData = $this->buildLocation($spkluId, $locationRow);
+
+                if ($existingLocation) {
+                    DB::connection('ev')
+                        ->table('pln_charger_locations')
+                        ->where('id', $locationId)
+                        ->update($locationData);
+
+                    DB::connection('ev')
+                        ->table('pln_charger_location_details')
+                        ->where('pln_charger_location_id', $locationId)
+                        ->delete();
+                } else {
+                    $locationData['created_at'] = now();
+                    $locationId = DB::connection('ev')
+                        ->table('pln_charger_locations')
+                        ->insertGetId($locationData);
+                    $summary['inserted_locations']++;
+                }
+
+                foreach ($detailsBySpkluId[$spkluId] ?? [] as $detailRow) {
+                    DB::connection('ev')
+                        ->table('pln_charger_location_details')
+                        ->insert($this->buildDetail($locationId, $detailRow));
+                    $summary['inserted_details']++;
+                }
+            }
+
+            return $summary;
+        });
+    }
+
+    public function previewFromFiles(string $locationFilePath, string $detailFilePath): array
+    {
+        return $this->importFromFiles($locationFilePath, $detailFilePath, true, true);
+    }
+
     private function ensureClusterIslands(): void
     {
         $existing = DB::connection('ev')->table('cluster_islands')->get()->keyBy('name');
@@ -228,11 +363,9 @@ class SpkluCsvImportService
             $row = $existing->get($name);
 
             if (! $row) {
-                $id = DB::connection('ev')->table('cluster_islands')->insertGetId([
+                $id = DB::connection('ev')->table('cluster_islands')->insertGetId(array_merge([
                     'name' => $name,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                ], $this->timestampColumns('cluster_islands')));
             } else {
                 $id = $row->id;
             }
@@ -244,7 +377,7 @@ class SpkluCsvImportService
     private function parseCsv(string $filePath): array
     {
         $handle = fopen($filePath, 'r');
-        $headers = fgetcsv($handle, 0, ',');
+        $headers = fgetcsv($handle, 0, ',', '"', '\\');
 
         if (! $headers) {
             fclose($handle);
@@ -261,7 +394,7 @@ class SpkluCsvImportService
         }
 
         $rows = [];
-        while (($data = fgetcsv($handle, 0, ',')) !== false) {
+        while (($data = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             if (count($data) !== count($headers)) {
                 continue;
             }
@@ -291,6 +424,23 @@ class SpkluCsvImportService
         return $grouped;
     }
 
+    private function uniqueRowsBySpkluId(array $rows): array
+    {
+        $unique = [];
+
+        foreach ($rows as $row) {
+            $spkluId = trim($row['ID Spklu'] ?? '');
+
+            if ($spkluId === '' || ! is_numeric($spkluId) || array_key_exists($spkluId, $unique)) {
+                continue;
+            }
+
+            $unique[$spkluId] = $row;
+        }
+
+        return $unique;
+    }
+
     private function buildLocation(string $spkluId, array $row): array
     {
         $clusterPulau = strtoupper(trim($row['Cluster Pulau'] ?? ''));
@@ -307,8 +457,8 @@ class SpkluCsvImportService
             'province_id' => $this->mapProvince($row['Propinsi'] ?? ''),
             'cluster_island_id' => $clusterIslandId,
             'owner_machine' => trim($row['Kepemilikan Mesin'] ?? ''),
-            'provider_id' => null,
-            'location_category_id' => null,
+            'provider_id' => $this->resolveProviderId($row['Provider'] ?? '', $row['Nama Spklu'] ?? '', $row['Kepemilikan Mesin'] ?? ''),
+            'location_category_id' => $this->resolveLocationCategoryId($row),
             'updated_at' => now(),
         ];
     }
@@ -326,7 +476,7 @@ class SpkluCsvImportService
             'operation_date' => $operationDate,
             'charging_type_id' => $this->resolveChargingTypeId($row['Kategori'] ?? ''),
             'merk_charger_id' => $this->resolveMerkChargerId($row['Merek'] ?? ''),
-            'category_charger_id' => null,
+            'category_charger_id' => $this->resolveChargerCategoryId($row['Kategori'] ?? ''),
             'count_connector_charger' => 1,
             'year' => $operationDate ? (int) Carbon::parse($operationDate)->format('Y') : null,
             'created_at' => now(),
@@ -366,11 +516,9 @@ class SpkluCsvImportService
             return $this->resolvedChargingTypes[$normalizedName] = (int) $existingId;
         }
 
-        $id = DB::connection('ev')->table('charging_types')->insertGetId([
+        $id = DB::connection('ev')->table('charging_types')->insertGetId(array_merge([
             'name' => $normalizedName,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ], $this->timestampColumns('charging_types')));
 
         return $this->resolvedChargingTypes[$normalizedName] = (int) $id;
     }
@@ -406,23 +554,208 @@ class SpkluCsvImportService
         if ($isStringKey) {
             $id = (string) Str::uuid();
 
-            DB::connection('ev')->table('merk_chargers')->insert([
+            DB::connection('ev')->table('merk_chargers')->insert(array_merge([
                 'id' => $id,
                 'name' => $normalizedName,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            ], $this->timestampColumns('merk_chargers')));
 
             return $this->resolvedMerkChargers[$normalizedName] = $id;
         }
 
-        $id = DB::connection('ev')->table('merk_chargers')->insertGetId([
+        $id = DB::connection('ev')->table('merk_chargers')->insertGetId(array_merge([
             'name' => $normalizedName,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ], $this->timestampColumns('merk_chargers')));
 
         return $this->resolvedMerkChargers[$normalizedName] = (int) $id;
+    }
+
+    private function resolveProviderId(string $providerName, string $spkluName = '', string $ownerMachine = ''): ?string
+    {
+        $providerName = $this->cleanName($providerName);
+        $normalizedSpkluName = $this->normalizeLookup($spkluName);
+        $normalizedProviderName = $this->normalizeLookup($providerName);
+
+        if ($normalizedProviderName === '' && $normalizedSpkluName === '') {
+            return null;
+        }
+
+        $cacheKey = $normalizedProviderName !== ''
+            ? "PROVIDER:{$normalizedProviderName}"
+            : "SPKLU:{$normalizedSpkluName}";
+
+        if (array_key_exists($cacheKey, $this->resolvedProviders)) {
+            return $this->resolvedProviders[$cacheKey];
+        }
+
+        $providers = DB::connection('ev')
+            ->table('providers')
+            ->select(['id', 'name'])
+            ->get();
+
+        if ($normalizedProviderName !== '') {
+            $provider = $providers->first(
+                fn ($provider) => $this->normalizeLookup($provider->name) === $normalizedProviderName
+            );
+
+            return $this->resolvedProviders[$cacheKey] = $provider?->id
+                ?? $this->resolveUuidMasterId('providers', $providerName, ['status' => 1]);
+        }
+
+        foreach ($this->providerAliasMap as $needle => $providerName) {
+            if (! str_contains($normalizedSpkluName, $this->normalizeLookup($needle))) {
+                continue;
+            }
+
+            $provider = $providers->first(
+                fn ($provider) => $this->normalizeLookup($provider->name) === $this->normalizeLookup($providerName)
+            );
+
+            return $this->resolvedProviders[$cacheKey] = $provider?->id
+                ?? $this->resolveUuidMasterId('providers', $providerName, ['status' => 1]);
+        }
+
+        $matchedProvider = $providers
+            ->filter(fn ($provider) => $this->normalizeLookup($provider->name) !== '')
+            ->filter(fn ($provider) => str_contains($normalizedSpkluName, $this->normalizeLookup($provider->name)))
+            ->sortByDesc(fn ($provider) => strlen($this->normalizeLookup($provider->name)))
+            ->first();
+
+        if ($matchedProvider) {
+            return $this->resolvedProviders[$cacheKey] = $matchedProvider->id;
+        }
+
+        $fallbackProviderName = $this->extractProviderNameFromSpklu($spkluName)
+            ?: $this->cleanName($ownerMachine)
+            ?: $this->cleanName($spkluName);
+
+        return $this->resolvedProviders[$cacheKey] = $this->resolveUuidMasterId(
+            'providers',
+            $fallbackProviderName,
+            ['status' => 1],
+        );
+    }
+
+    private function resolveLocationCategoryId(array $row): ?int
+    {
+        $candidates = $this->cleanCandidates([
+            $row['Kategori3'] ?? '',
+            $row['Cluster Peruntukan'] ?? '',
+            $row['Kategori2'] ?? '',
+            $row['Kategori Tol'] ?? '',
+        ]);
+
+        return $this->resolveIntegerMasterId('location_categories', $candidates, $this->resolvedLocationCategories);
+    }
+
+    private function resolveChargerCategoryId(string $category): ?int
+    {
+        $candidates = $this->cleanCandidates([$category]);
+
+        return $this->resolveIntegerMasterId('charger_categories', $candidates, $this->resolvedChargerCategories);
+    }
+
+    private function resolveIntegerMasterId(string $table, array $candidates, array &$cache): ?int
+    {
+        if ($candidates === []) {
+            return null;
+        }
+
+        foreach ($candidates as $candidate) {
+            $normalizedName = $this->normalizeLookup($candidate);
+
+            if (array_key_exists($normalizedName, $cache)) {
+                return $cache[$normalizedName];
+            }
+
+            $existingId = DB::connection('ev')
+                ->table($table)
+                ->whereRaw('UPPER(name) = ?', [$normalizedName])
+                ->value('id');
+
+            if ($existingId) {
+                return $cache[$normalizedName] = (int) $existingId;
+            }
+        }
+
+        $name = $candidates[0];
+        $normalizedName = $this->normalizeLookup($name);
+        $id = DB::connection('ev')->table($table)->insertGetId(array_merge([
+            'name' => $name,
+        ], $this->timestampColumns($table)));
+
+        return $cache[$normalizedName] = (int) $id;
+    }
+
+    private function resolveUuidMasterId(string $table, string $name, array $extraColumns = []): ?string
+    {
+        $name = $this->cleanName($name);
+
+        if ($name === '') {
+            return null;
+        }
+
+        $normalizedName = $this->normalizeLookup($name);
+        $existingId = DB::connection('ev')
+            ->table($table)
+            ->whereRaw('UPPER(name) = ?', [$normalizedName])
+            ->value('id');
+
+        if ($existingId) {
+            return $existingId;
+        }
+
+        $id = (string) Str::uuid();
+
+        DB::connection('ev')->table($table)->insert(array_merge($extraColumns, [
+            'id' => $id,
+            'name' => $name,
+        ], $this->timestampColumns($table)));
+
+        return $id;
+    }
+
+    private function extractProviderNameFromSpklu(string $spkluName): string
+    {
+        $name = $this->cleanName(preg_replace('/^SPKLU\s+/i', '', $spkluName) ?? $spkluName);
+
+        if (preg_match('/^PLN(?:\s|$)/i', $name)) {
+            return 'PLN';
+        }
+
+        return $name;
+    }
+
+    private function cleanCandidates(array $values): array
+    {
+        return array_values(array_unique(array_filter(
+            array_map(fn ($value) => $this->cleanName((string) $value), $values),
+            fn ($value) => $value !== '',
+        )));
+    }
+
+    private function cleanName(string $name): string
+    {
+        return trim(preg_replace('/\s+/', ' ', $name) ?? '');
+    }
+
+    private function normalizeLookup(string $name): string
+    {
+        return strtoupper($this->cleanName($name));
+    }
+
+    private function timestampColumns(string $table): array
+    {
+        $timestamps = [];
+
+        if (Schema::connection('ev')->hasColumn($table, 'created_at')) {
+            $timestamps['created_at'] = now();
+        }
+
+        if (Schema::connection('ev')->hasColumn($table, 'updated_at')) {
+            $timestamps['updated_at'] = now();
+        }
+
+        return $timestamps;
     }
 
     private function parseCoord(string $value): ?float

@@ -14,6 +14,16 @@
                     <dt class="text-sm text-gray-500 dark:text-gray-400">Baris CSV</dt>
                     <dd class="text-xl font-semibold">{{ number_format($lastImportSummary['total_rows']) }}</dd>
                 </div>
+                @if (array_key_exists('location_rows', $lastImportSummary))
+                    <div>
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Baris lokasi</dt>
+                        <dd class="text-xl font-semibold">{{ number_format($lastImportSummary['location_rows']) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Baris detail</dt>
+                        <dd class="text-xl font-semibold">{{ number_format($lastImportSummary['detail_rows']) }}</dd>
+                    </div>
+                @endif
                 <div>
                     <dt class="text-sm text-gray-500 dark:text-gray-400">Lokasi diimport</dt>
                     <dd class="text-xl font-semibold">{{ number_format($lastImportSummary['inserted_locations']) }}</dd>

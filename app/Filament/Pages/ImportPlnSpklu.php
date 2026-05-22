@@ -55,10 +55,11 @@ class ImportPlnSpklu extends Page implements HasForms
         return $form
             ->schema([
                 Section::make('Upload file CSV PLN')
-                    ->description('Import akan mengganti data pada pln_charger_locations dan pln_charger_location_details. Data master pendukung hanya ditambah bila belum ada.')
+                    ->description('Gunakan dua file CSV baru untuk lokasi dan detail charger. Import akan mengganti data pada pln_charger_locations dan pln_charger_location_details.')
                     ->schema([
-                        FileUpload::make('csv_file')
-                            ->label('File CSV')
+                        FileUpload::make('locations_file')
+                            ->label('File lokasi CSV')
+                            ->helperText('Contoh: pln_charger_locations.csv')
                             ->disk('public')
                             ->directory('pln-spklu-imports')
                             ->acceptedFileTypes([
@@ -67,8 +68,31 @@ class ImportPlnSpklu extends Page implements HasForms
                                 'application/csv',
                                 'application/vnd.ms-excel',
                             ])
-                            ->preserveFilenames()
-                            ->required(),
+                            ->preserveFilenames(),
+                        FileUpload::make('details_file')
+                            ->label('File detail charger CSV')
+                            ->helperText('Contoh: pln_charger_location_details.csv')
+                            ->disk('public')
+                            ->directory('pln-spklu-imports')
+                            ->acceptedFileTypes([
+                                'text/csv',
+                                'text/plain',
+                                'application/csv',
+                                'application/vnd.ms-excel',
+                            ])
+                            ->preserveFilenames(),
+                        FileUpload::make('csv_file')
+                            ->label('File CSV lama')
+                            ->helperText('Opsional, hanya dipakai bila dua file di atas tidak diisi.')
+                            ->disk('public')
+                            ->directory('pln-spklu-imports')
+                            ->acceptedFileTypes([
+                                'text/csv',
+                                'text/plain',
+                                'application/csv',
+                                'application/vnd.ms-excel',
+                            ])
+                            ->preserveFilenames(),
                     ]),
             ])
             ->statePath('data');
@@ -91,21 +115,33 @@ class ImportPlnSpklu extends Page implements HasForms
     public function import(SpkluCsvImportService $importer): void
     {
         $state = $this->form->getState();
-        $filePath = $state['csv_file'] ?? null;
+        $locationsFilePath = $state['locations_file'] ?? null;
+        $detailsFilePath = $state['details_file'] ?? null;
+        $legacyFilePath = $state['csv_file'] ?? null;
 
-        if (! $filePath) {
+        if ((! $locationsFilePath || ! $detailsFilePath) && ! $legacyFilePath) {
             Notification::make()
-                ->title('File CSV belum dipilih')
+                ->title('File CSV belum lengkap')
+                ->body('Upload file lokasi dan detail charger, atau gunakan satu file CSV lama.')
                 ->danger()
                 ->send();
 
             return;
         }
 
-        $fullPath = Storage::disk('public')->path($filePath);
-
         try {
-            $this->lastImportSummary = $importer->import($fullPath, replaceExisting: true);
+            if ($locationsFilePath && $detailsFilePath) {
+                $this->lastImportSummary = $importer->importFromFiles(
+                    Storage::disk('public')->path($locationsFilePath),
+                    Storage::disk('public')->path($detailsFilePath),
+                    replaceExisting: true,
+                );
+            } else {
+                $this->lastImportSummary = $importer->import(
+                    Storage::disk('public')->path($legacyFilePath),
+                    replaceExisting: true,
+                );
+            }
 
             Notification::make()
                 ->title('Import PLN SPKLU selesai')
