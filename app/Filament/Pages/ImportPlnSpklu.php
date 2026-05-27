@@ -5,10 +5,10 @@ namespace App\Filament\Pages;
 use App\Services\SpkluCsvImportService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
@@ -19,9 +19,9 @@ class ImportPlnSpklu extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-up-tray';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-arrow-up-tray';
 
-    protected static ?string $navigationGroup = 'Admin';
+    protected static string | \UnitEnum | null $navigationGroup = 'Admin';
 
     protected static ?string $navigationLabel = 'Import PLN SPKLU';
 
@@ -29,7 +29,7 @@ class ImportPlnSpklu extends Page implements HasForms
 
     protected static ?int $navigationSort = 2;
 
-    protected static string $view = 'filament.pages.import-pln-spklu';
+    protected string $view = 'filament.pages.import-pln-spklu';
 
     public ?array $data = [];
 
@@ -50,9 +50,9 @@ class ImportPlnSpklu extends Page implements HasForms
         $this->form->fill();
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Section::make('Upload file CSV PLN')
                     ->description('Gunakan dua file CSV baru untuk lokasi dan detail charger. Import akan mengganti data pada pln_charger_locations dan pln_charger_location_details.')

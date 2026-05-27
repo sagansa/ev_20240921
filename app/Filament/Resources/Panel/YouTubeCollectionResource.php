@@ -4,14 +4,14 @@ namespace App\Filament\Resources\Panel;
 
 use App\Filament\Resources\Panel\YouTubeCollectionResource\Pages;
 use App\Models\YouTubeCollection;
-use Filament\{Tables, Resources};
-use Filament\Forms\Form;
+use Filament\{Actions, Tables, Resources};
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\DatePicker;
@@ -24,9 +24,9 @@ class YouTubeCollectionResource extends Resource
 {
     protected static ?string $model = YouTubeCollection::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-video-camera';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-video-camera';
 
-    protected static ?string $navigationGroup = 'Content Management';
+    protected static string | \UnitEnum | null $navigationGroup = 'Content Management';
 
     protected static ?string $pluralModelLabel = 'YouTube Collections';
 
@@ -39,9 +39,21 @@ class YouTubeCollectionResource extends Resource
         return $user && $user->hasRole('super_admin');
     }
 
-    public static function form(Form $form): Form
+
+
+    public static function getNavigationIcon(): string | \BackedEnum | null
     {
-        return $form
+        return 'heroicon-o-video-camera';
+    }
+
+    public static function getNavigationGroup(): string | \UnitEnum | null
+    {
+        return 'Content Management';
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return $schema
             ->schema([
                 Section::make('YouTube Collection Information')
                     ->description('Enter the details for the YouTube video')
@@ -118,21 +130,21 @@ class YouTubeCollectionResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                Actions\EditAction::make(),
+                Actions\DeleteAction::make(),
                 Action::make('view')
                     ->url(fn ($record) => route('youtube.show', $record->id))
                     ->openUrlInNewTab()
                     ->icon('heroicon-o-eye'),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->emptyStateActions([
-                Tables\Actions\CreateAction::make(),
+                Actions\CreateAction::make(),
             ]);
     }
 

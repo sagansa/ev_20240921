@@ -5,7 +5,8 @@ namespace App\Filament\Resources\Panel\BrandVehicleResource\RelationManagers;
 use App\Filament\Forms\ImageFileUpload;
 use Filament\Forms;
 use Filament\Tables;
-use Filament\Forms\Form;
+use Filament\Actions;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Filament\Forms\Components\Grid;
 use Filament\Tables\Columns\TextColumn;
@@ -22,9 +23,9 @@ class ModelVehiclesRelationManager extends RelationManager
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Grid::make(['default' => 1])->schema([
                 ImageFileUpload::make('image')->directory('images/model'),
 
@@ -44,14 +45,14 @@ class ModelVehiclesRelationManager extends RelationManager
                 TextColumn::make('name'),
             ])
             ->filters([])
-            ->headerActions([Tables\Actions\CreateAction::make()])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->headerActions([Actions\CreateAction::make()])
+            ->recordActions([
+                Actions\EditAction::make(),
+                Actions\DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

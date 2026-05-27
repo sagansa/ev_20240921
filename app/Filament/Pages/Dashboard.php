@@ -6,10 +6,10 @@ use App\Models\CurrentCharger;
 use App\Models\TypeVehicle;
 use App\Models\Vehicle;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -18,9 +18,9 @@ class Dashboard extends BaseDashboard
 {
     use BaseDashboard\Concerns\HasFiltersForm;
 
-    public function filtersForm(Form $form): Form
+    public function filtersForm(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Section::make()
                     ->schema([
@@ -111,7 +111,13 @@ class Dashboard extends BaseDashboard
                             ->minDate(fn (Get $get) => $get('startDate') ?: now()->subMonthsNoOverflow(12)->startOfMonth())
                             ->maxDate(now()),
                     ])
-                    ->columns(5),
+                    ->columns([
+                        'default' => 1,
+                        'md' => 2,
+                        'xl' => 3,
+                        '2xl' => 5,
+                    ])
+                    ->columnSpanFull(),
             ]);
     }
 }

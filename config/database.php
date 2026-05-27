@@ -62,7 +62,7 @@ return [
             'strict' => false,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
 
@@ -84,7 +84,7 @@ return [
             'strict' => false,
             'engine' => null,
             'options' => ($sagansaDriver === 'mysql' && extension_loaded('pdo_mysql')) ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('DB_SAGANSA_SSL_CA', env('MYSQL_ATTR_SSL_CA')),
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('DB_SAGANSA_SSL_CA', env('MYSQL_ATTR_SSL_CA')),
             ]) : [],
         ],
 
@@ -106,7 +106,7 @@ return [
             'strict' => false,
             'engine' => null,
             'options' => ($sagansaUserDriver === 'mysql' && extension_loaded('pdo_mysql')) ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('DB_SAGANSA_USER_SSL_CA', env('MYSQL_ATTR_SSL_CA')),
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('DB_SAGANSA_USER_SSL_CA', env('MYSQL_ATTR_SSL_CA')),
             ]) : [],
         ],
 
@@ -128,7 +128,7 @@ return [
             'strict' => false,
             'engine' => null,
             'options' => ($evDriver === 'mysql' && extension_loaded('pdo_mysql')) ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
 
@@ -148,7 +148,7 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
 

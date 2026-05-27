@@ -14,7 +14,7 @@ class CountChargeChart extends ChartWidget
     use FiltersDashboardCharges;
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'Count Charge Each Provider';
+    protected ?string $heading = 'Count Charge Each Provider';
 
     protected static ?int $sort = 2;
 

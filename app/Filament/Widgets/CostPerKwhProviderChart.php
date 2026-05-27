@@ -14,7 +14,7 @@ class CostPerKwhProviderChart extends ChartWidget
     use FiltersDashboardCharges;
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'Gross Average Cost per kWh (Rp/kWh)';
+    protected ?string $heading = 'Gross Average Cost per kWh (Rp/kWh)';
 
     protected static ?int $sort = 1;
 

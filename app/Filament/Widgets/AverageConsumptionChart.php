@@ -14,7 +14,7 @@ class AverageConsumptionChart extends ChartWidget
     use FiltersDashboardCharges;
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'Consumption Trend Summary (km/kWh)';
+    protected ?string $heading = 'Consumption Trend Summary (km/kWh)';
 
     protected static ?int $sort = 4;
 

@@ -4,17 +4,18 @@ namespace App\Filament\Resources\Panel;
 
 use Filament\Support\Components\Badge;
 use Filament\Tables;
-use Filament\Forms\Form;
+use Filament\Actions;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use App\Models\TypeVehicle;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use App\Filament\Resources\Panel\TypeVehicleResource\Pages;
-use Filament\Tables\Actions\ActionGroup;
+use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\Layout\Panel;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
@@ -24,11 +25,21 @@ class TypeVehicleResource extends Resource
 {
     protected static ?string $model = TypeVehicle::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-globe-asia-australia';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-globe-asia-australia';
+    protected static string | \UnitEnum | null $navigationGroup = 'Databases';
 
-    protected static ?int $navigationSort = 1;
 
-    protected static ?string $navigationGroup = 'Databases';
+
+
+    public static function getNavigationIcon(): string | \BackedEnum | null
+    {
+        return 'heroicon-o-globe-asia-australia';
+    }
+
+    public static function getNavigationGroup(): string | \UnitEnum | null
+    {
+        return 'Databases';
+    }
 
     public static function getModelLabel(): string
     {
@@ -45,9 +56,9 @@ class TypeVehicleResource extends Resource
         return __('crud.typeVehicles.collectionTitle');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Section::make()->schema([
                 Grid::make(['default' => 1])->schema([
                     Select::make('model_vehicle_id')
@@ -127,15 +138,15 @@ class TypeVehicleResource extends Resource
                     ->relationship('modelVehicle','name')
                     ->label('Model'),
             ], layout: FiltersLayout::AboveContent)
-            ->actions([
+            ->recordActions([
                 ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\ViewAction::make(),
+                    Actions\EditAction::make(),
+                    Actions\ViewAction::make(),
                 ])
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort(function ($query) {

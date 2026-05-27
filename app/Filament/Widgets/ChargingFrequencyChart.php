@@ -14,7 +14,7 @@ class ChargingFrequencyChart extends ChartWidget
     use FiltersDashboardCharges;
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'Charging Frequency per Month';
+    protected ?string $heading = 'Charging Frequency per Month';
 
     protected static ?int $sort = 4;
 

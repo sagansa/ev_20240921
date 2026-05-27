@@ -14,7 +14,7 @@ class KwhChart extends ChartWidget
     use FiltersDashboardCharges;
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'kWh per Month & Average (kWh)';
+    protected ?string $heading = 'kWh per Month & Average (kWh)';
 
     protected static ?int $sort = 3;
 

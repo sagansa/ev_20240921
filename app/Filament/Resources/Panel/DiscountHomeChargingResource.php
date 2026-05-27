@@ -10,14 +10,15 @@ use App\Filament\Forms\DecimalTextInput;
 use App\Filament\Forms\TodayDatePicker;
 use Filament\Forms;
 use Filament\Tables;
+use Filament\Actions;
 use Livewire\Component;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Grid;
 use App\Models\DiscountHomeCharging;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,7 +26,7 @@ use Filament\Forms\Components\DatePicker;
 use App\Filament\Resources\Panel\DiscountHomeChargingResource\Pages;
 use App\Filament\Resources\Panel\DiscountHomeChargingResource\RelationManagers;
 use App\Models\ChargerLocation;
-use Filament\Tables\Actions\ActionGroup;
+use Filament\Actions\ActionGroup;
 use Illuminate\Support\Facades\Auth;
 use Ramsey\Uuid\Type\Decimal;
 
@@ -33,11 +34,21 @@ class DiscountHomeChargingResource extends Resource
 {
     protected static ?string $model = DiscountHomeCharging::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-percent-badge';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-percent-badge';
+    protected static string | \UnitEnum | null $navigationGroup = 'Apps';
 
-    protected static ?int $navigationSort = 1;
 
-    protected static ?string $navigationGroup = 'Apps';
+
+
+    public static function getNavigationIcon(): string | \BackedEnum | null
+    {
+        return 'heroicon-o-percent-badge';
+    }
+
+    public static function getNavigationGroup(): string | \UnitEnum | null
+    {
+        return 'Apps';
+    }
 
     public static function getModelLabel(): string
     {
@@ -54,9 +65,9 @@ class DiscountHomeChargingResource extends Resource
         return __('crud.discountHomeChargings.collectionTitle');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Section::make()->schema([
                 Grid::make(['default' => 2])->schema([
                     BaseSelect::make('charger_location_id')
@@ -109,15 +120,15 @@ class DiscountHomeChargingResource extends Resource
                 TextColumn::make('user.name')->hidden(fn () => Auth::user()->hasRole('user'))
             ])
             ->filters([])
-            ->actions([
+            ->recordActions([
                 ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\ViewAction::make(),
+                    Actions\EditAction::make(),
+                    Actions\ViewAction::make(),
                 ])
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('id', 'desc');

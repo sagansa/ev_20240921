@@ -8,13 +8,14 @@ use App\Filament\Forms\NominalTextInput;
 use App\Filament\Forms\PercentTextInput;
 use App\Filament\Forms\TodayDatePicker;
 use Filament\Tables;
+use Filament\Actions;
 use App\Models\Vehicle;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,7 +27,7 @@ use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Repeater;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
-use Filament\Tables\Actions\ActionGroup;
+use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\ImageColumn;
 use Illuminate\Support\Facades\Auth;
 
@@ -34,11 +35,21 @@ class VehicleResource extends Resource
 {
     protected static ?string $model = Vehicle::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-truck';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-truck';
+    protected static string | \UnitEnum | null $navigationGroup = 'Apps';
 
-    protected static ?int $navigationSort = 5;
 
-    protected static ?string $navigationGroup = 'Apps';
+
+
+    public static function getNavigationIcon(): string | \BackedEnum | null
+    {
+        return 'heroicon-o-truck';
+    }
+
+    public static function getNavigationGroup(): string | \UnitEnum | null
+    {
+        return 'Apps';
+    }
 
     public static function getModelLabel(): string
     {
@@ -55,9 +66,9 @@ class VehicleResource extends Resource
         return __('crud.vehicles.collectionTitle');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Section::make()->schema([
                 Grid::make(['default' => 1])->schema([
                     ImageFileUpload::make('image')->directory('images/vehicle'),
@@ -202,15 +213,15 @@ class VehicleResource extends Resource
                     ->visible(fn($record) => auth()->user()->hasRole('super_admin')), // Kondisi visibilitas,
             ])
             ->filters([])
-            ->actions([
+            ->recordActions([
                 ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\ViewAction::make(),
+                    Actions\EditAction::make(),
+                    Actions\ViewAction::make(),
                 ])
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('id', 'desc');

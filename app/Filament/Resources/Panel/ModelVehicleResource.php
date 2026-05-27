@@ -5,14 +5,15 @@ namespace App\Filament\Resources\Panel;
 use App\Filament\Forms\ImageFileUpload;
 use Filament\Forms;
 use Filament\Tables;
+use Filament\Actions;
 use Livewire\Component;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use App\Models\ModelVehicle;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,11 +26,21 @@ class ModelVehicleResource extends Resource
 {
     protected static ?string $model = ModelVehicle::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string | \UnitEnum | null $navigationGroup = 'Vehicles';
 
-    protected static ?int $navigationSort = 2;
 
-    protected static ?string $navigationGroup = 'Vehicles';
+
+
+    public static function getNavigationIcon(): string | \BackedEnum | null
+    {
+        return 'heroicon-o-rectangle-stack';
+    }
+
+    public static function getNavigationGroup(): string | \UnitEnum | null
+    {
+        return 'Vehicles';
+    }
 
     public static function getModelLabel(): string
     {
@@ -46,9 +57,9 @@ class ModelVehicleResource extends Resource
         return __('crud.modelVehicles.collectionTitle');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Section::make()->schema([
                 Grid::make(['default' => 1])->schema([
 
@@ -82,13 +93,13 @@ class ModelVehicleResource extends Resource
                 TextColumn::make('brandVehicle.name'),
             ])
             ->filters([])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                Actions\EditAction::make(),
+                Actions\ViewAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('id', 'desc');

@@ -7,10 +7,10 @@ use Filament\Resources\Pages\CreateRecord;
 use App\Filament\Resources\Panel\ChargerLocationResource;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\Wizard\Step;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Wizard;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 
 class CreateChargerLocation extends CreateRecord
 {
@@ -18,7 +18,7 @@ class CreateChargerLocation extends CreateRecord
 
     protected static string $resource = ChargerLocationResource::class;
 
-    // public function form(Form $form): Form
+    // public function form(Schema $schema): Schema
     // {
     //     return parent::form($form)
     //         ->schema([

@@ -10,12 +10,13 @@ use App\Filament\Forms\NominalTextInput;
 use App\Filament\Forms\PercentTextInput;
 use App\Filament\Forms\TodayDatePicker;
 use Filament\Tables;
+use Filament\Actions;
 use App\Models\Charge;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\ImageColumn;
@@ -38,11 +39,21 @@ class ChargeResource extends Resource
 {
     protected static ?string $model = Charge::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-bolt';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-bolt';
+    protected static string | \UnitEnum | null $navigationGroup = 'Apps';
 
-    protected static ?int $navigationSort = 1;
 
-    protected static ?string $navigationGroup = 'Apps';
+
+
+    public static function getNavigationIcon(): string | \BackedEnum | null
+    {
+        return 'heroicon-o-bolt';
+    }
+
+    public static function getNavigationGroup(): string | \UnitEnum | null
+    {
+        return 'Apps';
+    }
 
     public static function getModelLabel(): string
     {
@@ -66,10 +77,10 @@ class ChargeResource extends Resource
         ];
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
 
-        return $form->schema([
+        return $schema->schema([
 
             Group::make()->schema([
                 Section::make('Start Charging')->schema([
@@ -434,13 +445,13 @@ class ChargeResource extends Resource
                 ],
                 // layout: FiltersLayout::AboveContent
             )
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                // Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                Actions\EditAction::make(),
+                // Actions\ViewAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

@@ -13,7 +13,7 @@
 
     <script type="application/ld+json">
     {
-        "@context": "https://schema.org",
+        "@@context": "https://schema.org",
         "@type": "Dataset",
         "name": "Peta Lokasi Charging Station EV di Indonesia",
         "description": "Database lengkap lokasi charging station kendaraan listrik di Indonesia dengan informasi detail provider, tipe charger, dan kategori lokasi.",

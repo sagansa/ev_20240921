@@ -14,7 +14,7 @@ class LossesChart extends ChartWidget
     use FiltersDashboardCharges;
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'Average Charging Losses (%)';
+    protected ?string $heading = 'Average Charging Losses (%)';
 
     // protected int | string | array $columnSpan = 'full';
 

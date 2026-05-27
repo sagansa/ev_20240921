@@ -7,13 +7,14 @@ use App\Filament\Forms\ImageFileUpload;
 use App\Filament\Forms\NominalTextInput;
 use Filament\Forms;
 use Filament\Tables;
-use Filament\Forms\Form;
+use Filament\Actions;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use App\Models\ChargerLocation;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\Checkbox;
 use Filament\Tables\Columns\ImageColumn;
@@ -29,7 +30,7 @@ use App\Tables\Columns\StatusLocationColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Repeater;
-use Filament\Tables\Actions\ActionGroup;
+use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\ToggleColumn;
 use Humaidem\FilamentMapPicker\Fields\OSMMap;
 use Illuminate\Support\Facades\Auth;
@@ -40,11 +41,21 @@ class ChargerLocationResource extends Resource
 {
     protected static ?string $model = ChargerLocation::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-map-pin';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-map-pin';
+    protected static string | \UnitEnum | null $navigationGroup = 'Apps';
 
-    protected static ?int $navigationSort = 3;
 
-    protected static ?string $navigationGroup = 'Apps';
+
+
+    public static function getNavigationIcon(): string | \BackedEnum | null
+    {
+        return 'heroicon-o-map-pin';
+    }
+
+    public static function getNavigationGroup(): string | \UnitEnum | null
+    {
+        return 'Apps';
+    }
 
     public static function getModelLabel(): string
     {
@@ -61,9 +72,9 @@ class ChargerLocationResource extends Resource
         return __('crud.chargerLocations.collectionTitle');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Group::make()->schema([
                 Section::make()
                     ->schema(static::getAddressFormHeadSchema())
@@ -165,16 +176,16 @@ class ChargerLocationResource extends Resource
                     ]),
             ], layout: FiltersLayout::AboveContent)
 
-            ->actions([
+            ->recordActions([
                 ActionGroup::make([
-                    Tables\Actions\ViewAction::make(),
-                    Tables\Actions\EditAction::make()
+                    Actions\ViewAction::make(),
+                    Actions\EditAction::make()
                         ->visible(fn($record) => ($record->status === 1 && $record->user_id === Auth::id()) || Auth::user()->hasRole('super_admin')),
                 ])
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

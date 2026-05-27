@@ -10,39 +10,50 @@ use App\Models\TypeCharger;
 use App\Tables\Columns\StatusLocationColumn;
 use Filament\Forms;
 use Filament\Forms\Components\Group;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Actions\ActionGroup;
+use Filament\Actions;
+use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Forms\Get;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Forms\Set;
 use Illuminate\Support\Collection;
-use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Illuminate\Support\Facades\Auth;
-use Filament\Tables\Actions\BulkAction;
+use Filament\Actions\BulkAction;
 
 class ChargerResource extends Resource
 {
     protected static ?string $model = Charger::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-map';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-map';
+    protected static string | \UnitEnum | null $navigationGroup = 'Apps';
 
-    protected static ?int $navigationSort = 4;
 
-    protected static ?string $navigationGroup = 'Apps';
 
-    public static function form(Form $form): Form
+
+    public static function getNavigationIcon(): string | \BackedEnum | null
     {
-        return $form
+        return 'heroicon-o-map';
+    }
+
+    public static function getNavigationGroup(): string | \UnitEnum | null
+    {
+        return 'Apps';
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return $schema
             ->schema([
                 Group::make()->schema([
                     Section::make()->schema([
@@ -149,6 +160,8 @@ class ChargerResource extends Resource
                             '1' => 'not verified',
                             '2' => 'verified',
                             '3' => 'closed',
+                            '4' => 'external',
+                            default => $state,
                         }
                     )
                     ->badge()
@@ -157,6 +170,8 @@ class ChargerResource extends Resource
                             '1' => 'warning',
                             '2' => 'success',
                             '3' => 'danger',
+                            '4' => 'gray',
+                            default => 'gray',
                         }
                     ),
 
@@ -168,7 +183,7 @@ class ChargerResource extends Resource
                 SelectFilter::make('currentCharger')
                     ->relationship('currentCharger', 'name'),
             ])
-            ->actions([
+            ->recordActions([
                 ActionGroup::make([
                     ViewAction::make(),
                     EditAction::make()
@@ -179,8 +194,8 @@ class ChargerResource extends Resource
                         }),
                 ]),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
+            ->toolbarActions([
+                Actions\BulkActionGroup::make([
                     BulkAction::make('updateStatusVerified')
                         ->label('Change Status to Verified')
                         ->action(function (Collection $records) {

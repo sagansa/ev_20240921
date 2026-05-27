@@ -4,15 +4,16 @@ namespace App\Filament\Resources\Panel;
 
 use Filament\Forms;
 use Filament\Tables;
+use Filament\Actions;
 use Livewire\Component;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use App\Models\TypeCharger;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\Panel\TypeChargerResource\Pages;
@@ -22,11 +23,21 @@ class TypeChargerResource extends Resource
 {
     protected static ?string $model = TypeCharger::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string | \UnitEnum | null $navigationGroup = 'Chargers';
 
-    protected static ?int $navigationSort = 3;
 
-    protected static ?string $navigationGroup = 'Chargers';
+
+
+    public static function getNavigationIcon(): string | \BackedEnum | null
+    {
+        return 'heroicon-o-rectangle-stack';
+    }
+
+    public static function getNavigationGroup(): string | \UnitEnum | null
+    {
+        return 'Chargers';
+    }
 
     public static function getModelLabel(): string
     {
@@ -43,9 +54,9 @@ class TypeChargerResource extends Resource
         return __('crud.typeChargers.collectionTitle');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Section::make()->schema([
                 Grid::make(['default' => 1])->schema([
                     Radio::make('name')
@@ -89,13 +100,13 @@ class TypeChargerResource extends Resource
                 TextColumn::make('currentCharger.name'),
             ])
             ->filters([])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                Actions\EditAction::make(),
+                Actions\ViewAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('id', 'desc');

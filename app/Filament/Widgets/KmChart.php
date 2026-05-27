@@ -14,7 +14,7 @@ class KmChart extends ChartWidget
     use FiltersDashboardCharges;
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'km per Month & Average (km)';
+    protected ?string $heading = 'km per Month & Average (km)';
 
     protected static ?int $sort = 3;
 

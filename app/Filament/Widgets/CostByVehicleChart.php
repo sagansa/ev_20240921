@@ -14,7 +14,7 @@ class CostByVehicleChart extends ChartWidget
     use FiltersDashboardCharges;
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'Charging Cost by Vehicle';
+    protected ?string $heading = 'Charging Cost by Vehicle';
 
     protected static ?int $sort = 5;
 

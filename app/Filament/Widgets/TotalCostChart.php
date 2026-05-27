@@ -14,7 +14,7 @@ class TotalCostChart extends ChartWidget
     use FiltersDashboardCharges;
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'Charging Cost per Month & Average (Rp)';
+    protected ?string $heading = 'Charging Cost per Month & Average (Rp)';
 
     protected static ?int $sort = 3;
 

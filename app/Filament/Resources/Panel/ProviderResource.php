@@ -5,13 +5,14 @@ namespace App\Filament\Resources\Panel;
 use App\Filament\Forms\BaseSelect;
 use App\Filament\Forms\ImageFileUpload;
 use Filament\Tables;
-use Filament\Forms\Form;
+use Filament\Actions;
+use Filament\Schemas\Schema;
 use App\Models\Provider;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Forms\Components\TextInput;
@@ -20,20 +21,30 @@ use App\Filament\Resources\Panel\ProviderResource\RelationManagers;
 use App\Tables\Columns\StatusActiveColumn;
 use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Toggle;
-use Filament\Tables\Actions\ActionGroup;
+use Filament\Actions\ActionGroup;
 use Illuminate\Support\Facades\Auth;
 
 class ProviderResource extends Resource
 {
     protected static ?string $model = Provider::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-office';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-building-office';
 
     // protected static ?string $cluster = Providers::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'Databases';
 
-    protected static ?int $navigationSort = 1;
 
-    protected static ?string $navigationGroup = 'Databases';
+
+
+    public static function getNavigationIcon(): string | \BackedEnum | null
+    {
+        return 'heroicon-o-building-office';
+    }
+
+    public static function getNavigationGroup(): string | \UnitEnum | null
+    {
+        return 'Databases';
+    }
 
     public static function getModelLabel(): string
     {
@@ -50,9 +61,9 @@ class ProviderResource extends Resource
         return __('crud.providers.collectionTitle');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Group::make()->schema([
                 Section::make()
                     ->schema(static::getContactFormSchema()),
@@ -107,15 +118,15 @@ class ProviderResource extends Resource
             ->filters([
                 // Tambahkan filter jika diperlukan
             ])
-            ->actions([
+            ->recordActions([
                 ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\ViewAction::make(),
+                    Actions\EditAction::make(),
+                    Actions\ViewAction::make(),
                 ])
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('id', 'desc');

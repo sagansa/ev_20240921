@@ -14,7 +14,7 @@ class NetCostPerKwhChart extends ChartWidget
     use FiltersDashboardCharges;
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'Net Average Cost per kWh (Rp/kWh)';
+    protected ?string $heading = 'Net Average Cost per kWh (Rp/kWh)';
 
     protected static ?int $sort = 1;
 

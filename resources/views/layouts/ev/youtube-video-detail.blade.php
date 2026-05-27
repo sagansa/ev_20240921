@@ -7,8 +7,8 @@
     <!-- Schema.org markup for Google -->
     <script type="application/ld+json">
     {
-        "@context": "https://schema.org",
-        "@type": "VideoObject",
+        "@@context": "https://schema.org",
+        "@@type": "VideoObject",
         "name": "{{ $video->title }}",
         "description": "{{ strip_tags($video->description) }}",
         "thumbnailUrl": "{{ $video->thumbnail_url ?: 'https://img.youtube.com/vi/' . $video->video_id . '/0.jpg' }}",
@@ -16,7 +16,7 @@
         "duration": "PT1M",
         "embedUrl": "https://www.youtube.com/embed/{{ $video->video_id }}",
         "interactionStatistic": {
-            "@type": "InteractionCounter",
+            "@@type": "InteractionCounter",
             "interactionType": "https://schema.org/WatchAction",
             "userInteractionCount": {{ $video->view_count }}
         }
@@ -85,74 +85,68 @@
 </div>
 @endsection
 
-@once
-    @push('scripts')
-        <script>
-            window.evYoutube = window.evYoutube || {
-                ready: false,
-                queue: [],
-                loading: false,
-            };
-
-            window.evYoutube.loadApi = function () {
-                if (window.evYoutube.loading) return;
-                window.evYoutube.loading = true;
-                if (document.getElementById('youtube-iframe-api')) {
-                    return;
-                }
-                const tag = document.createElement('script');
-                tag.id = 'youtube-iframe-api';
-                tag.src = 'https://www.youtube.com/iframe_api';
-                document.head.appendChild(tag);
-                window.onYouTubeIframeAPIReady = function () {
-                    window.evYoutube.ready = true;
-                    window.evYoutube.queue.forEach(fn => fn());
-                    window.evYoutube.queue = [];
-                };
-            };
-
-            window.evYoutube.initPlayer = function ({ playerId, videoId, fallbackId }) {
-                const createPlayer = () => {
-                    try {
-                        const player = new YT.Player(playerId, {
-                            videoId,
-                            playerVars: {
-                                rel: 0,
-                                modestbranding: 1,
-                                playsinline: 1,
-                                origin: window.location.origin,
-                            },
-                            events: {
-                                onError: () => window.evYoutube.showFallback(fallbackId),
-                            },
-                        });
-                        return player;
-                    } catch (error) {
-                        console.error('YouTube player init error', error);
-                        window.evYoutube.showFallback(fallbackId);
-                    }
-                };
-
-                if (window.evYoutube.ready && window.YT && window.YT.Player) {
-                    createPlayer();
-                } else {
-                    window.evYoutube.queue.push(createPlayer);
-                    window.evYoutube.loadApi();
-                }
-            };
-
-            window.evYoutube.showFallback = function (fallbackId) {
-                const fallback = document.getElementById(fallbackId);
-                if (fallback) {
-                    fallback.classList.remove('hidden');
-                }
-            };
-        </script>
-    @endpush
-@endonce
-
 @push('scripts')
     <script>
+        window.evYoutube = window.evYoutube || {
+            ready: false,
+            queue: [],
+            loading: false,
+        };
+
+        window.evYoutube.loadApi = function () {
+            if (window.evYoutube.loading) return;
+            window.evYoutube.loading = true;
+            if (document.getElementById('youtube-iframe-api')) {
+                return;
+            }
+            const tag = document.createElement('script');
+            tag.id = 'youtube-iframe-api';
+            tag.src = 'https://www.youtube.com/iframe_api';
+            document.head.appendChild(tag);
+            window.onYouTubeIframeAPIReady = function () {
+                window.evYoutube.ready = true;
+                window.evYoutube.queue.forEach(fn => fn());
+                window.evYoutube.queue = [];
+            };
+        };
+
+        window.evYoutube.initPlayer = function ({ playerId, videoId, fallbackId }) {
+            const createPlayer = () => {
+                try {
+                    const player = new YT.Player(playerId, {
+                        videoId,
+                        playerVars: {
+                            rel: 0,
+                            modestbranding: 1,
+                            playsinline: 1,
+                            origin: window.location.origin,
+                        },
+                        events: {
+                            onError: () => window.evYoutube.showFallback(fallbackId),
+                        },
+                    });
+                    return player;
+                } catch (error) {
+                    console.error('YouTube player init error', error);
+                    window.evYoutube.showFallback(fallbackId);
+                }
+            };
+
+            if (window.evYoutube.ready && window.YT && window.YT.Player) {
+                createPlayer();
+            } else {
+                window.evYoutube.queue.push(createPlayer);
+                window.evYoutube.loadApi();
+            }
+        };
+
+        window.evYoutube.showFallback = function (fallbackId) {
+            const fallback = document.getElementById(fallbackId);
+            if (fallback) {
+                fallback.classList.remove('hidden');
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', function () {
             if (window.evYoutube) {
                 window.evYoutube.initPlayer({
