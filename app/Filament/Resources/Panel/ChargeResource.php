@@ -33,7 +33,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Columns\ToggleColumn;
 use App\Filament\Widgets\ChargeResource\ChargeStats;
-use Filament\Forms\Components\Group;
+use Filament\Schemas\Components\Group;
 
 class ChargeResource extends Resource
 {
