@@ -166,11 +166,21 @@ class ChargerLocation extends Model
         ];
     }
 
-    public function setLocationAttribute(?array $location): void
+    public function setLocationAttribute(array|string|null $location): void
     {
         if (is_array($location)) {
-            $this->attributes['latitude'] = $location['lat'];
-            $this->attributes['longitude'] = $location['lng'];
+            $this->attributes['latitude'] = $location['lat'] ?? $location['latitude'] ?? null;
+            $this->attributes['longitude'] = $location['lng'] ?? $location['longitude'] ?? null;
+            unset($this->attributes['location']);
+
+            return;
+        }
+
+        if (is_string($location) && str_contains($location, ',')) {
+            [$latitude, $longitude] = array_map('trim', explode(',', $location, 2));
+
+            $this->attributes['latitude'] = $latitude;
+            $this->attributes['longitude'] = $longitude;
             unset($this->attributes['location']);
         }
     }

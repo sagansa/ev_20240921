@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fb3b49f7649d93f9b52ef6f15fb11692",
+    "content-hash": "a35c284c7ab75b4818fe3dc9b6d88f24",
     "packages": [
         {
             "name": "akaunting/laravel-money",
@@ -9514,6 +9514,62 @@
                 "source": "https://github.com/tijsverkoyen/CssToInlineStyles/tree/v2.4.0"
             },
             "time": "2025-12-02T11:56:42+00:00"
+        },
+        {
+            "name": "traineratwot/filament-openstreetmap",
+            "version": "2.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Traineratwot/filament-openstreetmap.git",
+                "reference": "82bd2dafa5616f38de60eb43b4d1cba2a0796b4b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Traineratwot/filament-openstreetmap/zipball/82bd2dafa5616f38de60eb43b4d1cba2a0796b4b",
+                "reference": "82bd2dafa5616f38de60eb43b4d1cba2a0796b4b",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": ">=3",
+                "php": ">=8",
+                "spatie/laravel-package-tools": "^1.9"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Traineratwot\\FilamentOpenStreetMap\\FilamentOpenStreetMapServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Traineratwot\\FilamentOpenStreetMap\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Traineratwot",
+                    "email": "traineratwot@yandex.ru",
+                    "role": "Developer"
+                }
+            ],
+            "description": "This is my package filament-openstreetmap",
+            "homepage": "https://github.com/traineratwot/filament-openstreetmap",
+            "keywords": [
+                "Traineratwot",
+                "filament-openstreetmap",
+                "laravel"
+            ],
+            "support": {
+                "issues": "https://github.com/traineratwot/filament-openstreetmap/issues",
+                "source": "https://github.com/traineratwot/filament-openstreetmap"
+            },
+            "time": "2026-01-31T12:34:03+00:00"
         },
         {
             "name": "ueberdosis/tiptap-php",

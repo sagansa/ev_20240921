@@ -32,10 +32,11 @@ use Filament\Schemas\Components\Group;
 use Filament\Forms\Components\Repeater;
 use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\ToggleColumn;
-use Humaidem\FilamentMapPicker\Fields\OSMMap;
 use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
+use Traineratwot\FilamentOpenStreetMap\Enums\PointFormat;
+use Traineratwot\FilamentOpenStreetMap\Forms\Components\MapInput;
 
 class ChargerLocationResource extends Resource
 {
@@ -210,47 +211,13 @@ class ChargerLocationResource extends Resource
     {
         return [
             Grid::make(['default' => 1])->schema([
-                // OSMMap::make('location')
-                //     ->label('Location')
-                //     ->showMarker()
-                //     ->draggable()
-                //     ->extraControl([
-                //         'zoomDelta'           => 1,
-                //         'zoomSnap'            => 0.25,
-                //         'wheelPxPerZoomLevel' => 60
-                //     ])
-                //     ->afterStateHydrated(function (Forms\Get $get, Forms\Set $set, $record) {
-                //         if ($record) {
-                //             $latitude = $record->latitude;
-                //             $longitude = $record->longitude;
-
-                //             if ($latitude && $longitude) {
-                //                 $set('location', ['lat' => $latitude, 'lng' => $longitude]);
-                //             }
-                //         }
-                //     })
-                //     ->afterStateUpdated(function ($state, Forms\Get $get, Forms\Set $set) {
-                //         $set('latitude', $state['lat']);
-                //         $set('longitude', $state['lng']);
-                //     })
-                //     // tiles url (refer to https://www.spatialbias.com/2018/02/qgis-3.0-xyz-tile-layers/)
-                //     ->tilesUrl(
-                //         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                //     ),
-
-                Group::make()
-                    ->schema([
-                        TextInput::make('latitude')
-                            ->required()
-                            ->hiddenLabel()
-                            // ->readOnly(fn() => Auth::user()->hasRole('user'))
-                            ->numeric(),
-                        TextInput::make('longitude')
-                            ->required()
-                            ->hiddenLabel()
-                            // ->readOnly(fn() => Auth::user()->hasRole('user'))
-                            ->numeric(),
-                    ])->columns(2),
+                MapInput::make('location')
+                    ->label('Location')
+                    ->required()
+                    ->defaultPosition(-6.2, 106.816666)
+                    ->defaultZoom(12)
+                    ->saveFormat(PointFormat::LAT_LNG)
+                    ->columnSpanFull(),
 
                 // TextInput::make('google_maps_url')
                 //     ->required(fn() => !auth()->user()->hasRole('super_admin'))
