@@ -15,7 +15,7 @@ class Province extends Model
 
     public $timestamps = false;
 
-    protected $connection = 'mysql'; // Use the sagansa database connection
+    protected $connection = 'ev';
     protected $table = 'provinces';
 
     protected $guarded = [];

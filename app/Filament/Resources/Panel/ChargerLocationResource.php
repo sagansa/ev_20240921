@@ -12,7 +12,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use App\Models\ChargerLocation;
 use Filament\Resources\Resource;
-use Filament\Forms\Components\Grid;
+use Filament\Schemas\Components\Grid;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
@@ -28,7 +28,7 @@ use App\Models\TypeCharger;
 use App\Tables\Columns\LocationOnColumn;
 use App\Tables\Columns\StatusLocationColumn;
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Forms\Components\Group;
+use Filament\Schemas\Components\Group;
 use Filament\Forms\Components\Repeater;
 use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\ToggleColumn;
@@ -210,33 +210,33 @@ class ChargerLocationResource extends Resource
     {
         return [
             Grid::make(['default' => 1])->schema([
-                OSMMap::make('location')
-                    ->label('Location')
-                    ->showMarker()
-                    ->draggable()
-                    ->extraControl([
-                        'zoomDelta'           => 1,
-                        'zoomSnap'            => 0.25,
-                        'wheelPxPerZoomLevel' => 60
-                    ])
-                    ->afterStateHydrated(function (Forms\Get $get, Forms\Set $set, $record) {
-                        if ($record) {
-                            $latitude = $record->latitude;
-                            $longitude = $record->longitude;
+                // OSMMap::make('location')
+                //     ->label('Location')
+                //     ->showMarker()
+                //     ->draggable()
+                //     ->extraControl([
+                //         'zoomDelta'           => 1,
+                //         'zoomSnap'            => 0.25,
+                //         'wheelPxPerZoomLevel' => 60
+                //     ])
+                //     ->afterStateHydrated(function (Forms\Get $get, Forms\Set $set, $record) {
+                //         if ($record) {
+                //             $latitude = $record->latitude;
+                //             $longitude = $record->longitude;
 
-                            if ($latitude && $longitude) {
-                                $set('location', ['lat' => $latitude, 'lng' => $longitude]);
-                            }
-                        }
-                    })
-                    ->afterStateUpdated(function ($state, Forms\Get $get, Forms\Set $set) {
-                        $set('latitude', $state['lat']);
-                        $set('longitude', $state['lng']);
-                    })
-                    // tiles url (refer to https://www.spatialbias.com/2018/02/qgis-3.0-xyz-tile-layers/)
-                    ->tilesUrl(
-                        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                    ),
+                //             if ($latitude && $longitude) {
+                //                 $set('location', ['lat' => $latitude, 'lng' => $longitude]);
+                //             }
+                //         }
+                //     })
+                //     ->afterStateUpdated(function ($state, Forms\Get $get, Forms\Set $set) {
+                //         $set('latitude', $state['lat']);
+                //         $set('longitude', $state['lng']);
+                //     })
+                //     // tiles url (refer to https://www.spatialbias.com/2018/02/qgis-3.0-xyz-tile-layers/)
+                //     ->tilesUrl(
+                //         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                //     ),
 
                 Group::make()
                     ->schema([

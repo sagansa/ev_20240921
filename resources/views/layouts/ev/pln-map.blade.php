@@ -262,7 +262,7 @@
 
         #locateMe {
             position: absolute;
-            bottom: 30px;
+            bottom: 96px;
             right: 30px;
             z-index: 1000;
             background-color: var(--ev-surface);
@@ -452,8 +452,8 @@
             }
 
             #locateMe {
-                bottom: 20px;
-                right: 20px;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+                right: 16px;
             }
         }
 
