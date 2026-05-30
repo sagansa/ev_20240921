@@ -10,7 +10,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use App\Models\TypeCharger;
 use Filament\Resources\Resource;
-use Filament\Forms\Components\Grid;
+use Filament\Schemas\Components\Grid;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Section;

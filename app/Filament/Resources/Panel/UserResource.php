@@ -10,7 +10,7 @@ use Livewire\Component;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
-use Filament\Forms\Components\Grid;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;

@@ -9,7 +9,7 @@ use App\Models\PowerCharger;
 use App\Models\TypeCharger;
 use App\Tables\Columns\StatusLocationColumn;
 use Filament\Forms;
-use Filament\Forms\Components\Group;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
