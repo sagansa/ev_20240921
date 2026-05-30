@@ -34,6 +34,49 @@
     @yield('additional_head')
     @livewireStyles
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    <style>
+        .ev-site-nav {
+            background: rgba(255, 255, 255, 0.92) !important;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 0 18px 48px -34px rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(16px);
+        }
+
+        .ev-site-nav a,
+        .ev-site-nav button {
+            color: #0f172a !important;
+        }
+
+        .ev-site-nav a:hover,
+        .ev-site-nav button:hover,
+        .ev-site-nav .nav-active {
+            color: #2563eb !important;
+        }
+
+        .ev-site-nav .ev-nav-brand {
+            color: #0f172a !important;
+            letter-spacing: 0;
+        }
+
+        .ev-site-nav .ev-nav-logo {
+            filter: drop-shadow(0 8px 16px rgba(37, 99, 235, 0.22));
+        }
+
+        .ev-site-nav .ev-dropdown-panel,
+        .ev-site-nav #mobile-menu > ul {
+            background: rgba(255, 255, 255, 0.98) !important;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 0 22px 44px -28px rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(16px);
+        }
+
+        .ev-site-nav .ev-dropdown-panel a:hover,
+        .ev-site-nav #mobile-menu a:hover,
+        .ev-site-nav #mobile-menu button:hover {
+            background: #eff6ff !important;
+            color: #2563eb !important;
+        }
+    </style>
 
     <!-- Google Tag Manager -->
         <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -59,8 +102,8 @@
     <nav class="ev-site-nav fixed top-0 z-50 w-full bg-opacity-90 bg-ev-blue-800">
         <div class="container px-4 mx-auto">
             <div class="flex items-center justify-between py-4">
-                <a href="{{ route('home') }}" class="flex items-center text-xl font-bold text-ev-white">
-                    <img src="{{ asset('images/logo-files/logo.png') }}" alt="Sagansa EV Logo" class="h-8 mr-2">
+                <a href="{{ route('home') }}" class="ev-nav-brand flex items-center text-xl font-bold text-ev-white">
+                    <img src="{{ asset('images/logo-files/logo.png') }}" alt="Sagansa EV Logo" class="ev-nav-logo h-8 mr-2">
                     Sagansa - EV
                 </a>
 
@@ -75,7 +118,7 @@
                 <ul class="items-center justify-center flex-1 hidden space-x-12 lg:flex">
                     <li class="relative group">
                         <button onclick="toggleMapDesktopDropdown()"
-                            class="flex items-center transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs(['pln-map', 'map']) ? 'font-bold text-ev-green-400' : '' }}">
+                            class="flex items-center transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs(['pln-map', 'map']) ? 'nav-active font-bold text-ev-green-400' : '' }}">
                             Maps
                             <svg class="w-4 h-4 ml-1 transition-transform duration-200 transform" id="map-desktop-arrow"
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -85,7 +128,7 @@
                             </svg>
                         </button>
                         <div id="map-desktop-dropdown"
-                            class="absolute hidden w-48 py-2 mt-2 rounded-md shadow-xl bg-ev-blue-800">
+                            class="ev-dropdown-panel absolute hidden w-48 py-2 mt-2 rounded-md shadow-xl bg-ev-blue-800">
                             <a href="{{ route('pln-map') }}"
                                 class="block px-4 py-2 text-sm text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('pln-map') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">
                                 PLN Map

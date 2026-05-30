@@ -86,6 +86,15 @@
             max-width: 360px;
             width: 100%;
             backdrop-filter: blur(12px);
+            transform: translateX(calc(100% + 48px));
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #mapControls.show {
+            transform: translateX(0);
+            opacity: 1;
+            pointer-events: auto;
         }
 
         .map-controls-header {
@@ -154,17 +163,25 @@
         }
 
         #mapControlsToggle {
-            display: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: 30px;
+            right: 30px;
             z-index: 1001;
             background-color: var(--ev-surface);
-            padding: 10px;
-            border-radius: 50%;
+            min-height: 44px;
+            padding: 10px 14px;
+            border: 1px solid rgba(148, 163, 184, 0.34);
+            border-radius: 999px;
             box-shadow: 0 18px 36px -20px rgba(15, 23, 42, 0.45);
             cursor: pointer;
             color: var(--ev-text);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0;
         }
 
         #mapControlsToggle:hover {
@@ -441,9 +458,15 @@
             }
 
             #mapControlsToggle {
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                top: 20px;
+                right: 20px;
+                width: 44px;
+                padding: 10px;
+                border-radius: 50%;
+            }
+
+            #mapControlsToggle span {
+                display: none;
             }
 
             #mapid {
@@ -590,6 +613,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                 </svg>
+                <span>Filter</span>
             </button>
 
             <button id="locateMe" title="Temukan lokasi saya">
@@ -667,9 +691,9 @@
                 mobileBreakpoint.addListener(handleBreakpointChange);
             }
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap'
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20,
+                attribution: '&copy; OpenStreetMap &copy; CARTO'
             }).addTo(map);
 
             const plnLocations = @json($plnLocations);
