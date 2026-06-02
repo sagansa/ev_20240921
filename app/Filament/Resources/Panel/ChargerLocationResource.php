@@ -445,7 +445,7 @@ class ChargerLocationResource extends Resource
         return [
             RichEditor::make('description')
                 ->nullable()
-                ->string()
+                // ->string()
                 ->fileAttachmentsVisibility('public'),
         ];
     }
