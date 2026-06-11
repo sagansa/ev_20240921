@@ -872,7 +872,7 @@
                                     || 'Tidak Diketahui'
                                 }</p>
                                 ${location.kategori_tol ? `<p>Kategori Tol: ${location.kategori_tol}</p>` : ''}
-                                ${detailItems ? `<ul class="charger-details">${detailItems}</ul>` : '<p>Detail charger belum tersedia</p>'}
+                                ${detailItems ? `<ul class="charger-details">${detailItems}</ul>` : '<p>Detail Charger belum tersedia</p>'}
                                 <a href="https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
                                    class="maps-link"
                                    target="_blank"

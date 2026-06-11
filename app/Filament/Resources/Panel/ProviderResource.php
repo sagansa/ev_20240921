@@ -91,7 +91,8 @@ class ProviderResource extends Resource
             ->poll('60s')
             ->columns([
                 ImageColumn::make('image')
-                    ->visibility('public'),
+                    ->getStateUsing(fn ($record) => $record->image)
+                    ->defaultImageUrl(fn () => asset('/images/ev-charging.png')),
 
                 TextColumn::make('name')
                     ->sortable()

@@ -71,6 +71,7 @@ class Provider extends Model
             return null;
         }
 
+        // Full URLs (img.sagansa.id or any external) — return as-is
         if (Str::startsWith($trimmed, ['http://', 'https://', '//'])) {
             return $trimmed;
         }

@@ -357,7 +357,7 @@ class EvController extends Controller
             'web' => $provider->web,
             'google' => $provider->google,
             'ios' => $provider->ios,
-            'image' => $provider->image ? asset('storage/' . $provider->image) : null,
+            'image' => $provider->image ?: null,
             'price' => $provider->price,
             'tax' => $provider->tax,
             'admin_fee' => $provider->admin_fee,

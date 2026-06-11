@@ -45,4 +45,9 @@ return [
         'tracking_id' => env('GOOGLE_ANALYTICS_ID', 'G-5C30JTCW0S'),
     ],
 
+    'image' => [
+        'upload_secret' => env('IMAGE_UPLOAD_SECRET'),
+        'service_url' => env('IMG_SERVICE_URL', 'https://img.sagansa.id'),
+    ],
+
 ];
