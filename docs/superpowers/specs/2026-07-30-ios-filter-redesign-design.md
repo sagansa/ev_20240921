@@ -1,105 +1,67 @@
-# Redesign Filter SPKLU (iOS + Cross-Platform)
+# Redesign Filter SPKLU (Cross-Platform: iOS + Android)
 
 **Tanggal**: 2026-07-30
 **Status**: Draft (menunggu review user)
-**Scope**: Mobile (iOS + shared Kotlin; Android ikut manfaatkan shared)
+**Scope**: Mobile — iOS + Android + shared Kotlin
 
 ## 1. Latar Belakang & Masalah
 
-UI filter SPKLU di iOS (`FilterChipRowView.swift`, 447 baris) memiliki **repetisi data di banyak tempat** tanpa single source of truth. Setiap penambahan/perubahan provider atau opsi kecepatan mengharuskan edit 2-3 titik di iOS (plus 1 titik di Android untuk warna provider).
+UI filter SPKLU di kedua platform memiliki **repetisi parah**: banyak trigger yang membuka menu yang sama, dan data filter di-hardcode berkali-kali.
 
 ### Repetisi yang ditemukan
 
-1. **Opsi kecepatan (type_charge) didefinisikan 3×** dengan data identik:
-   - `typeLabel` switch (FilterChipRowView.swift:17-24): `medium`/`fast`/`ultra_fast`
-   - Quick chips strip (baris ~110): "Fast DC", "Ultra Fast"
-   - Modal `SpeedOptionRow` (baris ~330): Medium/Fast/Ultra Fast + subtitle
+**Repetisi trigger (di setiap platform)**: saat ini ada **3 elemen UI** yang semua membuka sheet filter yang sama:
+- iOS (`FilterChipRowView.swift`): Provider Pill + Speed Pill + slider icon → semua `showFilterSheet = true`. Plus quick chips strip dengan chip "Semua/Fast/Ultra/PLN/Voltron/Lainnya".
+- Android (`SpkluFilterRow.kt`): Provider Pill + Speed Pill + FilterList icon → semua `onOpenFilterSheet()`.
 
-2. **Daftar provider didefinisikan 2×**:
-   - Quick chips (hardcoded "PLN Mobile", "Voltron")
-   - Modal `providers` array (12 provider dengan warna)
+**Repetisi data (di setiap platform)**:
+1. Opsi kecepatan (type_charge) didefinisikan 3×: `typeLabel` switch, quick chips, dan modal rows.
+2. Daftar provider didefinisikan 2×: quick chips (hardcoded) + modal array.
+3. Warna provider didefinisikan 3×: quick chips, modal array, dan di Android `createCustomEvPinBitmapDescriptor` (lintas-platform).
 
-3. **Warna provider didefinisikan 3×** untuk provider yang sama:
-   - Quick chips: `Color(red: 2/255, ...)` (PLN)
-   - Modal array: warna identik diulang
-   - Android `createCustomEvPinBitmapDescriptor` (SpkluMapScreen.kt:120): warna yang sama lagi → repetisi lintas-platform
-
-4. **Styling 2 dropdown pill di-copy-paste**: Provider Pill & Speed Pill punya blok `.padding/.background/.foregroundColor/.clipShape/.overlay/.shadow` nyaris identik, hanya teks+warna yang beda.
-
-5. **`showFilterSheet = true`** di-assign ke 3 tombol berbeda (dua dropdown + ikon slider).
+**Repetisi lintas-platform**: daftar provider, opsi speed, dan warna provider duplikat antara iOS dan Android.
 
 ### Akar masalah
-Tidak ada single source of truth. Data filter (opsi kecepatan, daftar provider, warna provider) tersebar sebagai literal di banyak tempat.
+Tidak ada single source of truth, dan terlalu banyak trigger menuju fungsi yang sama.
 
-## 2. Tujuan
+## 2. Keputusan Desain
 
-- Hilangkan repetisi: tiap kategori data filter didefinisikan **sekali**.
-- Konsistensi lintas-platform: iOS & Android baca source of truth yang sama (shared Kotlin).
-- Menangani provider bertambah/berkurang **tanpa ubah kode aplikasi** (opsi provider dinamis dari data).
-- Tetap memungkinkan warna kustom per provider via map statis dengan fallback otomatis.
+User memutuskan: **1 tombol filter saja di kanan yang memunculkan menu (sheet modal)**. Ini menghilangkan:
+- Semua trigger ganda (provider pill, speed pill, quick chips strip).
+- Bar filter 3-elemen dihapus seluruhnya.
 
-## 3. Arsitektur
+Diganti dengan **satu icon button filter** yang ditempatkan di sebelah kanan top bar (area search bar).
 
-### 3.1 Prinsip: "Dinamis dari data + warna statis dengan fallback"
+Prinsip source of truth: **"Dinamis dari data + warna statis dengan fallback"**
 
 | Aspek | Sumber | Menangani provider baru? |
 |---|---|---|
-| **Opsi provider di filter** | Dinamis dari data aktual (`allLocations` unik, sorted) | ✅ Ya, otomatis muncul |
-| **Warna provider** | Statis map di shared Kotlin + fallback warna hash | ⚠️ Pakai fallback sampai ditambah |
-| **Opsi speed** | Statis di shared Kotlin | N/A (stabil: medium/fast/ultra_fast) |
+| Opsi provider di filter | Dinamis dari data aktual (unik, sorted by count) | ✅ Otomatis |
+| Warna provider | Statis map di shared Kotlin + fallback deterministik | ⚠️ Fallback sampai ditambah |
+| Opsi speed | Statis di shared Kotlin (medium/fast/ultra_fast) | N/A (stabil) |
 
-### 3.2 Komponen baru
+## 3. Arsitektur
 
-#### a. `shared/.../config/SpkluFilterConfig.kt` (source of truth)
-Berisi definisi statis untuk speed options dan provider color map.
+### 3.1 Komponen baru: `shared/.../config/SpkluFilterConfig.kt`
+
+Source of truth lintas-platform.
 
 ```kotlin
 package com.ev.spklu.config
 
 import kotlin.math.abs
 
-/**
- * Single source of truth untuk konfigurasi filter SPKLU lintas-platform.
- *
- * - [ChargeSpeed]: opsi kecepatan (stabil, tidak sering berubah).
- * - [ProviderColorMap]: warna kustom untuk provider utama + fallback deterministik
- *   untuk provider baru yang belum terdaftar.
- */
 object SpkluFilterConfig {
 
-    /**
-     * Opsi kecepatan charging. Urutan = urutan tampil.
-     */
+    /** Opsi kecepatan charging. Urutan = urutan tampil. */
     val chargeSpeeds: List<ChargeSpeed> = listOf(
-        ChargeSpeed(
-            id = "medium",
-            shortLabel = "Medium",
-            fullLabel = "Medium (AC 22kW)",
-            subtitle = "Pengisian standar AC 7kW - 22kW",
-            colorRgb = ChargeSpeedColorRgb(59, 130, 246) // Blue
-        ),
-        ChargeSpeed(
-            id = "fast",
-            shortLabel = "Fast DC",
-            fullLabel = "Fast (DC 50kW)",
-            subtitle = "Pengisian cepat DC 25kW - 60kW",
-            colorRgb = ChargeSpeedColorRgb(245, 158, 11) // Amber
-        ),
-        ChargeSpeed(
-            id = "ultra_fast",
-            shortLabel = "Ultra Fast",
-            fullLabel = "Ultra Fast (DC 200kW+)",
-            subtitle = "Pengisian ultra cepat DC 100kW+",
-            colorRgb = ChargeSpeedColorRgb(16, 185, 129) // Green
-        ),
+        ChargeSpeed("medium", "Medium", "Medium (AC 22kW)", "Pengisian standar AC 7kW - 22kW", Rgb(59, 130, 246)),
+        ChargeSpeed("fast", "Fast DC", "Fast (DC 50kW)", "Pengisian cepat DC 25kW - 60kW", Rgb(245, 158, 11)),
+        ChargeSpeed("ultra_fast", "Ultra Fast", "Ultra Fast (DC 200kW+)", "Pengisian ultra cepat DC 100kW+", Rgb(16, 185, 129)),
     )
 
-    /**
-     * Warna kustom untuk provider utama (key = effectiveProviderName, case-insensitive match).
-     * Provider baru yang tidak ada di map akan dapat warna fallback deterministik.
-     */
+    /** Warna kustom untuk provider utama. Key HARUS lowercase. */
     val providerColors: Map<String, Rgb> = mapOf(
-        // key HARUS lowercase untuk matching
         "pln mobile" to Rgb(2, 136, 209),
         "voltron" to Rgb(123, 31, 162),
         "shell" to Rgb(251, 192, 45),
@@ -114,14 +76,10 @@ object SpkluFilterConfig {
         "toyota lexus" to Rgb(158, 158, 158),
     )
 
-    /**
-     * Warna untuk provider. Kalau ada di [providerColors] pakai itu,
-     * kalau tidak, generate warna deterministik dari hash nama.
-     */
+    /** Warna provider: kustom jika ada, fallback deterministik dari hash nama. */
     fun colorForProvider(name: String?): Rgb {
-        val key = name?.trim()?.lowercase() ?: return Rgb(0, 191, 165) // teal default
+        val key = name?.trim()?.lowercase() ?: return Rgb(0, 191, 165)
         providerColors[key]?.let { return it }
-        // Fallback deterministik: hash nama -> hue, S/L tetap
         val hash = abs(key.hashCode())
         return Rgb(hash % 256, (hash / 256) % 256, (hash / 65536) % 256)
     }
@@ -132,135 +90,153 @@ data class ChargeSpeed(
     val shortLabel: String,
     val fullLabel: String,
     val subtitle: String,
-    val colorRgb: ChargeSpeedColorRgb,
+    val colorRgb: Rgb,
 )
 
 @Suppress("unused") // dipakai via Kotlin/Native interop
 data class Rgb(val r: Int, val g: Int, val b: Int)
-
-// Alias untuk kejelasan; tipenya sama
-typealias ChargeSpeedColorRgb = Rgb
 ```
 
-#### b. Komponen UI iOS yang di-refactor (`FilterChipRowView.swift`)
+### 3.2 iOS: `FilterChipRowView.swift` → dihapus, diganti
 
-**Dipertahankan (struktur luar)**:
-- `FilterChipRowView` dengan signature yang sama (tidak break pemanggil di `SpkluMapView.swift:298`).
-- Dua bagian: compact 2-pill bar + quick chips strip + modal sheet.
+**Dihapus seluruhnya**: `FilterChipRowView`, `QuickChipView`, `SpkluFilterModalSheetView`, quick chips strip, 2 dropdown pill, slider icon, literal provider/speed, `typeLabel` switch. (447 baris → turun drastis.)
 
-**Yang diubah**:
+**Baru**: `FilterMenuButton` — satu icon button yang membuka modal sheet.
 
-1. **Opsi speed** dibaca dari `SpkluFilterConfig.shared.chargeSpeeds` (bukan switch literal). `typeLabel` dihitung dari lookup `chargeSpeeds.first { $0.id == selectedTypeCharge }`.
-
-2. **Daftar provider** tidak lagi hardcoded. Di-generate dari data aktual:
-   - `SpkluViewModel` expose `availableProviders: [String]` (unik dari `allLocations`, sorted).
-   - Quick chips menampilkan top-N provider (mis. 2-3 provider dengan lokasi terbanyak) + tombol "Lainnya..." → modal.
-   - Modal menampilkan semua provider dari `availableProviders` via `ForEach`.
-
-3. **Warna provider** via `SpkluFilterConfig.shared.colorForProvider(name:)` (ter-expose ke Swift sebagai fungsi). Hilangkan array `providers: [(String, Color)]` literal.
-
-4. **Ekstrak `FilterPillButton`** generik untuk menghilangkan duplikasi styling antara Provider Pill & Speed Pill:
-   ```swift
-   struct FilterPillButton: View {
-       let icon: String
-       let label: String
-       let activeColor: Color?
-       let isActive: Bool
-       let action: () -> Void
-       // ... satu implementasi styling, dipakai oleh kedua pill
-   }
-   ```
-
-5. **Modal sheet** dipresentasikan dari satu titik (trigger tetap bisa dari banyak tombol, tapi presentation terpusat).
-
-#### c. ViewModel iOS (`SpkluViewModel.swift`)
-
-Tambah computed property:
 ```swift
-var availableProviders: [String] {
-    let names = allLocations.map { $0.effectiveProviderName }
-    // urut by frekuensi (provider dgn lokasi terbanyak di depan) lalu alfabetis
-    let counts = Dictionary(names.map { ($0, 1) }, uniquingKeysWith: +)
-    return counts.keys.sorted { (a, b) -> Bool in
-        if counts[a] != counts[b] { return counts[a]! > counts[b]! }
-        return a < b
+struct FilterMenuButton: View {
+    let selectedTypeCharge: String?
+    let selectedProvider: String?
+    let availableProviders: [String]
+    let onApplyFilter: (String?, String?) -> Void
+
+    @State private var showSheet = false
+
+    private var isFilterActive: Bool {
+        selectedTypeCharge != nil || selectedProvider != nil
+    }
+
+    var body: some View {
+        Button { showSheet = true } label: {
+            ZStack {
+                Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(isFilterActive ? .black : .white)
+                    .padding(12)
+                    .background(isFilterActive ? EvTheme.primaryGreen : Color.white.opacity(0.15))
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+                if isFilterActive {
+                    Circle().fill(Color.orange).frame(width: 8, height: 8).offset(x: 13, y: -13)
+                }
+            }
+        }
+        .sheet(isPresented: $showSheet) {
+            SpkluFilterSheet(/* baca dari shared config + availableProviders */)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
     }
 }
 ```
-Tidak ada perubahan pada `selectedTypeCharge`/`selectedProvider`/`filterLocations()`/`selectFilterType()`/`selectProviderFilter()` (logika filter tetap).
 
-#### d. Android (bonus dari shared, opsional)
+`SpkluFilterSheet` (modal) hanya satu, membaca:
+- Speed options dari `SpkluFilterConfig.shared.chargeSpeeds`
+- Provider options dari `availableProviders` (dinamis dari ViewModel)
+- Warna dari `SpkluFilterConfig.shared.colorForProvider(name:)`
 
-`SpkluMapScreen.kt:114-168` `createCustomEvPinBitmapDescriptor` saat ini hardcode `when (providerName.contains("pln")) {...}`. Dapat diubah membaca `SpkluFilterConfig.colorForProvider(providerName)` supaya warna marker & filter konsisten. **Bagian ini opsional** (lihat Out of Scope) — primary deliverable adalah iOS.
+### 3.3 Android: `SpkluFilterRow.kt` → disederhanakan
 
-### 3.3 Alur data
+**Dihapus**: `SpkluFilterBar` (3-elemen), quick chips, literal `providersList`, literal `types`. Modal `SpkluFilterModalSheet` dipertahankan tapi di-refactor membaca shared config + `availableProviders`.
+
+**Baru**: `FilterIconButton` composable (1 ikon) menggantikan `SpkluFilterBar`.
+
+### 3.4 ViewModel (kedua platform): expose `availableProviders`
+
+```kotlin
+// Android SpkluViewModel
+val availableProviders: List<String> get() =
+    allLocations.map { it.effectiveProviderName }
+        .groupingBy { it }.eachCount()
+        .entries.sortedWith(compareByDescending<MutableMap.MutableEntry<String, Int>> { it.value }.thenBy { it.key })
+        .map { it.key }
+```
+
+```swift
+// iOS SpkluViewModel — computed property equivalen (unik, sorted by count)
+var availableProviders: [String] { /* sama logic */ }
+```
+
+### 3.5 Placement "di kanan"
+
+Bar atas saat ini: `[search bar (weight 1f)] [refresh icon]`.
+Tombol filter baru ditempatkan **di kanan search bar**, bersama refresh. Layout jadi:
+`[search bar] [filter icon] [refresh icon]`
+
+- iOS: filter icon di trailing search row (sudah ada di `SpkluMapView` top bar).
+- Android: tambah `FilterIconButton` ke Row di `SpkluMapScreen.kt:380`, hapus pemanggilan `SpkluFilterBar` di baris 421.
+
+### 3.6 Alur data
 
 ```
-allLocations (loaded)
-       │
-       ▼
-availableProviders (unik, sorted by count)   ← dinamis
-       │
-       ├──► Quick chips (top-N)               ┐
-       └──► Modal sheet (semua)               ├── baca warna dari
-                                                │   SpkluFilterConfig.colorForProvider()
-chargeSpeeds (SpkluFilterConfig.shared)         │   (statik + fallback)
-       │                                        │
-       ├──► typeLabel lookup                   │
-       ├──► Speed pill                         │
-       └──► Modal speed rows                   ┘
+[search bar]  [filter icon] → sheet  →  [refresh]
+                    │
+                    ▼
+        SpkluFilterSheet (modal)
+            ├─ speed: SpkluFilterConfig.chargeSpeeds (statik)
+            └─ provider: availableProviders (dinamis dari data)
+                              └─ warna: SpkluFilterConfig.colorForProvider()
 ```
 
-## 4. Rincian File yang Diubah
+## 4. Rincian File
 
 | File | Aksi | Ringkasan |
 |---|---|---|
-| `shared/src/commonMain/kotlin/com/ev/spklu/config/SpkluFilterConfig.kt` | **BUAT** | Source of truth: `chargeSpeeds`, `providerColors`, `colorForProvider()` |
-| `iosApp/.../Views/FilterChipRowView.swift` | **REWRITE** | Baca dari shared; ekstrak `FilterPillButton`; hapus literal provider/speed; provider dari `availableProviders` |
-| `iosApp/.../SpkluViewModel.swift` | **EDIT** | Tambah `availableProviders` computed property |
-| `androidApp/.../SpkluMapScreen.kt` | **EDIT (opsional)** | `createCustomEvPinBitmapDescriptor` pakai `SpkluFilterConfig.colorForProvider()` |
+| `shared/.../config/SpkluFilterConfig.kt` | **BUAT** | Source of truth: `chargeSpeeds`, `providerColors`, `colorForProvider()` |
+| `iosApp/.../Views/FilterChipRowView.swift` | **HAPUS + BUAT FilterMenuButton.swift** | Hapus 447 baris; ganti 1 icon button + 1 sheet (baca shared) |
+| `iosApp/.../SpkluViewModel.swift` | **EDIT** | Tambah `availableProviders` |
+| `iosApp/.../Views/SpkluMapView.swift` | **EDIT** | Ganti `FilterChipRowView(...)` → `FilterMenuButton(...)` di top bar |
+| `androidApp/.../components/SpkluFilterRow.kt` | **REWRITE** | Hapus `SpkluFilterBar`; buat `FilterIconButton`; refactor modal baca shared config |
+| `androidApp/.../screens/SpkluMapScreen.kt` | **EDIT** | Hapus `SpkluFilterBar(...)` baris 421; tambah `FilterIconButton` ke top Row baris 380 |
+| `androidApp/.../ui/SpkluViewModel.kt` | **EDIT** | Tambah `availableProviders` |
 
-**Tidak diubah**: `SpkluMapView.swift` (signature `FilterChipRowView` dipertahankan), `EvTheme.swift`, logika filter di ViewModel, backend.
+**Tidak diubah**: logika filter (`filterLocations`/`selectFilterType`/`selectProviderFilter`), backend, signature `onApplyFilter` di modal (tetap `(type?, provider?) -> Void`).
 
 ## 5. Pertimbangan Interop Kotlin → Swift
 
-- Object Kotlin `SpkluFilterConfig` ter-expose sebagai `SpkluFilterConfig.shared` di Swift (konvensi Kotlin/Native).
-- Data class `ChargeSpeed` & `Rgb` ter-expose sebagai struct Swift dengan property.
-- Fungsi `colorForProvider(name: String?): Rgb` ter-expose; `Rgb(r,g,b)` dipetakan ke `Color(.sRGB, red:green:blue:)` di helper Swift extension:
+- `SpkluFilterConfig` → `SpkluFilterConfig.shared` di Swift.
+- `ChargeSpeed` & `Rgb` → struct Swift dengan property (`r`/`g`/`b`, `id`/`fullLabel`/dll).
+- `colorForProvider(name:)` ter-expose; helper Swift:
   ```swift
-  extension Color {
-      init(_ rgb: Rgb) {
-          self.init(.sRGB, red: Double(rgb.r)/255, green: Double(rgb.g)/255, blue: Double(rgb.b)/255)
-      }
-  }
+  extension Color { init(_ rgb: Rgb) { self.init(.sRGB, red: Double(rgb.r)/255, green: Double(rgb.g)/255, blue: Double(rgb.b)/255) } }
   ```
-- Daftar `chargeSpeeds: List<ChargeSpeed>` ter-expose sebagai `[ChargeSpeed]` di Swift, dapat di-`ForEach`.
+- `chargeSpeeds: List<ChargeSpeed>` → `[ChargeSpeed]`, dapat `ForEach`.
 
 ## 6. Out of Scope
 
-- Mengubah logika filter backend atau query API.
-- Mengubah tata letak visual filter (posisi, ukuran chip) — hanya menghilangkan repetisi, bukan redesain visual.
-- Membuat opsi provider benar-benar dari API `/meta/filters` (dipilih pendekatan data-lokal dinamis; API metadata tidak dipakai untuk provider).
-- Wajib mengubah Android (opsional; primary deliverable iOS).
-- Pekerjaan terkait provider logo HVT (issue terpisah).
+- Mengubah logika filter backend / query API.
+- Menggunakan API `/meta/filters` (provider dari data lokal).
+- Mengubah marker pin Android `createCustomEvPinBitmapDescriptor` (warna provider di marker tetap hardcode saat ini — bisa follow-up terpisah; fokus sekarang filter UI). *Catatan: idealnya juga pakai config, tapi dipisah agar scope terkendali.*
+- Issue terpisah: provider logo HVT.
 
 ## 7. Verifikasi
 
-1. **Build shared framework**: `./gradlew :shared:assembleDebug` (Android) + build iOS tidak error.
-2. **iOS build**: kompilasi `FilterChipRowView.swift` & `SpkluViewModel.swift` tanpa error.
+1. **Build**: `./gradlew :shared:assembleDebug` + build iOS + build Android, semua tanpa error.
+2. **Tidak ada repetisi trigger**: hanya 1 ikon filter di kedua platform.
 3. **Fungsional**:
-   - Filter speed: pilih Medium/Fast/Ultra Fast → marker & list ter-filter benar (logika filter tidak diubah).
-   - Filter provider: modal menampilkan provider aktual dari data (bukan hardcoded 12); provider baru muncul otomatis.
-   - Warna: provider dikenali dapat warna kustom; provider tak dikenal dapat warna fallback deterministik (konsisten antar run).
-   - Quick chips tetap berfungsi (toggle).
-4. **Tidak ada regressi**: tampilan filter secara visual sama dengan sebelumnya (warna, ukuran, behavior toggle).
-5. **Repetisi terhapus**: grep literal warna provider di FilterChipRowView → 0 (semua lewat config).
+   - Tap ikon filter → sheet muncul dengan section Provider (dinamis dari data) + Speed (statik).
+   - Pilih provider/speed → apply → marker & list ter-filter benar.
+   - Reset → kembali "Semua".
+   - Provider baru otomatis muncul; provider tak dikenal dapat warna fallback deterministik.
+4. **Tidak ada regressi**: search bar & refresh tetap berfungsi; tampilan modal familiar.
+5. **Grep**: literal warna/provider/speed di view file → 0 (semua via config).
 
 ## 8. Risiko & Mitigasi
 
 | Risiko | Mitigasi |
 |---|---|
-| Interop Kotlin/Native untuk `List<ChargeSpeed>` bermasalah di Swift | Pakai pola yang sudah terbukti (DTO lain sudah ter-expose); verifikasi dengan build awal |
-| Warna fallback deterministik jelek secara estetika | Fallback pakai hash sederhana; kalau tidak memuaskan, dapat di-tweak di config saja (1 tempat) |
-| `availableProviders` kosong saat data belum load | Modal/quick chips tampilkan state kosong atau "Semua" saja; tidak crash |
-| Signature `FilterChipRowView` berubah break pemanggil | Dipertahankan identik; verifikasi `SpkluMapView.swift:298` tetap kompilasi |
+| Interop `List<ChargeSpeed>` bermasalah di Swift | Pola DTO sudah terbukti (SpkluLocationDto dll); verifikasi build awal |
+| `availableProviders` kosong saat belum load | Sheet tampilkan state "Semua" saja; tidak crash |
+| Pemanggil `SpkluFilterBar`/`FilterChipRowView` di screen lain | Grep dulu semua referensi sebelum hapus; sesuaikan |
+| Layout top bar sempit setelah +1 ikon | Pakai ukuran ikon konsisten; verifikasi visual di kedua platform |
