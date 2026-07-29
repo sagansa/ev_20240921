@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,18 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         // Production runs behind a reverse proxy (DirectAdmin) that terminates
-        // HTTPS and forwards plain HTTP to PHP. Without this, Laravel builds
-        // absolute URLs (e.g. Livewire upload endpoints, Storage::url()) as
-        // http://..., which the host redirects to https:// as a 301/302 —
-        // turning Livewire's POST into a GET → MethodNotAllowedHttpException,
-        // and breaking generated storage URLs.
+        // HTTPS and forwards plain HTTP to PHP. Without this, Laravel reads the
+        // scheme as http://, so Livewire upload endpoints / Storage::url() /
+        // asset() are generated as http://... and the host's HTTP→HTTPS redirect
+        // turns Livewire's POST into a GET → MethodNotAllowedHttpException.
+        // Trusting the proxy lets Laravel honor X-Forwarded-Proto and emit https.
         $middleware->trustProxies(at: '*');
-
-        // Force the HTTPS scheme so asset()/Storage::url()/Livewire endpoints
-        // are generated as https:// in production.
-        if (env('APP_ENV') !== 'local') {
-            URL::forceScheme('https');
-        }
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
