@@ -90,8 +90,14 @@ class ProviderResource extends Resource
         return $table
             ->poll('60s')
             ->columns([
+                // Read the raw DB path instead of the model accessor, which
+                // returns a web URL ("/storage/..."). The disk existence check
+                // in ImageColumn only matches a relative disk path, so it would
+                // otherwise always fail and every row would fall back to the
+                // default placeholder image.
                 ImageColumn::make('image')
-                    ->getStateUsing(fn ($record) => $record->image)
+                    ->getStateUsing(fn ($record) => $record->getRawOriginal('image'))
+                    ->disk('public')
                     ->defaultImageUrl(fn () => asset('/images/ev-charging.png')),
 
                 TextColumn::make('name')
