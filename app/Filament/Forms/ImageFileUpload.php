@@ -3,8 +3,6 @@
 namespace App\Filament\Forms;
 
 use Filament\Forms\Components\FileUpload;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -21,72 +19,16 @@ class ImageFileUpload extends FileUpload
             ->image()
             ->imageEditor()
             ->saveUploadedFileUsing(function (TemporaryUploadedFile $file, self $component): ?string {
-                return $this->uploadToImgService($file, $component);
+                return $this->storeAsWebp($file, $component);
             })
             ->columnSpan(['full'])
             ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1']);
     }
 
     /**
-     * Upload file to img.sagansa.id and return the URL
+     * Store the uploaded image on the public disk, converting to webp when possible.
      */
-    protected function uploadToImgService(TemporaryUploadedFile $file, self $component): ?string
-    {
-        $secret = config('services.image.upload_secret');
-        $serviceUrl = config('services.image.service_url', 'https://img.sagansa.id');
-
-        if (!$secret) {
-            Log::error('ImageFileUpload: IMAGE_UPLOAD_SECRET not configured, falling back to local storage');
-            return $this->uploadToLocalStorage($file, $component);
-        }
-
-        try {
-            $directory = trim($component->getDirectory() ?? '', '/');
-
-            // Generate signed URL parameters
-            $expires = time() + 300;
-            $signature = hash_hmac('sha256', "expires={$expires}", $secret);
-
-            $uploadUrl = rtrim($serviceUrl, '/') . '/api/upload';
-            $uploadUrl .= "?expires={$expires}&signature={$signature}";
-
-            if ($directory) {
-                $uploadUrl .= '&directory=' . urlencode($directory);
-            }
-
-            // Upload file to img.sagansa.id
-            $response = Http::timeout(30)
-                ->attach('image', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
-                ->post($uploadUrl);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                if (isset($data['url'])) {
-                    return $data['url'];
-                }
-            }
-
-            Log::error('ImageFileUpload: Upload to img service failed', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-
-            // Fallback to local storage
-            return $this->uploadToLocalStorage($file, $component);
-        } catch (\Exception $e) {
-            Log::error('ImageFileUpload: Exception during upload to img service', [
-                'message' => $e->getMessage(),
-            ]);
-
-            // Fallback to local storage
-            return $this->uploadToLocalStorage($file, $component);
-        }
-    }
-
-    /**
-     * Fallback: upload to local storage as webp
-     */
-    protected function uploadToLocalStorage(TemporaryUploadedFile $file, self $component): ?string
+    protected function storeAsWebp(TemporaryUploadedFile $file, self $component): ?string
     {
         if (function_exists('imagewebp')) {
             $image = @imagecreatefromstring(file_get_contents($file->getRealPath()));
@@ -106,7 +48,7 @@ class ImageFileUpload extends FileUpload
                     $component->getDisk()->put($path, $contents);
 
                     if ($component->getVisibility() === 'public') {
-                        rescue(fn() => $component->getDisk()->setVisibility($path, 'public'), report: false);
+                        rescue(fn () => $component->getDisk()->setVisibility($path, 'public'), report: false);
                     }
 
                     return $path;
@@ -114,7 +56,7 @@ class ImageFileUpload extends FileUpload
             }
         }
 
-        // Final fallback: save original file
+        // Fallback: store the original file on the component's disk.
         return $file->store($component->getDirectory(), $component->getDiskName());
     }
 }

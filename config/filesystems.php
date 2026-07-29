@@ -36,21 +36,12 @@ return [
             'throw' => false,
         ],
 
-        // 'public' => [
-        //     'driver' => 'local',
-        //     'root' => storage_path('app/public'),
-        //     'url' => env('APP_URL').'/storage',
-        //     'visibility' => 'public',
-        //     'throw' => false,
-        // ],
-
         'public' => [
             'driver' => 'local',
-            'root' => env('FILESYSTEM_PUBLIC_ROOT', storage_path('app/public')),
-            'url' => rtrim(env('FILESYSTEM_PUBLIC_URL', env('APP_URL', 'http://localhost').'/storage'), '/'),
+            'root' => storage_path('app/public'),
+            'url' => env('APP_URL').'/storage',
             'visibility' => 'public',
             'throw' => false,
-            'report' => false,
         ],
 
         's3' => [

@@ -113,14 +113,14 @@ return [
         'ev' => [
             'driver' => $evDriver,
             'url' => env('DB_EV_URL', env('DB_URL')),
-            'host' => env('DB_EV_HOST', '127.0.0.1'),
-            'port' => env('DB_EV_PORT', '3306'),
+            'host' => env('DB_EV_HOST', env('DB_SAGANSA_HOST', '127.0.0.1')),
+            'port' => env('DB_EV_PORT', env('DB_SAGANSA_PORT', '3306')),
             'database' => env(
                 'DB_EV_DATABASE',
-                $evDriver === 'sqlite' ? database_path('database.sqlite') : 'ev'
+                $evDriver === 'sqlite' ? database_path('database.sqlite') : env('DB_SAGANSA_DATABASE', 'sagansa_ev')
             ),
-            'username' => env('DB_EV_USERNAME', 'root'),
-            'password' => env('DB_EV_PASSWORD', 'root'),
+            'username' => env('DB_EV_USERNAME', env('DB_SAGANSA_USERNAME', 'root')),
+            'password' => env('DB_EV_PASSWORD', env('DB_SAGANSA_PASSWORD', 'root')),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
             'prefix' => '',

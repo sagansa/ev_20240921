@@ -31,7 +31,7 @@ class ChargerLocationController extends Controller
         $validated = $request->validated();
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('public');
+            $validated['image'] = $request->file('image')->store('images/charger-locations', 'public');
         }
 
         $chargerLocation = ChargerLocation::create($validated);
@@ -54,10 +54,10 @@ class ChargerLocationController extends Controller
 
         if ($request->hasFile('image')) {
             if ($chargerLocation->image) {
-                Storage::delete($chargerLocation->image);
+                Storage::disk('public')->delete($chargerLocation->image);
             }
 
-            $validated['image'] = $request->file('image')->store('public');
+            $validated['image'] = $request->file('image')->store('images/charger-locations', 'public');
         }
 
         $chargerLocation->update($validated);
@@ -70,7 +70,7 @@ class ChargerLocationController extends Controller
         ChargerLocation $chargerLocation
     ): Response {
         if ($chargerLocation->image) {
-            Storage::delete($chargerLocation->image);
+            Storage::disk('public')->delete($chargerLocation->image);
         }
 
         $chargerLocation->delete();

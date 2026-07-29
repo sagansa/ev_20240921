@@ -13,6 +13,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Filament\Forms\Components\Select;
 use Throwable;
 
 class ImportPlnSpklu extends Page implements HasForms
@@ -94,6 +95,27 @@ class ImportPlnSpklu extends Page implements HasForms
                             ])
                             ->preserveFilenames(),
                     ]),
+                Section::make('Upload file JSON SPKLU (data_spklu.json)')
+                    ->description('Upload file data_spklu.json. Import ini akan menggantikan seluruh data pada tabel spklu_locations dan spklu_charger_boxes.')
+                    ->schema([
+                        FileUpload::make('json_file')
+                            ->label('File data_spklu.json')
+                            ->disk('public')
+                            ->directory('spklu-json-imports')
+                            ->acceptedFileTypes([
+                                'application/json',
+                                'text/plain',
+                                'text/json',
+                            ])
+                            ->preserveFilenames(),
+                        Select::make('json_provider_id')
+                            ->label('Definisikan Provider (Opsional)')
+                            ->placeholder('Deteksi Otomatis (Default: PLN)')
+                            ->options(fn () => \App\Models\Provider::pluck('name', 'id')->toArray())
+                            ->searchable()
+                            ->nullable()
+                            ->helperText('Pilih provider jika ingin menetapkan provider tertentu untuk seluruh data dalam file JSON ini.'),
+                    ]),
             ])
             ->statePath('data');
     }
@@ -101,6 +123,14 @@ class ImportPlnSpklu extends Page implements HasForms
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('importJson')
+                ->label('Import JSON')
+                ->icon('heroicon-o-document-arrow-up')
+                ->color('primary')
+                ->requiresConfirmation()
+                ->modalHeading('Import ulang data SPKLU dari JSON?')
+                ->modalDescription('Seluruh data pada spklu_locations dan spklu_charger_boxes akan dihapus dan diganti dengan isi file JSON ini.')
+                ->action('importJson'),
             Action::make('import')
                 ->label('Import CSV')
                 ->icon('heroicon-o-arrow-up-tray')
@@ -110,6 +140,55 @@ class ImportPlnSpklu extends Page implements HasForms
                 ->modalDescription('Data lama pada pln_charger_locations dan pln_charger_location_details akan dihapus, lalu diganti dengan isi CSV ini.')
                 ->action('import'),
         ];
+    }
+
+    public function importJson(\App\Services\SpkluJsonImportService $jsonImporter): void
+    {
+        $state = $this->form->getState();
+        $jsonFilePath = $state['json_file'] ?? null;
+        $overrideProviderId = $state['json_provider_id'] ?? null;
+
+        if (! $jsonFilePath) {
+            Notification::make()
+                ->title('File JSON belum diupload')
+                ->body('Silakan upload file data_spklu.json terlebih dahulu pada form di bawah.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        try {
+            $summary = $jsonImporter->importFromFile(
+                Storage::disk('public')->path($jsonFilePath),
+                replaceExisting: true,
+                overrideProviderId: $overrideProviderId
+            );
+
+            $this->lastImportSummary = [
+                'type' => 'json',
+                'total_rows' => $summary['total_records'],
+                'inserted_locations' => $summary['inserted_locations'],
+                'inserted_details' => $summary['inserted_charger_boxes'],
+                'deleted_locations' => $summary['deleted_locations'],
+                'deleted_details' => $summary['deleted_charger_boxes'],
+                'skipped_rows' => 0,
+            ];
+
+            Notification::make()
+                ->title('Import SPKLU JSON selesai')
+                ->body("Berhasil meng-import {$summary['inserted_locations']} lokasi dan {$summary['inserted_charger_boxes']} charger box.")
+                ->success()
+                ->send();
+        } catch (Throwable $exception) {
+            report($exception);
+
+            Notification::make()
+                ->title('Import JSON gagal')
+                ->body($exception->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 
     public function import(SpkluCsvImportService $importer): void

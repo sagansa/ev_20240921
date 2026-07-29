@@ -37,7 +37,7 @@ class VehiclesStateOfHealthController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('public');
+            $validated['image'] = $request->file('image')->store('images/state-of-health', 'public');
         }
 
         $stateOfHealth = $vehicle->stateOfHealths()->create($validated);

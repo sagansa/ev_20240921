@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\ContributorController;
 use App\Http\Controllers\Api\V1\AdvertisementController;
 use App\Http\Controllers\Api\V1\PlnChargerLocationController;
 use App\Http\Controllers\Api\V1\LocationCategoryController;
+use App\Http\Controllers\Api\V1\SpkluLocationController;
 
 Route::prefix('v1')->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
@@ -27,6 +28,13 @@ Route::prefix('v1')->group(function () {
     Route::get('/charging-locations/{chargerLocation}', [ChargerLocationController::class, 'show']);
     Route::get('/pln-charging-locations', [PlnChargerLocationController::class, 'index']);
     Route::get('/location-categories', [LocationCategoryController::class, 'index']);
+
+    // SPKLU data routes (from data_spklu.json)
+    Route::get('/spklu', [SpkluLocationController::class, 'index']);
+    Route::get('/spklu/{id}', [SpkluLocationController::class, 'show']);
+    Route::get('/meta/filters', [SpkluLocationController::class, 'metaFilters']);
+
+
 
     // Public advertisement routes (for displaying ads to users and tracking metrics)
     Route::get('/ads/mobile', [AdvertisementController::class, 'mobile']);

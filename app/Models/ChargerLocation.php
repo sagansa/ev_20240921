@@ -57,8 +57,41 @@ class ChargerLocation extends Model
     protected function image(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $this->resolveMediaPath($value) ?? '/images/ev-station.png',
+            get: fn ($value) => $this->resolveMediaPath($value),
+            set: fn ($value) => $this->sanitizeImagePath($value),
         );
+    }
+
+    protected function sanitizeImagePath($value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '' || in_array($trimmed, ['/images/ev-charging.png', 'images/ev-charging.png', '/images/ev-station.png', 'images/ev-station.png'])) {
+            return null;
+        }
+
+        if (Str::startsWith($trimmed, ['http://', 'https://', '//'])) {
+            return $trimmed;
+        }
+
+        $normalized = ltrim($trimmed, '/');
+
+        if (Str::startsWith($normalized, 'storage/')) {
+            $normalized = Str::after($normalized, 'storage/');
+        }
+
+        if (Str::startsWith($normalized, 'public/')) {
+            $normalized = Str::after($normalized, 'public/');
+        } elseif (Str::startsWith($normalized, 'app/public/')) {
+            $normalized = Str::after($normalized, 'app/public/');
+        }
+
+        $normalized = ltrim($normalized, '/');
+
+        return $normalized !== '' ? $normalized : null;
     }
 
     public function provider()

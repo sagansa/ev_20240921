@@ -18,17 +18,21 @@ return new class extends Migration
             $table->unsignedBigInteger('cluster_island_id')->nullable()->change();
         });
 
-        // Drop foreign key if it exists (type mismatch: merk_charger_id is bigint, merk_chargers.id is char)
-        $fkExists = DB::connection('ev')->selectOne(
-            "SELECT COUNT(*) as cnt FROM information_schema.TABLE_CONSTRAINTS
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pln_charger_location_details'
-             AND CONSTRAINT_NAME = 'pln_charger_location_details_merk_charger_id_foreign'
-             AND CONSTRAINT_TYPE = 'FOREIGN KEY'"
-        );
-        if ($fkExists && $fkExists->cnt > 0) {
-            DB::connection('ev')->statement(
-                'ALTER TABLE pln_charger_location_details DROP FOREIGN KEY pln_charger_location_details_merk_charger_id_foreign'
+        $driver = DB::connection('ev')->getDriverName();
+
+        if (in_array($driver, ['mysql', 'mariadb'])) {
+            // Drop foreign key if it exists (type mismatch: merk_charger_id is bigint, merk_chargers.id is char)
+            $fkExists = DB::connection('ev')->selectOne(
+                "SELECT COUNT(*) as cnt FROM information_schema.TABLE_CONSTRAINTS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pln_charger_location_details'
+                 AND CONSTRAINT_NAME = 'pln_charger_location_details_merk_charger_id_foreign'
+                 AND CONSTRAINT_TYPE = 'FOREIGN KEY'"
             );
+            if ($fkExists && $fkExists->cnt > 0) {
+                DB::connection('ev')->statement(
+                    'ALTER TABLE pln_charger_location_details DROP FOREIGN KEY pln_charger_location_details_merk_charger_id_foreign'
+                );
+            }
         }
 
         Schema::connection('ev')->table('pln_charger_location_details', function (Blueprint $table) {
@@ -36,16 +40,18 @@ return new class extends Migration
             $table->unsignedBigInteger('merk_charger_id')->nullable()->change();
         });
 
-        // Drop stale index left behind
-        $idxExists = DB::connection('ev')->selectOne(
-            "SELECT COUNT(*) as cnt FROM information_schema.STATISTICS
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pln_charger_location_details'
-             AND INDEX_NAME = 'pln_charger_location_details_merk_charger_id_foreign'"
-        );
-        if ($idxExists && $idxExists->cnt > 0) {
-            DB::connection('ev')->statement(
-                'ALTER TABLE pln_charger_location_details DROP INDEX pln_charger_location_details_merk_charger_id_foreign'
+        if (in_array($driver, ['mysql', 'mariadb'])) {
+            // Drop stale index left behind
+            $idxExists = DB::connection('ev')->selectOne(
+                "SELECT COUNT(*) as cnt FROM information_schema.STATISTICS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pln_charger_location_details'
+                 AND INDEX_NAME = 'pln_charger_location_details_merk_charger_id_foreign'"
             );
+            if ($idxExists && $idxExists->cnt > 0) {
+                DB::connection('ev')->statement(
+                    'ALTER TABLE pln_charger_location_details DROP INDEX pln_charger_location_details_merk_charger_id_foreign'
+                );
+            }
         }
     }
 
