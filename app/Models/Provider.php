@@ -39,6 +39,11 @@ class Provider extends Model
         return $this->hasMany(ChargerLocation::class);
     }
 
+    public function spkluLocations()
+    {
+        return $this->hasMany(SpkluLocation::class);
+    }
+
     protected function image(): Attribute
     {
         return Attribute::make(

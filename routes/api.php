@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\AdvertisementController;
 use App\Http\Controllers\Api\V1\PlnChargerLocationController;
 use App\Http\Controllers\Api\V1\LocationCategoryController;
 use App\Http\Controllers\Api\V1\SpkluLocationController;
+use App\Http\Controllers\Api\V1\ProviderController;
 
 Route::prefix('v1')->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
@@ -34,7 +35,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/spklu/{id}', [SpkluLocationController::class, 'show']);
     Route::get('/meta/filters', [SpkluLocationController::class, 'metaFilters']);
 
-
+    // Providers
+    Route::get('/providers', [ProviderController::class, 'index']);
 
     // Public advertisement routes (for displaying ads to users and tracking metrics)
     Route::get('/ads/mobile', [AdvertisementController::class, 'mobile']);
