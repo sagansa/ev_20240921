@@ -31,6 +31,9 @@ class SpkluLocationResource extends JsonResource
                     'name' => $this->provider->name,
                     'logo' => $this->provider->logo,
                     'contact' => $this->provider->contact,
+                    'web' => $this->provider->web,
+                    'google' => $this->provider->google,
+                    'ios' => $this->provider->ios,
                 ];
             }),
             'provider_name' => $this->provider?->name ?? 'PLN Mobile',
