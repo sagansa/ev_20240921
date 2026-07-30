@@ -2,47 +2,17 @@
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Third Party Services
-    |--------------------------------------------------------------------------
-    |
-    | This file is for storing the credentials for third party services such
-    | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
-    |
-    */
-
-    'postmark' => [
-        'token' => env('POSTMARK_TOKEN'),
+    'google' => [
+        // Web client ID (server-side). Prefer GOOGLE_WEB_CLIENT_ID; fall back to GOOGLE_CLIENT_ID.
+        'client_id' => env('GOOGLE_WEB_CLIENT_ID', env('GOOGLE_CLIENT_ID')),
+        // Per-platform client IDs — accepted as alternative ID-token audiences so mobile
+        // clients (which issue tokens with their own client ID) pass verification.
+        'android_client_id' => env('GOOGLE_ANDROID_CLIENT_ID'),
+        'ios_client_id' => env('GOOGLE_IOS_CLIENT_ID'),
     ],
 
-    'ses' => [
-        'key' => env('AWS_ACCESS_KEY_ID'),
-        'secret' => env('AWS_SECRET_ACCESS_KEY'),
-        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
-    ],
-
-    'resend' => [
-        'key' => env('RESEND_KEY'),
-    ],
-
-    'slack' => [
-        'notifications' => [
-            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
-        ],
-    ],
-
-    'youtube' => [
-        'ev_video_id' => env('EV_YOUTUBE_VIDEO_ID'),
-    ],
-
-
-
-    'analytics' => [
-        'tracking_id' => env('GOOGLE_ANALYTICS_ID', 'G-5C30JTCW0S'),
+    'apple' => [
+        'service_id' => env('APPLE_SERVICE_ID'),
     ],
 
 ];

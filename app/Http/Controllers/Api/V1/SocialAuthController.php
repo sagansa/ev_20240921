@@ -157,8 +157,16 @@ class SocialAuthController extends Controller
 
     private function verifyGoogleToken(string $idToken): ?array
     {
-        $clientId = config('services.google.client_id');
-        if (! $clientId) {
+        // Accept tokens whose audience (aud) matches ANY of the configured Google OAuth
+        // client IDs. Mobile clients (Android/iOS) issue tokens with their own per-platform
+        // client ID as the audience; the legacy GoogleSignInOptions flow uses the Web client
+        // ID. Accepting all of them avoids audience-mismatch rejections across platforms.
+        $allowedAudiences = array_values(array_filter([
+            config('services.google.client_id'),       // Web client ID (server-side)
+            config('services.google.android_client_id'),
+            config('services.google.ios_client_id'),
+        ]));
+        if (empty($allowedAudiences)) {
             return null;
         }
 
@@ -167,7 +175,8 @@ class SocialAuthController extends Controller
             $payload = JWT::decode($idToken, $keySet);
             $payloadArr = (array) $payload;
 
-            if (($payloadArr['aud'] ?? null) !== $clientId) {
+            $aud = $payloadArr['aud'] ?? null;
+            if (! in_array($aud, $allowedAudiences, true)) {
                 return null;
             }
             if (! in_array($payloadArr['iss'] ?? null, ['https://accounts.google.com', 'accounts.google.com'], true)) {
