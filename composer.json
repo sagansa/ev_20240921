@@ -12,6 +12,7 @@
         "ariaieboy/filament-currency": "^3.0",
         "bezhansalleh/filament-shield": "^4.2",
         "filament/filament": "^5.0",
+        "firebase/php-jwt": "^7.1",
         "flowframe/laravel-trend": "^0.5.0",
         "laravel/framework": "^13.0",
         "laravel/jetstream": "^5.1",

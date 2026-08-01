@@ -80,4 +80,19 @@ return [
         'validate_csrf_token' => Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Sanctum Models
+    |--------------------------------------------------------------------------
+    |
+    | Custom token model that pins the `personal_access_tokens` table to the
+    | same connection as the User model (`sagansa_user`). Without this, tokens
+    | are written on `sagansa_user` (via the User relation) but read on the
+    | default `ev` connection during auth, so every bearer-authenticated
+    | request returns 401.
+    |
+    */
+
+    'personal_access_token_model' => App\Models\PersonalAccessToken::class,
+
 ];

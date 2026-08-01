@@ -14,6 +14,7 @@ class SpkluLocation extends Model
 
     protected $fillable = [
         'external_id',
+        'place_id',
         'provider_id',
         'provinsi',
         'kabupaten_kota',
