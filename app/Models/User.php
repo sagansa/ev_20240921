@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\UsesDefaultConnectionWhenTesting;
 use BezhanSalleh\FilamentShield\Traits\HasPanelShield;
+use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,7 +18,7 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable // implements FilamentUser
+class User extends Authenticatable implements FilamentUser
 {
     use HasApiTokens;
     use HasFactory;
@@ -158,9 +159,15 @@ class User extends Authenticatable // implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
+        if ($this->hasRole('super_admin')) {
+            return true;
+        }
+
         if ($panel->getId() === 'admin') {
-            return $this->hasRole('super_admin');
-        } elseif ($panel->getId() === 'user') {
+            return $this->hasRole('admin');
+        }
+
+        if ($panel->getId() === 'user') {
             return $this->hasRole('user');
         }
 

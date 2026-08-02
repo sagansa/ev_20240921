@@ -25,7 +25,7 @@ class AdvertisementResource extends Resource
 {
     protected static ?string $model = Advertisement::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-megaphone';
 
     protected static string | \UnitEnum | null $navigationGroup = 'Admin';
 
@@ -35,7 +35,7 @@ class AdvertisementResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Advertisements';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 3;
 
     public static function canViewAny(): bool
     {

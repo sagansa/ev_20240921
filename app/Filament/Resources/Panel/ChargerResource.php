@@ -35,20 +35,21 @@ class ChargerResource extends Resource
 {
     protected static ?string $model = Charger::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-map';
-    protected static string | \UnitEnum | null $navigationGroup = 'Apps';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-bolt';
+    protected static string | \UnitEnum | null $navigationGroup = 'Aplikasi';
+    protected static ?int $navigationSort = 4;
 
 
 
 
     public static function getNavigationIcon(): string | \BackedEnum | null
     {
-        return 'heroicon-o-map';
+        return 'heroicon-o-bolt';
     }
 
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
-        return 'Apps';
+        return 'Aplikasi';
     }
 
     public static function form(Schema $schema): Schema

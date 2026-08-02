@@ -35,7 +35,8 @@ class DiscountHomeChargingResource extends Resource
     protected static ?string $model = DiscountHomeCharging::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-percent-badge';
-    protected static string | \UnitEnum | null $navigationGroup = 'Apps';
+    protected static string | \UnitEnum | null $navigationGroup = 'Aplikasi';
+    protected static ?int $navigationSort = 6;
 
 
 
@@ -47,7 +48,7 @@ class DiscountHomeChargingResource extends Resource
 
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
-        return 'Apps';
+        return 'Aplikasi';
     }
 
     public static function getModelLabel(): string

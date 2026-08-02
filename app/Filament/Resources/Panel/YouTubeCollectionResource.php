@@ -26,7 +26,9 @@ class YouTubeCollectionResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-video-camera';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Content Management';
+    protected static string | \UnitEnum | null $navigationGroup = 'Konten';
+
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $pluralModelLabel = 'YouTube Collections';
 
@@ -48,7 +50,7 @@ class YouTubeCollectionResource extends Resource
 
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
-        return 'Content Management';
+        return 'Konten';
     }
 
     public static function form(Schema $schema): Schema

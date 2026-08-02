@@ -30,7 +30,7 @@ class SpkluScrapeRawResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-inbox-arrow-down';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Databases';
+    protected static string|\UnitEnum|null $navigationGroup = 'Provider & SPKLU';
 
     protected static ?string $navigationLabel = 'Review Hasil Scrape';
 
@@ -38,7 +38,7 @@ class SpkluScrapeRawResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Review Hasil Scrape';
 
-    protected static ?int $navigationSort = 11;
+    protected static ?int $navigationSort = 3;
 
     public static function canViewAny(): bool
     {

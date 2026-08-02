@@ -43,7 +43,8 @@ class ChargerLocationResource extends Resource
     protected static ?string $model = ChargerLocation::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-map-pin';
-    protected static string | \UnitEnum | null $navigationGroup = 'Apps';
+    protected static string | \UnitEnum | null $navigationGroup = 'Aplikasi';
+    protected static ?int $navigationSort = 3;
 
 
 
@@ -55,7 +56,7 @@ class ChargerLocationResource extends Resource
 
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
-        return 'Apps';
+        return 'Aplikasi';
     }
 
     public static function getModelLabel(): string

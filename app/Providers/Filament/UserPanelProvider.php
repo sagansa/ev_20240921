@@ -3,6 +3,12 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Dashboard;
+use App\Filament\Resources\Panel\ChargerLocationResource;
+use App\Filament\Resources\Panel\ChargerResource;
+use App\Filament\Resources\Panel\ChargeResource;
+use App\Filament\Resources\Panel\DiscountHomeChargingResource;
+use App\Filament\Resources\Panel\StateOfHealthResource;
+use App\Filament\Resources\Panel\VehicleResource;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -27,12 +33,21 @@ class UserPanelProvider extends PanelProvider
             ->login()
             ->registration()
             ->passwordReset()
-            ->topNavigation()
             ->emailVerification()
+            ->navigationGroups([
+                'Aplikasi',
+            ])
             ->colors([
                 'primary' => Color::Sky,
             ])
-            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
+            ->resources([
+                VehicleResource::class,
+                ChargeResource::class,
+                ChargerLocationResource::class,
+                ChargerResource::class,
+                StateOfHealthResource::class,
+                DiscountHomeChargingResource::class,
+            ])
             ->discoverPages(in: app_path('Filament/User/Pages'), for: 'App\\Filament\\User\\Pages')
             ->pages([
                 Dashboard::class

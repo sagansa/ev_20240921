@@ -26,6 +26,7 @@ class UserResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-s-user-group';
     protected static string | \UnitEnum | null $navigationGroup = 'Admin';
+    protected static ?int $navigationSort = 1;
 
 
 
@@ -38,6 +39,11 @@ class UserResource extends Resource
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
         return 'Admin';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 1;
     }
 
     public static function getModelLabel(): string

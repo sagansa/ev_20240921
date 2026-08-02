@@ -25,20 +25,21 @@ class PowerChargerResource extends Resource
 {
     protected static ?string $model = PowerCharger::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static string | \UnitEnum | null $navigationGroup = 'Chargers';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-swatch';
+    protected static string | \UnitEnum | null $navigationGroup = 'Master Charger';
+    protected static ?int $navigationSort = 3;
 
 
 
 
     public static function getNavigationIcon(): string | \BackedEnum | null
     {
-        return 'heroicon-o-rectangle-stack';
+        return 'heroicon-o-swatch';
     }
 
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
-        return 'Chargers';
+        return 'Master Charger';
     }
 
     public static function getModelLabel(): string

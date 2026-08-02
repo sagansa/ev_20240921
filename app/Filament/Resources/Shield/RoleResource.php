@@ -171,7 +171,17 @@ class RoleResource extends Resource implements HasShieldPermissions
 
     public static function getNavigationSort(): ?int
     {
-        return config('filament-shield.shield_resource.navigation_sort');
+        return 2;
+    }
+
+    public static function getNavigationIcon(): string | \BackedEnum | null
+    {
+        return 'heroicon-o-shield-check';
+    }
+
+    public static function getNavigationGroup(): string | \UnitEnum | null
+    {
+        return 'Admin';
     }
 
     public static function getSlug(?Panel $panel = null): string

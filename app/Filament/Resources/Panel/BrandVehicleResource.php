@@ -27,12 +27,17 @@ class BrandVehicleResource extends Resource
 
     public static function getNavigationIcon(): string | \BackedEnum | null
     {
-        return 'heroicon-o-rectangle-stack';
+        return 'heroicon-o-tag';
     }
 
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
-        return 'Vehicles';
+        return 'Referensi Kendaraan';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 1;
     }
 
     public static function getModelLabel(): string

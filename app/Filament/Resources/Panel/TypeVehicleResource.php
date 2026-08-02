@@ -25,20 +25,21 @@ class TypeVehicleResource extends Resource
 {
     protected static ?string $model = TypeVehicle::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-globe-asia-australia';
-    protected static string | \UnitEnum | null $navigationGroup = 'Databases';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-adjustments-horizontal';
+    protected static string | \UnitEnum | null $navigationGroup = 'Referensi Kendaraan';
+    protected static ?int $navigationSort = 3;
 
 
 
 
     public static function getNavigationIcon(): string | \BackedEnum | null
     {
-        return 'heroicon-o-globe-asia-australia';
+        return 'heroicon-o-adjustments-horizontal';
     }
 
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
-        return 'Databases';
+        return 'Referensi Kendaraan';
     }
 
     public static function getModelLabel(): string

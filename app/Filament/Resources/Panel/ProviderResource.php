@@ -29,9 +29,10 @@ class ProviderResource extends Resource
     protected static ?string $model = Provider::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-building-office';
+    protected static ?int $navigationSort = 1;
 
     // protected static ?string $cluster = Providers::class;
-    protected static string | \UnitEnum | null $navigationGroup = 'Databases';
+    protected static string | \UnitEnum | null $navigationGroup = 'Provider & SPKLU';
 
 
 
@@ -43,7 +44,7 @@ class ProviderResource extends Resource
 
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
-        return 'Databases';
+        return 'Provider & SPKLU';
     }
 
     public static function getModelLabel(): string

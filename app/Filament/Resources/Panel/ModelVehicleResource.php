@@ -26,20 +26,21 @@ class ModelVehicleResource extends Resource
 {
     protected static ?string $model = ModelVehicle::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static string | \UnitEnum | null $navigationGroup = 'Vehicles';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-squares-2x2';
+    protected static string | \UnitEnum | null $navigationGroup = 'Referensi Kendaraan';
+    protected static ?int $navigationSort = 2;
 
 
 
 
     public static function getNavigationIcon(): string | \BackedEnum | null
     {
-        return 'heroicon-o-rectangle-stack';
+        return 'heroicon-o-squares-2x2';
     }
 
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
-        return 'Vehicles';
+        return 'Referensi Kendaraan';
     }
 
     public static function getModelLabel(): string

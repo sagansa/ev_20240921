@@ -28,10 +28,17 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->registration()
             ->passwordReset()
-            ->topNavigation()
             ->emailVerification()
             ->maxContentWidth('full')
             ->profile()
+            ->navigationGroups([
+                'Aplikasi',
+                'Master Charger',
+                'Referensi Kendaraan',
+                'Provider & SPKLU',
+                'Konten',
+                'Admin',
+            ])
             ->colors([
                 'primary' => Color::Sky,
             ])

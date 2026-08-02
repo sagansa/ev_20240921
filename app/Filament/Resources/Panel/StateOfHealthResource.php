@@ -34,7 +34,8 @@ class StateOfHealthResource extends Resource
     protected static ?string $model = StateOfHealth::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-battery-50';
-    protected static string | \UnitEnum | null $navigationGroup = 'Apps';
+    protected static string | \UnitEnum | null $navigationGroup = 'Aplikasi';
+    protected static ?int $navigationSort = 5;
 
 
 
@@ -46,7 +47,7 @@ class StateOfHealthResource extends Resource
 
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
-        return 'Apps';
+        return 'Aplikasi';
     }
 
     public static function getModelLabel(): string

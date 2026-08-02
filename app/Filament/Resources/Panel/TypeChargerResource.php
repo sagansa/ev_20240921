@@ -23,20 +23,21 @@ class TypeChargerResource extends Resource
 {
     protected static ?string $model = TypeCharger::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static string | \UnitEnum | null $navigationGroup = 'Chargers';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-queue-list';
+    protected static string | \UnitEnum | null $navigationGroup = 'Master Charger';
+    protected static ?int $navigationSort = 1;
 
 
 
 
     public static function getNavigationIcon(): string | \BackedEnum | null
     {
-        return 'heroicon-o-rectangle-stack';
+        return 'heroicon-o-queue-list';
     }
 
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
-        return 'Chargers';
+        return 'Master Charger';
     }
 
     public static function getModelLabel(): string
