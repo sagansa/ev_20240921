@@ -161,10 +161,13 @@ class ScrapeIngestTest extends TestCase
         $this->assertLessThan(1, $candidates[0]['distance_km']);
     }
 
-    public function test_api_index_unions_approved_unlinked_scrape_rows(): void
+    /**
+     * Layar display UNION scrape sudah DIHAPUS dari /api/v1/spklu (Phase 4
+     * canonical layer). Approved scrape rows TIDAK lagi di-serving langsung —
+     * serving murni dari charging_stations (kanonik).
+     */
+    public function test_api_index_no_longer_serves_scrape_rows(): void
     {
-        SpkluLocation::create(['external_id' => 1, 'provinsi' => 'X', 'nama_lokasi' => 'Prod Location', 'latitude' => -6.2, 'longitude' => 106.8]);
-
         SpkluScrapeRaw::create([
             'nama_lokasi' => 'Scrape Visible', 'latitude' => -6.3, 'longitude' => 106.9,
             'dedup_hash' => sha1('a'), 'scrape_session' => 's', 'status' => SpkluScrapeRaw::STATUS_APPROVED,
@@ -178,19 +181,22 @@ class ScrapeIngestTest extends TestCase
         $resp->assertOk();
 
         $names = collect($resp->json('data'))->pluck('nama_lokasi');
-        $this->assertContains('Prod Location', $names);
-        $this->assertContains('Scrape Visible', $names);
+        $this->assertNotContains('Scrape Visible', $names);
         $this->assertNotContains('Scrape Hidden', $names);
     }
 
-    public function test_api_index_can_disable_scrape_layer(): void
+    /**
+     * include_scrape kini diabaikan sepenuhnya — scrape tidak pernah masuk ke
+     * serving (baik flag on maupun off).
+     */
+    public function test_api_index_ignores_include_scrape_flag(): void
     {
         SpkluScrapeRaw::create([
             'nama_lokasi' => 'Scrape Visible', 'latitude' => -6.3, 'longitude' => 106.9,
             'dedup_hash' => sha1('a'), 'scrape_session' => 's', 'status' => SpkluScrapeRaw::STATUS_APPROVED,
         ]);
 
-        $resp = $this->getJson('/api/v1/spklu?per_page=500&include_scrape=0');
+        $resp = $this->getJson('/api/v1/spklu?per_page=500&include_scrape=1');
         $names = collect($resp->json('data'))->pluck('nama_lokasi');
         $this->assertNotContains('Scrape Visible', $names);
     }

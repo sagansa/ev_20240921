@@ -18,7 +18,7 @@ class SpkluLocationResource extends JsonResource
             'latitude' => (float) $this->latitude,
             'longitude' => (float) $this->longitude,
             'keterangan' => $this->keterangan,
-            'status' => (int) $this->status,
+            'status' => (int) ($this->status ?? 1),
             'type_charge' => $this->type_charge,
             'watt' => $this->watt,
             'total_charger' => (int) $this->total_charger,
@@ -36,7 +36,7 @@ class SpkluLocationResource extends JsonResource
                     'ios' => $this->provider->ios,
                 ];
             }),
-            'provider_name' => $this->provider?->name ?? 'PLN Mobile',
+            'provider_name' => $this->provider_name ?? $this->provider?->name ?? 'PLN Mobile',
             'provider_logo' => $this->provider?->logo ?? null,
             'charger_boxes' => SpkluChargerBoxResource::collection($this->whenLoaded('chargerBoxes')),
         ];
