@@ -25,10 +25,9 @@ class ScrapeIngestController extends Controller
 
         $session = $request->input('session');
         $inserted = 0;
-        $duplicates = 0;
         $errors = [];
 
-        DB::connection('ev')->transaction(function () use ($request, $session, &$inserted, &$duplicates, &$errors) {
+        DB::connection('ev')->transaction(function () use ($request, $session, &$inserted, &$errors) {
             foreach ($request->input('places', []) as $placeData) {
                 try {
                     $latitude = isset($placeData['latitude']) ? (float) $placeData['latitude'] : null;
@@ -105,16 +104,11 @@ class ScrapeIngestController extends Controller
                         ]);
                     }
 
-                    $matched = $this->dedup->findDuplicate($row);
-                    if ($matched) {
-                        $row->update([
-                            'status' => SpkluScrapeRaw::STATUS_DUPLICATE,
-                            'matched_spklu_location_id' => $matched->id,
-                        ]);
-                        $duplicates++;
-                    } else {
-                        $inserted++;
-                    }
+                    // Every ingested row starts as NEW. Matching against the
+                    // canonical spklu_locations dataset is advisory only and
+                    // happens in the Filament review UI (recommendCandidates).
+                    // The scrape pipeline never mutates production.
+                    $inserted++;
                 } catch (\Throwable $e) {
                     $errors[] = [
                         'nama_lokasi' => $placeData['nama_lokasi'] ?? '',
@@ -129,7 +123,6 @@ class ScrapeIngestController extends Controller
             'message' => 'Scrape data ingested',
             'data' => [
                 'inserted' => $inserted,
-                'duplicates' => $duplicates,
                 'errors' => $errors,
             ],
         ]);

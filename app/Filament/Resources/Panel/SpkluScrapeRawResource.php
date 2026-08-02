@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Panel;
 use App\Filament\Resources\Panel\SpkluScrapeRawResource\Pages;
 use App\Models\Provider;
 use App\Models\SpkluScrapeRaw;
+use App\Services\ScrapeDedupService;
 use App\Services\SpkluScrapeMergeService;
 use App\Tables\Columns\ScrapeStatusColumn;
 use Filament\Actions;
@@ -133,14 +134,14 @@ class SpkluScrapeRawResource extends Resource
                     ->label('Session')
                     ->searchable()
                     ->limit(10),
-                TextColumn::make('matched_spklu_location_id')
-                    ->label('Match Produksi')
-                    ->getStateUsing(fn (SpkluScrapeRaw $record): string => $record->matchedLocation
-                        ? "↻ {$record->matchedLocation->nama_lokasi} (#{$record->matchedLocation->id})"
-                        : ($record->status === SpkluScrapeRaw::STATUS_DUPLICATE ? 'Duplikat (match kosong)' : 'Baru'))
+                TextColumn::make('linked_spklu_location_id')
+                    ->label('Link Produksi (referensi)')
+                    ->getStateUsing(fn (SpkluScrapeRaw $record): string => $record->linkedLocation
+                        ? "→ {$record->linkedLocation->nama_lokasi} (#{$record->linkedLocation->id})"
+                        : '—')
                     ->placeholder('—')
                     ->limit(40)
-                    ->color(fn (SpkluScrapeRaw $record): string => $record->matched_spklu_location_id ? 'info' : 'gray'),
+                    ->color(fn (SpkluScrapeRaw $record): string => $record->linked_spklu_location_id ? 'info' : 'gray'),
                 ScrapeStatusColumn::make('status')
                     ->label('Status'),
                 TextColumn::make('created_at')
@@ -153,8 +154,7 @@ class SpkluScrapeRawResource extends Resource
                     ->label('Filter Status')
                     ->options([
                         0 => 'new',
-                        1 => 'duplicate',
-                        2 => 'approved',
+                        2 => 'approved (tampil di map)',
                         3 => 'rejected',
                     ]),
                 SelectFilter::make('scrape_session')
@@ -180,18 +180,22 @@ class SpkluScrapeRawResource extends Resource
                 Actions\ActionGroup::make([
                     Actions\ViewAction::make(),
                     Actions\Action::make('approve')
-                        ->label('Setujui & Gabung')
-                        ->icon('heroicon-o-check')
+                        ->label('Tandai Tampil di Map')
+                        ->icon('heroicon-o-eye')
                         ->color('success')
                         ->form(static::getApproveFormSchema())
                         ->fillForm(fn (SpkluScrapeRaw $record): array => static::getApproveFormDefaults($record))
-                        ->requiresConfirmation()
                         ->action(function (SpkluScrapeRaw $record, array $data): void {
-                            $location = app(SpkluScrapeMergeService::class)->approve($record, $data);
+                            app(SpkluScrapeMergeService::class)->markApproved(
+                                $record,
+                                isset($data['linked_spklu_location_id']) && $data['linked_spklu_location_id']
+                                    ? (int) $data['linked_spklu_location_id']
+                                    : null,
+                            );
 
                             Notification::make()
-                                ->title('Data berhasil digabung ke produksi')
-                                ->body("{$location->nama_lokasi} disimpan sebagai lokasi baru.")
+                                ->title('Ditandai tampil di map')
+                                ->body('Data ini akan muncul di peta via layer scrape (tanpa mengubah data JSON produksi).')
                                 ->success()
                                 ->send();
                         }),
@@ -213,18 +217,18 @@ class SpkluScrapeRawResource extends Resource
             ->toolbarActions([
                 Actions\BulkActionGroup::make([
                     Actions\BulkAction::make('bulkApprove')
-                        ->label('Setujui Terpilih')
-                        ->icon('heroicon-o-check')
+                        ->label('Tandai Tampil Terpilih')
+                        ->icon('heroicon-o-eye')
                         ->color('success')
                         ->requiresConfirmation()
                         ->action(function (Collection $records): void {
                             $service = app(SpkluScrapeMergeService::class);
                             foreach ($records as $record) {
-                                $service->approve($record);
+                                $service->markApproved($record);
                             }
 
                             Notification::make()
-                                ->title(count($records).' data digabung ke produksi')
+                                ->title(count($records).' data ditandai tampil di map')
                                 ->success()
                                 ->send();
                         }),
@@ -253,37 +257,50 @@ class SpkluScrapeRawResource extends Resource
     public static function getApproveFormSchema(): array
     {
         return [
-            Placeholder::make('merge_context')
-                ->label('Mode penggabungan')
-                ->content(function (?SpkluScrapeRaw $record): string {
+            Placeholder::make('display_context')
+                ->label('Cara kerja')
+                ->content('Data ini hanya di-mark "tampil". Tidak menambah/mengubah data produksi JSON. Yang muncul di map berasal dari UNION layer scrape saat query API.')
+                ->columnSpanFull(),
+            Placeholder::make('recommendations')
+                ->label('Rekomendasi kandidat terdekat dari data JSON')
+                ->content(function (?SpkluScrapeRaw $record): \Illuminate\Support\HtmlString {
                     if (! $record) {
-                        return '—';
+                        return new \Illuminate\Support\HtmlString('—');
                     }
-                    if ($record->matchedLocation) {
-                        return "↻ UPDATE lokasi produksi existing: {$record->matchedLocation->nama_lokasi} (#{$record->matchedLocation->id}). Field yang sudah terisi di produksi TIDAK akan ditimpa.";
+                    $candidates = app(ScrapeDedupService::class)->recommendCandidates($record, 5);
+                    if (empty($candidates)) {
+                        return new \Illuminate\Support\HtmlString('<em>Tidak ada kandidat — tempat ini kemungkinan baru.</em>');
                     }
+                    $items = array_map(fn ($c) => "<li><b>{$c['similarity_pct']}%</b> mirip, <b>{$c['distance_km']} km</b> ({$c['reason']}) — #{$c['id']} ".e($c['nama_lokasi']).'</li>', $candidates);
 
-                    return '+ BUAT lokasi baru di produksi.';
+                    return new \Illuminate\Support\HtmlString('<ul style="margin:.3em 0">'.implode('', $items).'</ul>');
                 })
                 ->columnSpanFull(),
+            Select::make('linked_spklu_location_id')
+                ->label('Link ke produksi (opsional, hanya referensi)')
+                ->options(function (?SpkluScrapeRaw $record) {
+                    if (! $record) {
+                        return [];
+                    }
+                    $cands = app(ScrapeDedupService::class)->recommendCandidates($record, 10);
+
+                    return array_column($cands, 'nama_lokasi', 'id');
+                })
+                ->searchable()
+                ->placeholder('Tidak dilink (tempat baru)')
+                ->helperText('Pilih kalau ini tempat yang sama dengan data JSON. Tidak mengubah data JSON.'),
             Grid::make(2)->schema([
                 TextInput::make('nama_lokasi')
                     ->label('Nama Lokasi')
                     ->required()
                     ->string(),
-                Select::make('provider_id')
+                Select::make('guessed_provider_id')
                     ->label('Provider EV')
                     ->options(fn () => Provider::pluck('name', 'id')->toArray())
                     ->searchable()
                     ->placeholder('Pilih provider'),
-                TextInput::make('provinsi')
-                    ->label('Provinsi')
-                    ->string(),
-                TextInput::make('kabupaten_kota')
-                    ->label('Kabupaten/Kota')
-                    ->string(),
                 TextInput::make('type_charge')
-                    ->label('Type Charge')
+                    ->label('Type Charge (speed tier)')
                     ->string(),
                 TextInput::make('watt')
                     ->label('Watt')
@@ -294,13 +311,10 @@ class SpkluScrapeRawResource extends Resource
 
     public static function getApproveFormDefaults(SpkluScrapeRaw $record): array
     {
-        $service = app(SpkluScrapeMergeService::class);
-
         return [
             'nama_lokasi' => $record->nama_lokasi,
-            'provider_id' => $record->guessed_provider_id,
-            'provinsi' => $service->resolveProvinsi($record),
-            'kabupaten_kota' => $service->resolveKabupatenKota($record),
+            'guessed_provider_id' => $record->guessed_provider_id,
+            'linked_spklu_location_id' => $record->linked_spklu_location_id,
             'type_charge' => $record->type_charge,
             'watt' => $record->max_kw !== null ? $record->max_kw.' kW' : null,
         ];

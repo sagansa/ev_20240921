@@ -187,105 +187,41 @@ class ScrapeDedupService
     }
 
     /**
-     * Resolve an existing production location this scraped record duplicates.
+     * Recommend the closest production locations for a scraped record.
+     *
+     * IMPORTANT: this is advisory only. It does NOT mutate the staging row
+     * or production. The reviewer decides whether to link / display-as-new.
+     * Scrape data never inserts into spklu_locations — that table is the
+     * canonical JSON-imported dataset and changes only via JSON replace.
+     *
+     * @return list<array{id: int, nama_lokasi: string, distance_km: float, similarity_pct: float, reason: string}>
      */
-    public function findDuplicate(SpkluScrapeRaw $row): ?SpkluLocation
+    public function recommendCandidates(SpkluScrapeRaw $row, int $limit = 5): array
     {
-        if ($row->place_id) {
-            $matched = $this->findByPlaceId($row->place_id);
-            if ($matched) {
-                return $matched;
-            }
-        }
+        $name = $row->nama_lokasi;
+        $lat = $row->latitude;
+        $lng = $row->longitude;
 
-        if ($row->dedup_hash) {
-            $matched = $this->findByDedupHash($row->dedup_hash);
-            if ($matched) {
-                return $matched;
-            }
-        }
-
-        return $this->findFuzzyMatch($row->nama_lokasi, $row->latitude, $row->longitude);
-    }
-
-    private function findByPlaceId(string $placeId): ?SpkluLocation
-    {
-        // Primary: match directly against production locations by place_id.
-        $matched = SpkluLocation::query()->where('place_id', $placeId)->first();
-        if ($matched) {
-            return $matched;
-        }
-
-        // Fallback: a previously-approved staging row may already know the
-        // production location id (e.g. place_id column added later).
-        $existing = SpkluScrapeRaw::query()
-            ->where('place_id', $placeId)
-            ->whereIn('status', [SpkluScrapeRaw::STATUS_DUPLICATE, SpkluScrapeRaw::STATUS_APPROVED])
-            ->whereNotNull('matched_spklu_location_id')
-            ->first();
-
-        if ($existing) {
-            return SpkluLocation::find($existing->matched_spklu_location_id);
-        }
-
-        return null;
-    }
-
-    private function findByDedupHash(string $dedupHash): ?SpkluLocation
-    {
-        $existing = SpkluScrapeRaw::query()
-            ->where('dedup_hash', $dedupHash)
-            ->whereIn('status', [SpkluScrapeRaw::STATUS_DUPLICATE, SpkluScrapeRaw::STATUS_APPROVED])
-            ->whereNotNull('matched_spklu_location_id')
-            ->first();
-
-        if ($existing) {
-            return SpkluLocation::find($existing->matched_spklu_location_id);
-        }
-
-        return null;
-    }
-
-    private function findFuzzyMatch(?string $name, ?float $lat, ?float $lng): ?SpkluLocation
-    {
         $normalized = $this->normalizeName($name);
-        if ($normalized === '') {
-            return null;
-        }
-
-        if ($lat === null || $lng === null) {
-            return null;
+        if ($normalized === '' || $lat === null || $lng === null) {
+            return [];
         }
 
         $haversine = $this->haversineExpression($lat, $lng);
 
-        // Tier 1 — exact name match (case-insensitive). Legacy JSON
-        // coordinates can be imprecise (centroid vs Google Maps pin), so
-        // trust the name when it matches verbatim and accept a wide radius.
-        // Uses LOWER() (portable across MySQL + SQLite), not BINARY.
-        $exact = SpkluLocation::query()
-            ->whereRaw('LOWER(nama_lokasi) = ?', [strtolower($name)])
-            ->whereRaw($haversine.' <= 50')
-            ->orderByRaw($haversine)
-            ->first();
-        if ($exact) {
-            return $exact;
-        }
-
-        // Tier 2 — proximity search with similarity scoring. Two bands:
-        //   very similar name (>=90%) -> wider radius (5 km)
-        //   similar name    (>=80%)   -> tight radius (0.5 km)
-        // The old single 0.2 km / 80% band missed legit matches because
-        // legacy JSON coordinates can be ~1-4 km off the Google Maps pin.
-        $candidates = SpkluLocation::query()
+        // Pull nearby candidates (wider net than the old hard match), then
+        // score each by name similarity. Order by distance so even weak name
+        // matches surface the geographically closest existing location.
+        $rows = SpkluLocation::query()
             ->select('spklu_locations.*')
             ->selectRaw($haversine.' AS distance')
-            ->whereRaw($haversine.' <= 5')
+            ->whereRaw($haversine.' <= 50')
             ->orderBy('distance')
-            ->limit(20)
+            ->limit(50)
             ->get();
 
-        foreach ($candidates as $candidate) {
+        $scored = [];
+        foreach ($rows as $candidate) {
             $candidateName = $this->normalizeName($candidate->nama_lokasi);
             if ($candidateName === '') {
                 continue;
@@ -293,15 +229,30 @@ class ScrapeDedupService
 
             similar_text($normalized, $candidateName, $percent);
 
-            if ($percent >= 90 && $candidate->distance <= 5) {
-                return $candidate;
+            // Classify confidence so the reviewer can prioritize.
+            $reason = 'dekat';
+            if (strtolower($name) === strtolower($candidate->nama_lokasi)) {
+                $reason = 'nama sama';
+            } elseif ($percent >= 90) {
+                $reason = 'mirip';
+            } elseif ($percent >= 80) {
+                $reason = 'agak mirip';
             }
-            if ($percent >= 80 && $candidate->distance <= 0.5) {
-                return $candidate;
-            }
+
+            $scored[] = [
+                'id' => (int) $candidate->id,
+                'nama_lokasi' => $candidate->nama_lokasi,
+                'distance_km' => round((float) $candidate->distance, 3),
+                'similarity_pct' => round($percent, 1),
+                'reason' => $reason,
+            ];
         }
 
-        return null;
+        // Best similarity first, then nearest.
+        usort($scored, fn ($a, $b) => $b['similarity_pct'] <=> $a['similarity_pct']
+            ?: $a['distance_km'] <=> $b['distance_km']);
+
+        return array_slice($scored, 0, $limit);
     }
 
     private function haversineExpression(float $lat, float $lng): string

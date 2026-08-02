@@ -41,7 +41,7 @@ class SpkluScrapeRaw extends Model
         'raw_payload',
         'dedup_hash',
         'status',
-        'matched_spklu_location_id',
+        'linked_spklu_location_id',
         'scrape_session',
     ];
 
@@ -67,8 +67,8 @@ class SpkluScrapeRaw extends Model
         return $this->belongsTo(Provider::class, 'guessed_provider_id');
     }
 
-    public function matchedLocation()
+    public function linkedLocation()
     {
-        return $this->belongsTo(SpkluLocation::class, 'matched_spklu_location_id');
+        return $this->belongsTo(SpkluLocation::class, 'linked_spklu_location_id');
     }
 }
