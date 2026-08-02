@@ -106,9 +106,23 @@ class SpkluScrapeRawResource extends Resource
                     ->label('Provider (tebakan)')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('chargers.connector_type')
+                    ->label('Konektor')
+                    ->badge()
+                    ->limitList(3)
+                    ->separator(',')
+                    ->color('gray'),
                 TextColumn::make('type_charge')
-                    ->label('Type Charge')
-                    ->sortable(),
+                    ->label('Tier')
+                    ->sortable()
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'ultrafast' => 'danger',
+                        'fast' => 'warning',
+                        'medium' => 'info',
+                        'standard' => 'gray',
+                        default => 'gray',
+                    }),
                 TextColumn::make('max_kw')
                     ->label('Max kW')
                     ->alignCenter(),

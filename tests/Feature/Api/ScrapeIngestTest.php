@@ -68,7 +68,7 @@ class ScrapeIngestTest extends TestCase
         $row = SpkluScrapeRaw::first();
         $this->assertEquals('SPKLU PLN UID Jakarta Pusat', $row->nama_lokasi);
         $this->assertEquals('PLN Mobile', $row->provider_name);
-        $this->assertEquals('ultra_fast', $row->type_charge);
+        $this->assertEquals('ultrafast', $row->type_charge);
         $this->assertEquals(0, $row->status);
         $this->assertNotNull($row->dedup_hash);
         $this->assertSame('120 kW', $row->chargers()->first()->watt);

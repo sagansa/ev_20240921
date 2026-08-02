@@ -172,7 +172,7 @@ class ScrapeDedupService
         }
 
         if ($kw >= 100) {
-            return 'ultra_fast';
+            return 'ultrafast';
         }
 
         if ($kw >= 25) {
@@ -249,18 +249,40 @@ class ScrapeDedupService
     private function findFuzzyMatch(?string $name, ?float $lat, ?float $lng): ?SpkluLocation
     {
         $normalized = $this->normalizeName($name);
-        if ($normalized === '' || $lat === null || $lng === null) {
+        if ($normalized === '') {
             return null;
         }
 
-        $haversine = "(6371 * acos(cos(radians($lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians($lng)) + sin(radians($lat)) * sin(radians(latitude))))";
+        if ($lat === null || $lng === null) {
+            return null;
+        }
 
+        $haversine = $this->haversineExpression($lat, $lng);
+
+        // Tier 1 — exact name match (case-insensitive). Legacy JSON
+        // coordinates can be imprecise (centroid vs Google Maps pin), so
+        // trust the name when it matches verbatim and accept a wide radius.
+        // Uses LOWER() (portable across MySQL + SQLite), not BINARY.
+        $exact = SpkluLocation::query()
+            ->whereRaw('LOWER(nama_lokasi) = ?', [strtolower($name)])
+            ->whereRaw($haversine.' <= 50')
+            ->orderByRaw($haversine)
+            ->first();
+        if ($exact) {
+            return $exact;
+        }
+
+        // Tier 2 — proximity search with similarity scoring. Two bands:
+        //   very similar name (>=90%) -> wider radius (5 km)
+        //   similar name    (>=80%)   -> tight radius (0.5 km)
+        // The old single 0.2 km / 80% band missed legit matches because
+        // legacy JSON coordinates can be ~1-4 km off the Google Maps pin.
         $candidates = SpkluLocation::query()
             ->select('spklu_locations.*')
             ->selectRaw($haversine.' AS distance')
-            ->whereRaw($haversine.' <= 0.2')
+            ->whereRaw($haversine.' <= 5')
             ->orderBy('distance')
-            ->limit(5)
+            ->limit(20)
             ->get();
 
         foreach ($candidates as $candidate) {
@@ -270,11 +292,20 @@ class ScrapeDedupService
             }
 
             similar_text($normalized, $candidateName, $percent);
-            if ($percent >= 80) {
+
+            if ($percent >= 90 && $candidate->distance <= 5) {
+                return $candidate;
+            }
+            if ($percent >= 80 && $candidate->distance <= 0.5) {
                 return $candidate;
             }
         }
 
         return null;
+    }
+
+    private function haversineExpression(float $lat, float $lng): string
+    {
+        return "(6371 * acos(cos(radians($lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians($lng)) + sin(radians($lat)) * sin(radians(latitude))))";
     }
 }

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\SpkluChargerBox;
 use App\Models\SpkluLocation;
 use App\Models\SpkluScrapeRaw;
+use App\Models\SpkluScrapeRawCharger;
 use Illuminate\Support\Facades\DB;
 
 class SpkluScrapeMergeService
@@ -69,7 +70,10 @@ class SpkluScrapeMergeService
                     'spklu_location_id' => $location->id,
                     'chargerbox_id' => $charger->connector_type,
                     'type_charge' => $charger->type_charge,
-                    'nama_chargerbox' => $charger->connector_type,
+                    // Connector info lives in the free-text nama_chargerbox so
+                    // it survives JSON re-imports (which don't know about a
+                    // dedicated connector_type column). Example: "CCS 200 kW".
+                    'nama_chargerbox' => $this->labelForCharger($charger),
                     'watt' => $charger->watt,
                     'jumlah_charger' => $charger->jumlah_charger,
                     'jumlah_konektor' => $charger->jumlah_konektor,
@@ -83,6 +87,21 @@ class SpkluScrapeMergeService
 
             return $location;
         });
+    }
+
+    /**
+     * Build a human label for a charger when the scrape doesn't carry a real
+     * box name (Google only gives connector + power). Keeps `nama_chargerbox`
+     * readable in Filament instead of just repeating the connector code.
+     */
+    private function labelForCharger(SpkluScrapeRawCharger $charger): string
+    {
+        $parts = array_filter([
+            $charger->connector_type,
+            $charger->watt,
+        ]);
+
+        return $parts ? implode(' ', $parts) : 'Charger';
     }
 
     /**
@@ -139,11 +158,36 @@ class SpkluScrapeMergeService
      */
     private function appendMissingChargers(SpkluLocation $location, SpkluScrapeRaw $row): void
     {
-        $existing = $location->chargerBoxes()->get()->map(fn ($c) => strtolower(($c->nama_chargerbox ?? '').'|'.($c->watt ?? '')));
+        // Decide whether each scraped charger is already represented on the
+        // production location. Dedup key = nama_chargerbox + watt (both are
+        // free-text fields the JSON import knows about, so the comparison
+        // survives re-imports). A scrape is "already present" when an existing
+        // box has the same watt AND either the same label or a legacy label
+        // (which has no connector info to compare).
+        $existingBoxes = $location->chargerBoxes()->get();
 
         foreach ($row->chargers as $charger) {
-            $key = strtolower(($charger->connector_type ?? '').'|'.($charger->watt ?? ''));
-            if ($existing->contains($key)) {
+            $scrapeLabel = strtolower($this->labelForCharger($charger));
+            $scrapeWatt = strtolower($charger->watt ?? '');
+
+            $alreadyPresent = $existingBoxes->contains(function ($c) use ($scrapeLabel, $scrapeWatt) {
+                $existingWatt = strtolower($c->watt ?? '');
+                if ($existingWatt !== $scrapeWatt) {
+                    return false;
+                }
+                // Same watt. If labels match exactly, skip. Otherwise treat a
+                // legacy box (label without a known connector, e.g. "Delta AC
+                // Max") as covering this power to avoid duplicate watts.
+                $existingLabel = strtolower($c->nama_chargerbox ?? '');
+                if ($existingLabel === $scrapeLabel) {
+                    return true;
+                }
+
+                // Legacy JSON labels typically don't look like "<Connector> <kW> kW".
+                return ! preg_match('/^(ccs|chademo|tipe|type|gb\/t|tesla)/i', $existingLabel);
+            });
+
+            if ($alreadyPresent) {
                 continue;
             }
 
@@ -151,7 +195,7 @@ class SpkluScrapeMergeService
                 'spklu_location_id' => $location->id,
                 'chargerbox_id' => $charger->connector_type,
                 'type_charge' => $charger->type_charge,
-                'nama_chargerbox' => $charger->connector_type,
+                'nama_chargerbox' => $this->labelForCharger($charger),
                 'watt' => $charger->watt,
                 'jumlah_charger' => $charger->jumlah_charger,
                 'jumlah_konektor' => $charger->jumlah_konektor,

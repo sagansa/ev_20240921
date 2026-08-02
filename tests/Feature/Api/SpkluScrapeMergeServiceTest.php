@@ -37,7 +37,7 @@ class SpkluScrapeMergeServiceTest extends TestCase
             'latitude' => -6.2,
             'longitude' => 106.8,
             'max_kw' => 120,
-            'type_charge' => 'ultra_fast',
+            'type_charge' => 'ultrafast',
             'total_charger' => 4,
             'total_konektor' => 2,
             'dedup_hash' => sha1('TEST'),
@@ -49,7 +49,7 @@ class SpkluScrapeMergeServiceTest extends TestCase
             'connector_type' => 'CCS2',
             'power_kw' => 120,
             'watt' => '120 kW',
-            'type_charge' => 'ultra_fast',
+            'type_charge' => 'ultrafast',
             'jumlah_charger' => 2,
         ]);
 
@@ -150,7 +150,7 @@ class SpkluScrapeMergeServiceTest extends TestCase
         $this->assertDatabaseCount('spklu_locations', 1);
 
         // Empty fields are backfilled from the scrape.
-        $this->assertSame('ultra_fast', $location->fresh()->type_charge);
+        $this->assertSame('ultrafast', $location->fresh()->type_charge);
         $this->assertSame('120 kW', $location->fresh()->watt);
 
         // Staging row marked approved.
@@ -187,9 +187,10 @@ class SpkluScrapeMergeServiceTest extends TestCase
             'nama_lokasi' => 'SPKLU PLN Jakarta',
             'provinsi' => 'DKI Jakarta',
         ]);
-        // A charger the scrape will also report -> must NOT be duplicated.
+        // A legacy JSON-imported charger (model name, no connector info, like
+        // the real data). Same watt as the scrape -> must NOT be duplicated.
         $existing->chargerBoxes()->create([
-            'nama_chargerbox' => 'CCS2',
+            'nama_chargerbox' => 'CS Energy DC 120kW',
             'watt' => '120 kW',
             'jumlah_charger' => 2,
         ]);
@@ -209,7 +210,7 @@ class SpkluScrapeMergeServiceTest extends TestCase
 
         app(SpkluScrapeMergeService::class)->approve($row);
 
-        // 1 pre-existing + 1 newly appended, no duplicate of CCS2 120 kW.
+        // 1 pre-existing (same 120 kW watt, deduped) + 1 newly appended.
         $this->assertSame(2, $existing->fresh()->chargerBoxes()->count());
     }
 }
