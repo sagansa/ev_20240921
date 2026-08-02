@@ -42,9 +42,17 @@ class EsdmSinggatStationStatus extends Model
         'aggregated_at' => 'datetime',
     ];
 
+    /**
+     * Relasi ke master stasiun ESDM.
+     *
+     * Pakai station_esdm_id → esdm_id (selalu terisi oleh poller), BUKAN
+     * station_id (PK lokal) yang bisa NULL bila poller jalan sebelum
+     * station_id di-resolve. Ini membuat nama stasiun selalu resolve di
+     * Filament terlepas dari urutan pipeline (poll sebelum import master).
+     */
     public function station()
     {
-        return $this->belongsTo(EsdmSinggatSpkluStation::class, 'station_id');
+        return $this->belongsTo(EsdmSinggatSpkluStation::class, 'station_esdm_id', 'esdm_id');
     }
 
     /** True bila stasiun punya minimal 1 slot bebas. */

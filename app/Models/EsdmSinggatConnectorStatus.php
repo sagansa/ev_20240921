@@ -35,9 +35,16 @@ class EsdmSinggatConnectorStatus extends Model
         'last_seen_at' => 'datetime',
     ];
 
+    /**
+     * Relasi ke master konektor ESDM.
+     *
+     * Pakai connector_esdm_id → esdm_id (selalu terisi oleh poller), BUKAN
+     * connector_id (PK lokal) yang bisa NULL bila poller jalan sebelum
+     * connector_id di-resolve.
+     */
     public function connector()
     {
-        return $this->belongsTo(EsdmSinggatSpkluConnector::class, 'connector_id');
+        return $this->belongsTo(EsdmSinggatSpkluConnector::class, 'connector_esdm_id', 'esdm_id');
     }
 
     public function statusLogs()
