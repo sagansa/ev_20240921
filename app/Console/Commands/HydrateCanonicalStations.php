@@ -25,16 +25,17 @@ class HydrateCanonicalStations extends Command
 
         $this->newLine();
         $this->info('✓ Hydrate selesai.');
-        $this->table(
-            ['Keterangan', 'Jumlah'],
-            [
-                ['Stasiun diproses', $stats['processed']],
-                ['Dibuat', $stats['created']],
-                ['Diupdate', $stats['updated']],
-                ['Dilewati (tidak layak)', $stats['skipped']],
-                ['Child charger ditulis', $stats['chargers']],
-            ]
-        );
+            $this->table(
+                ['Keterangan', 'Jumlah'],
+                [
+                    ['Stasiun diproses', $stats['processed']],
+                    ['Dibuat', $stats['created']],
+                    ['Diupdate', $stats['updated']],
+                    ['Dilewati (tidak layak)', $stats['skipped']],
+                    ['Child charger ditulis', $stats['chargers']],
+                    ['Geo cleaning otomatis', $stats['geo_cleaned'] ?? 0],
+                ]
+            );
 
         return 0;
     }

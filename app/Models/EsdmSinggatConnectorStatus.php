@@ -21,6 +21,7 @@ class EsdmSinggatConnectorStatus extends Model
         'connector_esdm_id',
         'connector_id',
         'station_esdm_id',
+        'installation_esdm_id',
         'status',
         'status_konektor',
         'status_since',
@@ -31,6 +32,7 @@ class EsdmSinggatConnectorStatus extends Model
         'connector_esdm_id' => 'integer',
         'connector_id' => 'integer',
         'station_esdm_id' => 'integer',
+        'installation_esdm_id' => 'integer',
         'status_since' => 'datetime',
         'last_seen_at' => 'datetime',
     ];

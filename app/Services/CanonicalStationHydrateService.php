@@ -84,10 +84,30 @@ class CanonicalStationHydrateService
     /**
      * Hydrate seluruh stasiun ESDM SPKLU ke charging_stations.
      *
-     * @return array{processed: int, created: int, updated: int, skipped: int, chargers: int}
+     * Bila ada stasiun ESDM yang latitude/longitude-nya belum di-clean (masih
+     * NULL padahal *_raw ada), otomatis jalankan geo cleaning dulu. Ini membuat
+     * pipeline production-safe: urutan import → hydrate tetap menghasilkan
+     * koordinat, tanpa harus ingat menjalankan esdm:clean-geo terpisah.
+     *
+     * Setelah charger box di-hydrate, fold status real-time per-box dari
+     * connector_status yang sudah ada (bila poller pernah jalan). Charger box
+     * yang konektornya belum terlacak tetap 'unknown' sampai poller berjalan.
+     *
+     * @return array{processed: int, created: int, updated: int, skipped: int, chargers: int, geo_cleaned: int, charger_boxes_folded: int}
      */
     public function hydrateFromEsdm(): array
     {
+        // Auto-clean geo bila ada stasiun yang belum di-normalize (production safety).
+        $geoCleaned = 0;
+        $needsGeoClean = EsdmSinggatSpkluStation::whereNull('latitude')
+            ->whereNotNull('latitude_spklu_raw')
+            ->exists();
+        if ($needsGeoClean) {
+            $cleaning = app(EsdmSinggatGeoCleaningService::class);
+            $result = $cleaning->clean(false);
+            $geoCleaned = $result['spklu']['fixed'] ?? 0;
+        }
+
         $stations = EsdmSinggatSpkluStation::with(['installations.connectors'])->get();
 
         $statusMap = EsdmSinggatStationStatus::query()
@@ -120,7 +140,36 @@ class CanonicalStationHydrateService
             }
         });
 
+        // Fold status real-time per-charger box dari connector_status yg sudah ada.
+        // Backfill awal: semua charger box dapat status dari snapshot konektor terakhir.
+        $chargerFolded = $this->foldAllChargerBoxesFromConnectorStatus();
+
+        $stats['geo_cleaned'] = $geoCleaned;
+        $stats['charger_boxes_folded'] = $chargerFolded;
+
         return $stats;
+    }
+
+    /**
+     * Fold status untuk SEMUA charger box canonical dari connector_status.
+     * Dipanggil hydrate (bukan hanya poll delta) supaya initial backfill lengkap.
+     */
+    private function foldAllChargerBoxesFromConnectorStatus(): int
+    {
+        // Ambil semua installation_esdm_id unik dari connector_status
+        $instIds = DB::connection('ev')->table('esdm_singgat_connector_status')
+            ->whereNotNull('installation_esdm_id')
+            ->distinct()
+            ->pluck('installation_esdm_id')
+            ->all();
+
+        if (empty($instIds)) {
+            return 0;
+        }
+
+        $instData = array_map(fn ($id) => ['installation_esdm_id' => $id], $instIds);
+
+        return $this->foldEsdmChargerStatuses($instData);
     }
 
     /**
@@ -142,6 +191,83 @@ class CanonicalStationHydrateService
                 'finishing_count' => $aggregate['finishing_count'],
                 'status_updated_at' => $aggregate['aggregated_at'] ?? now(),
             ]);
+    }
+
+    /**
+     * Fold status real-time per charger box (instalasi) ESDM ke canonical.
+     *
+     * Dipanggil poller setelah update konektor status. Untuk setiap charger box
+     * canonical yang punya source_charger_id (ESDM instalasi id), hitung agregat
+     * dari konektor-konektornya: berapa available/charging/finishing, lalu
+     * turunkan availability_level. No-op bila charger box belum di-hydrate.
+     *
+     * @param  array<int, array{installation_esdm_id: int, aggregated_at?: Carbon|null}>  $installations  list of installation esdm IDs touched by this poll
+     */
+    public function foldEsdmChargerStatuses(array $installations, $aggregatedAt = null): int
+    {
+        $ids = array_column($installations, 'installation_esdm_id');
+        $ids = array_values(array_filter($ids));
+        if (empty($ids)) {
+            return 0;
+        }
+
+        // Agregat status per instalasi dari esdm_singgat_connector_status.
+        // Join via installation_esdm_id di connector_status.
+        $rows = DB::connection('ev')->table('esdm_singgat_connector_status')
+            ->selectRaw('
+                installation_esdm_id,
+                count(*) as total,
+                sum(status_konektor = "available") as avail,
+                sum(status_konektor = "charging") as charg,
+                sum(status_konektor = "finishing") as finish
+            ')
+            ->whereIn('installation_esdm_id', $ids)
+            ->groupBy('installation_esdm_id')
+            ->get();
+
+        $folded = 0;
+        $ts = $aggregatedAt ?? now();
+        foreach ($rows as $row) {
+            $avail = (int) $row->avail;
+            $charg = (int) $row->charg;
+            $finish = (int) $row->finish;
+            $total = (int) $row->total;
+            $level = $this->computeAvailabilityLevel($avail, $finish, $charg, $total);
+
+            ChargingStationCharger::query()
+                ->where('source_charger_id', $row->installation_esdm_id)
+                ->update([
+                    'availability_level' => $level,
+                    'available_count' => $avail,
+                    'charging_count' => $charg,
+                    'finishing_count' => $finish,
+                    'status_updated_at' => $ts,
+                ]);
+            $folded++;
+        }
+
+        return $folded;
+    }
+
+    /**
+     * availability_level dari count. Dipakai untuk station & charger box.
+     */
+    private function computeAvailabilityLevel(int $avail, int $finish, int $charg, int $total): string
+    {
+        if ($total === 0) {
+            return 'offline';
+        }
+        if ($avail > 0) {
+            return 'available';
+        }
+        if ($finish > 0) {
+            return 'partial';
+        }
+        if ($charg > 0) {
+            return 'occupied';
+        }
+
+        return 'offline';
     }
 
     // ─── Roll-up master data ────────────────────────────────────────────────
@@ -217,6 +343,7 @@ class CanonicalStationHydrateService
 
             ChargingStationCharger::create([
                 'station_id' => $canonical->id,
+                'source_charger_id' => $inst->esdm_id,
                 'chargerbox_id' => $inst->nomor_identitas,
                 'type_charge' => $inst->jenis_pengisian_spklu,
                 'nama' => $inst->merek_mesin,

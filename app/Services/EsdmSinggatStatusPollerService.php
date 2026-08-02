@@ -79,8 +79,8 @@ class EsdmSinggatStatusPollerService
             $progress
         );
 
-        // 5. Agregasi per stasiun
-        $stationStats = $this->aggregateStations($fetchedAt);
+        // 5. Agregasi per stasiun + fold charger box status
+        $stationStats = $this->aggregateStations($fetchedAt, $stats['touched_installations']);
 
         return [
             'batch' => $batch,
@@ -93,6 +93,7 @@ class EsdmSinggatStatusPollerService
             'logs_inserted' => $stats['logs_inserted'],
             'stations_aggregated' => $stationStats['aggregated'],
             'canonical_folded' => $stationStats['folded_to_canonical'],
+            'charger_boxes_folded' => $stationStats['charger_boxes_folded'],
         ];
     }
 
@@ -136,6 +137,7 @@ class EsdmSinggatStatusPollerService
         $logsToInsert = [];
         $now = now();
         $processedKeys = []; // dedup intra-poll: data ESDM punya duplikat identik
+        $touchedInstallations = []; // instalasi yg konektornya berubah → utk fold charger box
 
         foreach ($stations as $i => $stasiun) {
             $stationEsmId = $stasiun['id'] ?? null;
@@ -152,8 +154,6 @@ class EsdmSinggatStatusPollerService
                     }
 
                     // Dedup: skip record identik yg sudah diproses di poll ini.
-                    // ESDM kadang mengulang instalasi yg sama dgn konektor yg sama
-                    // (mis. instalasi 5079 + konektor 6328 muncul 3x di stasiun 5920).
                     $dedupKey = $konId.'|'.($stationEsmId ?? '').'|'.($instId ?? '');
                     if (isset($processedKeys[$dedupKey])) {
                         continue;
@@ -172,7 +172,7 @@ class EsdmSinggatStatusPollerService
                         // Konektor baru (belum pernah terlihat)
                         $newConnectors++;
                         $logsToInsert[] = $this->buildLogRow(
-                            $konId, $localConnectorId, $stationEsmId,
+                            $konId, $localConnectorId, $stationEsmId, $instId,
                             null, $newStatus, null, $newStatusKonektor,
                             $batch, $fetchedAt, $now
                         );
@@ -181,23 +181,29 @@ class EsdmSinggatStatusPollerService
                             'connector_esdm_id' => $konId,
                             'connector_id' => $localConnectorId,
                             'station_esdm_id' => $stationEsmId,
+                            'installation_esdm_id' => $instId,
                             'status' => $newStatus,
                             'status_konektor' => $newStatusKonektor,
                             'status_since' => $fetchedAt,
                             'last_seen_at' => $fetchedAt,
                         ]);
                         $changed++;
+                        if ($instId !== null) {
+                            $touchedInstallations[$instId] = true;
+                        }
                     } else {
                         // Konektor sudah ada — cek perubahan
                         $oldStatusKonektor = $snapshot->status_konektor;
                         $statusChanged = ($oldStatusKonektor !== $newStatusKonektor);
 
-                        $updateData = ['last_seen_at' => $fetchedAt];
+                        $updateData = [
+                            'last_seen_at' => $fetchedAt,
+                            'installation_esdm_id' => $instId, // pastikan selalu terisi
+                        ];
 
                         if ($statusChanged) {
-                            // Catat transisi
                             $logsToInsert[] = $this->buildLogRow(
-                                $konId, $localConnectorId, $stationEsmId,
+                                $konId, $localConnectorId, $stationEsmId, $instId,
                                 $snapshot->status, $newStatus,
                                 $oldStatusKonektor, $newStatusKonektor,
                                 $batch, $fetchedAt, $now
@@ -206,6 +212,9 @@ class EsdmSinggatStatusPollerService
                             $updateData['status_konektor'] = $newStatusKonektor;
                             $updateData['status_since'] = $fetchedAt;
                             $changed++;
+                            if ($instId !== null) {
+                                $touchedInstallations[$instId] = true;
+                            }
                         }
 
                         $snapshot->update($updateData);
@@ -231,11 +240,12 @@ class EsdmSinggatStatusPollerService
             'status_changed' => $changed,
             'new_connectors' => $newConnectors,
             'logs_inserted' => count($logsToInsert),
+            'touched_installations' => array_keys($touchedInstallations),
         ];
     }
 
     private function buildLogRow(
-        int $konId, ?int $localId, ?int $stationEsmId,
+        int $konId, ?int $localId, ?int $stationEsmId, ?int $instEsmId,
         ?string $fromStatus, ?string $toStatus,
         ?string $fromStatusKon, ?string $toStatusKon,
         string $batch, $fetchedAt, $now
@@ -257,7 +267,7 @@ class EsdmSinggatStatusPollerService
 
     // ─── Aggregate stations ─────────────────────────────────────────────────
 
-    private function aggregateStations($fetchedAt): array
+    private function aggregateStations($fetchedAt, array $touchedInstallations = []): array
     {
         // Group konektor by station, hitung per status
         $rows = DB::connection('ev')->table('esdm_singgat_connector_status')
@@ -302,7 +312,6 @@ class EsdmSinggatStatusPollerService
             );
 
             // Fold agregat ke tabel kanonik agar serving tidak perlu JOIN.
-            // No-op bila stasiun belum di-hydrate ke charging_stations.
             $this->canonicalHydrate->foldEsdmStatus((int) $row->station_esdm_id, [
                 'availability_level' => $level,
                 'available_count' => $avail,
@@ -313,7 +322,21 @@ class EsdmSinggatStatusPollerService
             $aggregated++;
         }
 
-        return ['aggregated' => $aggregated, 'folded_to_canonical' => $aggregated];
+        // Fold status per-charger box (hanya instalasi yg konektornya berubah).
+        $chargerBoxesFolded = 0;
+        if (! empty($touchedInstallations)) {
+            $instData = array_map(
+                fn ($id) => ['installation_esdm_id' => $id],
+                $touchedInstallations
+            );
+            $chargerBoxesFolded = $this->canonicalHydrate->foldEsdmChargerStatuses($instData, $fetchedAt);
+        }
+
+        return [
+            'aggregated' => $aggregated,
+            'folded_to_canonical' => $aggregated,
+            'charger_boxes_folded' => $chargerBoxesFolded,
+        ];
     }
 
     /**

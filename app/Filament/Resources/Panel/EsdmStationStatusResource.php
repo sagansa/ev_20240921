@@ -77,7 +77,8 @@ class EsdmStationStatusResource extends Resource
                     ->alignCenter(),
                 TextColumn::make('aggregated_at')
                     ->label('Agregasi')
-                    ->since()
+                    ->dateTime('d M Y H:i')
+                    ->timezone('Asia/Jakarta')
                     ->sortable(),
             ])
             ->filters([

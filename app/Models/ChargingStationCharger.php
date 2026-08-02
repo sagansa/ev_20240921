@@ -21,6 +21,7 @@ class ChargingStationCharger extends Model
 
     protected $fillable = [
         'station_id',
+        'source_charger_id',
         'chargerbox_id',
         'type_charge',
         'nama',
@@ -31,11 +32,20 @@ class ChargingStationCharger extends Model
         'gambar',
         'harga_pengisian',
         'harga_layanan',
+        'availability_level',
+        'available_count',
+        'charging_count',
+        'finishing_count',
+        'status_updated_at',
     ];
 
     protected $casts = [
         'jumlah_charger' => 'integer',
         'jumlah_konektor' => 'integer',
+        'available_count' => 'integer',
+        'charging_count' => 'integer',
+        'finishing_count' => 'integer',
+        'status_updated_at' => 'datetime',
     ];
 
     public function station()

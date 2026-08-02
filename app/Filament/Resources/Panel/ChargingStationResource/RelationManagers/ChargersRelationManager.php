@@ -35,16 +35,23 @@ class ChargersRelationManager extends RelationManager
                 TextColumn::make('watt')
                     ->label('Watt')
                     ->alignCenter(),
-                TextColumn::make('jumlah_charger')
-                    ->label('Charger')
-                    ->alignCenter(),
                 TextColumn::make('jumlah_konektor')
                     ->label('Konektor')
                     ->alignCenter(),
-                TextColumn::make('harga_pengisian')
-                    ->label('Harga Pengisian'),
-                TextColumn::make('harga_layanan')
-                    ->label('Harga Layanan'),
+                TextColumn::make('availability_level')
+                    ->label('Status')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => \App\Filament\Concerns\AvailabilityLevelColors::availabilityLevelLabel($state))
+                    ->color(fn (string $state): string => \App\Filament\Concerns\AvailabilityLevelColors::availabilityLevelColor($state)),
+                TextColumn::make('available_count')
+                    ->label('Siap/Konektor')
+                    ->getStateUsing(fn ($record): string => $record->available_count.'/'.$record->jumlah_konektor)
+                    ->alignCenter(),
+                TextColumn::make('status_updated_at')
+                    ->label('Update')
+                    ->dateTime('d M Y H:i')
+                    ->timezone('Asia/Jakarta')
+                    ->sortable(),
             ])
             ->filters([])
             ->recordActions([])

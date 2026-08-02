@@ -23,7 +23,13 @@ class SpkluLocationResource extends JsonResource
             'watt' => $this->watt,
             'total_charger' => (int) $this->total_charger,
             'total_konektor' => (int) $this->total_konektor,
-            'distance_km' => $this->when(isset($this->distance), round($this->distance, 4)),
+            // Status real-time agregat (fold dari konektor ESDM oleh poller)
+            'availability_level' => $this->availability_level,
+            'available_count' => (int) $this->available_count,
+            'charging_count' => (int) $this->charging_count,
+            'finishing_count' => (int) $this->finishing_count,
+            'status_updated_at' => $this->status_updated_at?->setTimezone('Asia/Jakarta')->toDateTimeString(),
+            'distance_km' => $this->when(isset($this->distance) && $this->distance !== null, fn () => round((float) $this->distance, 4)),
             'provider_id' => $this->provider_id,
             'provider' => $this->when($this->relationLoaded('provider') && $this->provider, function () {
                 return [

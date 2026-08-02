@@ -16,6 +16,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -55,9 +56,6 @@ class ChargingStationResource extends Resource
                         ->string(),
                     TextInput::make('provinsi')
                         ->label('Provinsi')
-                        ->string(),
-                    TextInput::make('kabupaten_kota')
-                        ->label('Kabupaten/Kota')
                         ->string(),
                     TextInput::make('alamat')
                         ->label('Alamat')
@@ -154,9 +152,7 @@ class ChargingStationResource extends Resource
                     ->label('Provinsi')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('kabupaten_kota')
-                    ->label('Kab/Kota')
-                    ->searchable(),
+                // kabupaten_kota disembunyikan (selalu NULL di ESDM; search lewat alamat cukup)
                 TextColumn::make('availability_level')
                     ->label('Status')
                     ->sortable()
@@ -180,7 +176,8 @@ class ChargingStationResource extends Resource
                     }),
                 TextColumn::make('status_updated_at')
                     ->label('Update Status')
-                    ->since()
+                    ->dateTime('d M Y H:i')
+                    ->timezone('Asia/Jakarta')
                     ->sortable(),
             ])
             ->filters([
@@ -212,8 +209,18 @@ class ChargingStationResource extends Resource
                     ]),
                 SelectFilter::make('provider_name')
                     ->label('Filter Provider')
-                    ->options(fn () => ChargingStation::query()->whereNotNull('provider_name')->distinct()->pluck('provider_name', 'provider_name')->toArray())
+                    ->options(fn () => ChargingStation::query()->whereNotNull('provider_name')->distinct()->orderBy('provider_name')->pluck('provider_name', 'provider_name')->toArray())
                     ->searchable(),
+                TernaryFilter::make('has_provider')
+                    ->label('Provider')
+                    ->placeholder('Semua')
+                    ->trueLabel('Punya provider')
+                    ->falseLabel('Tanpa provider')
+                    ->queries(
+                        true: fn ($query) => $query->whereNotNull('provider_id'),
+                        false: fn ($query) => $query->whereNull('provider_id'),
+                        blank: fn ($query) => $query,
+                    ),
             ])
             ->recordActions([
                 \Filament\Actions\ActionGroup::make([
