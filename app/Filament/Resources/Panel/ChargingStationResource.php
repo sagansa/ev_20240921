@@ -163,9 +163,23 @@ class ChargingStationResource extends Resource
                     ->label('Siap/Konektor')
                     ->getStateUsing(fn (ChargingStation $record): string => $record->available_count.'/'.$record->total_konektor)
                     ->alignCenter(),
-                TextColumn::make('provider_name')
+                // Tampilkan nama provider dari tabel providers (relasi), BUKAN
+                // provider_name mentah (nama_badan_usaha ESDM). Yang unmatched
+                // (tanpa provider_id) tampil "—" — bisa di-filter via TernaryFilter.
+                TextColumn::make('provider.name')
                     ->label('Provider')
-                    ->searchable(),
+                    ->placeholder('—')
+                    ->searchable()
+                    ->sortable(),
+                // Badan Usaha = nama legal operator dari ESDM (sumber). Dipakai utk
+                // identifikasi provider yg belum match (bulk edit mapping).
+                TextColumn::make('nama_badan_usaha')
+                    ->label('Badan Usaha')
+                    ->searchable()
+                    ->sortable()
+                    ->limit(35)
+                    ->toggleable()
+                    ->placeholder('—'),
                 TextColumn::make('source')
                     ->label('Sumber')
                     ->sortable()
@@ -207,9 +221,14 @@ class ChargingStationResource extends Resource
                     ->options([
                         'esdm' => 'esdm',
                     ]),
-                SelectFilter::make('provider_name')
+                SelectFilter::make('provider_id')
                     ->label('Filter Provider')
-                    ->options(fn () => ChargingStation::query()->whereNotNull('provider_name')->distinct()->orderBy('provider_name')->pluck('provider_name', 'provider_name')->toArray())
+                    ->relationship('provider', 'name')
+                    ->searchable()
+                    ->preload(),
+                SelectFilter::make('nama_badan_usaha')
+                    ->label('Filter Badan Usaha')
+                    ->options(fn () => ChargingStation::query()->whereNotNull('nama_badan_usaha')->distinct()->orderBy('nama_badan_usaha')->pluck('nama_badan_usaha', 'nama_badan_usaha')->toArray())
                     ->searchable(),
                 TernaryFilter::make('has_provider')
                     ->label('Provider')

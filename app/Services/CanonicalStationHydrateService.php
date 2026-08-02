@@ -297,7 +297,9 @@ class CanonicalStationHydrateService
             $totalKonektor = (int) $station->count_konektor;
         }
 
-        [$providerId, $providerName] = $this->resolveProvider($station->nama_badan_usaha, $guesser, $plnProvider);
+        [$providerId, $providerName] = $this->resolveProvider(
+            $station->nama_badan_usaha, $guesser, $plnProvider, $namaLokasi
+        );
 
         $raw = $station->raw_payload;
         $status = $statusMap[$station->esdm_id] ?? null;
@@ -383,12 +385,18 @@ class CanonicalStationHydrateService
     }
 
     /**
-     * Resolve provider: guess via ScrapeDedupService; fallback nama_badan_usaha
-     * raw. Alias khusus ESDM: nama legal PLN tidak memuat token "PLN".
+     * Resolve provider: guess via ScrapeDedupService dengan cek GABUNGAN
+     * nama_badan_usaha + nama_lokasi. Banyak stasiun ESDM punya nama legal
+     * panjang di badan_usaha tapi nama singkat provider di nama_lokasi
+     * (mis. badan="...", nama_lokasi="Astra Otopower" → provider "Astra").
+     *
+     * Strategi: guess dgn badan_usaha; bila no-match, coba guess dgn
+     * gabungan "badan_usaha + nama_lokasi" utk catch provider di nama_lokasi.
+     * Alias khusus ESDM: nama legal PLN tidak memuat token "PLN".
      *
      * @return array{0: string|null, 1: string|null} [provider_id, provider_name]
      */
-    private function resolveProvider(?string $namaBadanUsaha, ScrapeDedupService $guesser, ?Provider $plnProvider): array
+    private function resolveProvider(?string $namaBadanUsaha, ScrapeDedupService $guesser, ?Provider $plnProvider, ?string $namaLokasi = null): array
     {
         $name = trim((string) $namaBadanUsaha);
         if ($name === '') {
@@ -403,9 +411,30 @@ class CanonicalStationHydrateService
             return [$plnProvider->id, $plnProvider->name];
         }
 
+        // Coba badan_usaha dulu
         $provider = $guesser->guessProvider($name);
+        if ($provider !== null) {
+            return [$provider->id, $provider->name];
+        }
 
-        return [$provider?->id, $provider?->name ?? $name];
+        // No-match di badan_usaha → cek nama_lokasi secara terpisah.
+        // Penting utk provider generik (Astra, Mall, Hotel) yg match-nya
+        // starts-with: nama_lokasi "Astra Otopower" match "Astra", tapi
+        // gabungan "ARDENDI JAYA SENTOSA Astra Otopower" tidak (tidak mulai dgn Astra).
+        if ($namaLokasi !== null && trim($namaLokasi) !== '') {
+            $provider = $guesser->guessProvider(trim($namaLokasi));
+            if ($provider !== null) {
+                return [$provider->id, $provider->name];
+            }
+            // Terakhir: coba gabungan utk non-generik (token match di mana saja).
+            $combined = $name.' '.$namaLokasi;
+            $provider = $guesser->guessProvider($combined);
+            if ($provider !== null) {
+                return [$provider->id, $provider->name];
+            }
+        }
+
+        return [null, null];
     }
 
     /** Gabungkan nilai string unik (non-null/non-kosong) dengan " / ". */

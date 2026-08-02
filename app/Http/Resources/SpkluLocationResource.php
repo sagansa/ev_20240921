@@ -42,7 +42,9 @@ class SpkluLocationResource extends JsonResource
                     'ios' => $this->provider->ios,
                 ];
             }),
-            'provider_name' => $this->provider_name ?? $this->provider?->name ?? 'PLN Mobile',
+            // Prioritas: nama dari tabel providers (relasi). Bila unmatched (tidak
+            // ada provider_id), null — jangan tampilkan nama_badan_usaha mentah ESDM.
+            'provider_name' => $this->provider?->name,
             'provider_logo' => $this->provider?->logo ?? null,
             'charger_boxes' => SpkluChargerBoxResource::collection($this->whenLoaded('chargerBoxes')),
         ];

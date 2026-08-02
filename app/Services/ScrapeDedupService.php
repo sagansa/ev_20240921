@@ -113,6 +113,9 @@ class ScrapeDedupService
         'WULING' => 'Wuling',
         'LEXUS' => 'Toyota & Lexus',
         'TOYOTA' => 'Toyota & Lexus',
+        // Operator ESDM sering memakai nama legal ("UTOMO MOBILITAS BERSIH")
+        // yg tidak persis sama dgn nama provider di DB. Token kuat utk catch:
+        'UTOMO' => 'Charge+',
     ];
 
     private function nameMatchesProvider(string $haystack, array $entry): bool
