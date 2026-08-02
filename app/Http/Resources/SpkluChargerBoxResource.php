@@ -25,6 +25,9 @@ class SpkluChargerBoxResource extends JsonResource
             'charging_count' => (int) $this->charging_count,
             'finishing_count' => (int) $this->finishing_count,
             'status_updated_at' => $this->status_updated_at?->setTimezone('Asia/Jakarta')->toDateTimeString(),
+            // Plug individual (paling granular) — status real-time per-konektor
+            'connectors' => ChargingStationConnectorResource::collection($this->whenLoaded('connectors')),
         ];
     }
 }
+

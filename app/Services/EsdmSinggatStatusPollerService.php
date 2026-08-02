@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\EsdmSinggatConnectorStatus;
 use App\Models\EsdmSinggatConnectorStatusLog;
+use App\Models\ChargingStationConnector;
 use App\Models\EsdmSinggatSpkluConnector;
 use App\Models\EsdmSinggatSpkluStation;
 use App\Models\EsdmSinggatStationStatus;
@@ -234,6 +235,24 @@ class EsdmSinggatStatusPollerService
             }
         }
 
+        // Fold status per-konektor ke canonical (plug individual).
+        // Update charging_station_connectors dari snapshot terbaru.
+        $connectorsFolded = 0;
+        if ($changed > 0) {
+            $touchedConnectorIds = EsdmSinggatConnectorStatus::query()
+                ->where('last_seen_at', $fetchedAt)
+                ->pluck('status_konektor', 'connector_esdm_id');
+            foreach ($touchedConnectorIds as $connectorEsdmId => $statusKonektor) {
+                ChargingStationConnector::query()
+                    ->where('source_connector_id', $connectorEsdmId)
+                    ->update([
+                        'status_konektor' => $statusKonektor,
+                        'status_updated_at' => $fetchedAt,
+                    ]);
+                $connectorsFolded++;
+            }
+        }
+
         return [
             'stations_processed' => count($stations),
             'connectors_seen' => $seen,
@@ -241,6 +260,7 @@ class EsdmSinggatStatusPollerService
             'new_connectors' => $newConnectors,
             'logs_inserted' => count($logsToInsert),
             'touched_installations' => array_keys($touchedInstallations),
+            'connectors_folded' => $connectorsFolded,
         ];
     }
 
@@ -341,9 +361,11 @@ class EsdmSinggatStatusPollerService
 
     /**
      * available: ada slot bebas
-     * partial:   tidak ada bebas, tapi ada finishing (segera bebas)
-     * occupied:  semua charging (penuh)
+     * occupied:  tidak ada slot bebas (charging/finishing) — 0 slot = merah
      * offline:   semua unavailable/null (tidak aktif real-time)
+     *
+     * Catatan: finishing tidak mengubah warna jadi partial. 0 slot bebas = occupied,
+     * apapun status konektornya. finishing_count tetap utk info detail.
      */
     private function computeAvailabilityLevel(int $avail, int $finish, int $charg, int $total): string
     {
@@ -353,10 +375,9 @@ class EsdmSinggatStatusPollerService
         if ($avail > 0) {
             return 'available';
         }
-        if ($finish > 0) {
-            return 'partial';
-        }
-        if ($charg > 0) {
+
+        $activeCount = $avail + $finish + $charg;
+        if ($activeCount > 0) {
             return 'occupied';
         }
 

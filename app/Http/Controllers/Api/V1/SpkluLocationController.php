@@ -17,7 +17,7 @@ class SpkluLocationController extends Controller
 {
     public function index(Request $request)
     {
-        $query = ChargingStation::with(['chargerBoxes', 'provider'])
+        $query = ChargingStation::with(['chargerBoxes.connectors', 'provider'])
             ->whereNotNull('latitude')
             ->whereNotNull('longitude');
 

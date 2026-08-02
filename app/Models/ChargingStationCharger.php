@@ -53,6 +53,12 @@ class ChargingStationCharger extends Model
         return $this->belongsTo(ChargingStation::class, 'station_id');
     }
 
+    /** Plug individual di bawah charger box ini (CCS2, CHAdeMO, dll). */
+    public function connectors()
+    {
+        return $this->hasMany(ChargingStationConnector::class, 'charger_id');
+    }
+
     /** Serialization compat: SpkluChargerBoxResource membaca nama_chargerbox. */
     public function getNamaChargerboxAttribute(): ?string
     {

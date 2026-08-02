@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ChargingStation;
 use App\Models\ChargingStationCharger;
+use App\Models\ChargingStationConnector;
 use App\Models\EsdmSinggatSpkluStation;
 use App\Models\EsdmSinggatStationStatus;
 use App\Models\Provider;
@@ -144,10 +145,39 @@ class CanonicalStationHydrateService
         // Backfill awal: semua charger box dapat status dari snapshot konektor terakhir.
         $chargerFolded = $this->foldAllChargerBoxesFromConnectorStatus();
 
+        // Backfill status per-konektor (plug individual) dari snapshot terbaru.
+        $connectorFolded = $this->foldAllConnectorsFromStatus();
+
         $stats['geo_cleaned'] = $geoCleaned;
         $stats['charger_boxes_folded'] = $chargerFolded;
+        $stats['connectors_folded'] = $connectorFolded;
 
         return $stats;
+    }
+
+    /**
+     * Fold status untuk SEMUA konektor (plug) canonical dari esdm_singgat_connector_status.
+     * Backfill awal saat hydrate. Poller berikutnya hanya fold delta.
+     */
+    private function foldAllConnectorsFromStatus(): int
+    {
+        $rows = DB::connection('ev')->table('esdm_singgat_connector_status')
+            ->select(['connector_esdm_id', 'status_konektor', 'status', 'last_seen_at'])
+            ->get();
+
+        $folded = 0;
+        foreach ($rows as $row) {
+            ChargingStationConnector::query()
+                ->where('source_connector_id', $row->connector_esdm_id)
+                ->update([
+                    'status_konektor' => $row->status_konektor,
+                    'status' => $row->status,
+                    'status_updated_at' => $row->last_seen_at,
+                ]);
+            $folded++;
+        }
+
+        return $folded;
     }
 
     /**
@@ -251,6 +281,10 @@ class CanonicalStationHydrateService
 
     /**
      * availability_level dari count. Dipakai untuk station & charger box.
+     *
+     * Logika sederhana: ada slot bebas → hijau (available). Tidak ada → merah
+     * (occupied), apapun status konektornya (charging/finishing). finishing_count
+     * tetap disimpan utk info detail "segera bebas" tapi tidak mengubah warna.
      */
     private function computeAvailabilityLevel(int $avail, int $finish, int $charg, int $total): string
     {
@@ -260,10 +294,10 @@ class CanonicalStationHydrateService
         if ($avail > 0) {
             return 'available';
         }
-        if ($finish > 0) {
-            return 'partial';
-        }
-        if ($charg > 0) {
+
+        // Tidak ada slot bebas. Bedakan occupied (semua sibuk) vs offline (mati).
+        $activeCount = $avail + $finish + $charg;
+        if ($activeCount > 0) {
             return 'occupied';
         }
 
@@ -333,7 +367,7 @@ class CanonicalStationHydrateService
         ];
     }
 
-    /** Replace seluruh child charger milik satu stasiun. */
+    /** Replace seluruh child charger + konektor milik satu stasiun. */
     private function replaceChargers(ChargingStation $canonical, EsdmSinggatSpkluStation $station): int
     {
         $canonical->chargers()->delete();
@@ -343,7 +377,7 @@ class CanonicalStationHydrateService
             $connectors = $inst->connectors;
             $firstConnector = $connectors->first();
 
-            ChargingStationCharger::create([
+            $charger = ChargingStationCharger::create([
                 'station_id' => $canonical->id,
                 'source_charger_id' => $inst->esdm_id,
                 'chargerbox_id' => $inst->nomor_identitas,
@@ -359,6 +393,17 @@ class CanonicalStationHydrateService
                 'harga_pengisian' => $inst->harga_pengisian_raw,
                 'harga_layanan' => $inst->harga_layanan_raw,
             ]);
+
+            // Child connectors (plug individual) — master data + img_path.
+            // Status real-time di-fold terpisah oleh poller.
+            foreach ($connectors as $kon) {
+                ChargingStationConnector::create([
+                    'charger_id' => $charger->id,
+                    'source_connector_id' => $kon->esdm_id,
+                    'nama_konektor' => $kon->nama_konektor,
+                    'img_path' => $kon->img_path,
+                ]);
+            }
             $inserted++;
         }
 
