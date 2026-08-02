@@ -2,35 +2,141 @@
 
 namespace App\Services;
 
+use App\Models\Provider;
 use App\Models\SpkluLocation;
 use App\Models\SpkluScrapeRaw;
+use Illuminate\Support\Facades\Cache;
 
 class ScrapeDedupService
 {
-    private array $providerPatterns = [
-        '/\bPLN\b/i' => 'PLN Mobile',
-        '/\bPERTAMINA\b/i' => 'Pertamina',
-        '/\bSHELL\b/i' => 'Shell',
-        '/\bCHARGE\s?\+?\b|\bCHARGEPLUS\b|\bCHARGE PLUS\b/i' => 'Charge+',
-        '/\bVOLTRON\b/i' => 'Voltron',
-        '/\bWULING\b/i' => 'Wuling',
-        '/\bHYUNDAI\b/i' => 'Hyundai',
-        '/\bSTARVO\b/i' => 'Starvo',
-        '/\bCASINO\b/i' => 'Casino',
-        '/\bDAYAGREEN\b/i' => 'Dayagreen',
-        '/\bSTROOM\b/i' => 'Stroom',
-        '/\bTOYOTA\b|\bLEXUS\b/i' => 'Toyota Lexus',
-    ];
-
-    public function guessProvider(string $name): ?string
+    /**
+     * Infer the provider of a scraped place by matching its name against EVERY
+     * provider in the database (not a hardcoded list). Returns the Provider
+     * model so the caller can store `guessed_provider_id` directly.
+     *
+     * Matching rules:
+     *  - Case-insensitive, against the provider's alphanumeric tokens so that
+     *    "INVI" matches "INVI Charging Station" and "Toyota & Lexus" matches
+     *    "...Toyota..." or "...Lexus...".
+     *  - Longest provider names are tried first so that "Toyota & Lexus" wins
+     *    over a bare "Toyota" when both would match.
+     *  - Generic filler tokens (Mall, Hotel, Rumah, Kantor, Parking, Astra)
+     *    are only matched as exact-ish namesakes, never as a substring of the
+     *    place name, to avoid false positives.
+     */
+    public function guessProvider(string $name): ?Provider
     {
-        foreach ($this->providerPatterns as $pattern => $providerName) {
-            if (preg_match($pattern, $name)) {
-                return $providerName;
+        $haystack = $this->normalizeName($name);
+        if ($haystack === '') {
+            return null;
+        }
+
+        // Fast path: a single strong token ("PLN", "SHELL", ...) in the place
+        // name maps straight to its provider, even when the provider's stored
+        // name is compound ("PLN Mobile").
+        $words = explode(' ', $haystack);
+        $providers = $this->providersForMatching();
+        $byName = [];
+        foreach ($providers as $entry) {
+            $byName[$this->normalizeName($entry['model']->name)] = $entry['model'];
+        }
+        foreach ($words as $word) {
+            if (isset(self::STRONG_TOKEN_ALIASES[$word])) {
+                $providerName = $this->normalizeName(self::STRONG_TOKEN_ALIASES[$word]);
+                if (isset($byName[$providerName])) {
+                    return $byName[$providerName];
+                }
+            }
+        }
+
+        // Full match: every token of the provider name must appear in the
+        // place name. Providers are ordered longest-first so "Toyota & Lexus"
+        // wins over a bare "Toyota".
+        foreach ($providers as $entry) {
+            if ($this->nameMatchesProvider($haystack, $entry)) {
+                return $entry['model'];
             }
         }
 
         return null;
+    }
+
+    public function guessProviderName(string $name): ?string
+    {
+        return $this->guessProvider($name)?->name;
+    }
+
+    /**
+     * Providers from DB, cached briefly, sorted longest-name-first and with
+     * the "generic" providers (Mall/Hotel/...) flagged so they use stricter
+     * matching. Returns an array of [Provider model, tokens[], generic bool].
+     */
+    private function providersForMatching(): array
+    {
+        return Cache::remember('scrape:providers:'.Provider::count(), now()->addHour(), function () {
+            $generic = ['mall', 'hotel', 'rumah', 'kantor', 'parking', 'astra', 'igreen'];
+
+            return Provider::query()
+                ->orderByRaw('LENGTH(name) DESC')
+                ->get()
+                ->map(fn ($p) => [
+                    'model' => $p,
+                    'tokens' => $this->extractTokens($p->name),
+                    'generic' => in_array(strtolower($p->name), $generic, true),
+                ])
+                ->values()
+                ->all();
+        });
+    }
+
+    /**
+     * "Toyota & Lexus" -> ["TOYOTA","LEXUS"]. Drops "&", "and", "+", punctuation.
+     */
+    private function extractTokens(string $name): array
+    {
+        $clean = preg_replace('/[^A-Z0-9 ]/i', ' ', strtoupper($name));
+        $tokens = array_values(array_filter(explode(' ', $clean ?? ''), fn ($t) => ! in_array($t, ['', 'AND'], true)));
+
+        return $tokens;
+    }
+
+    /**
+     * Some providers are stored under a compound name ("PLN Mobile") but the
+     * place name only mentions the strong single token ("PLN"). Map such
+     * strong tokens to their provider name so they still match.
+     */
+    private const STRONG_TOKEN_ALIASES = [
+        'PLN' => 'PLN Mobile',
+        'PERTAMINA' => 'Pertamina',
+        'SHELL' => 'Shell',
+        'HYUNDAI' => 'Hyundai',
+        'WULING' => 'Wuling',
+        'LEXUS' => 'Toyota & Lexus',
+        'TOYOTA' => 'Toyota & Lexus',
+    ];
+
+    private function nameMatchesProvider(string $haystack, array $entry): bool
+    {
+        $tokens = $entry['tokens'];
+        if (empty($tokens)) {
+            return false;
+        }
+
+        // Generic providers (Mall, Hotel, ...) only match when the haystack
+        // literally starts with the provider name — avoids flagging every
+        // "Hotel X" location as provider "Hotel".
+        if ($entry['generic']) {
+            return str_starts_with($haystack, $this->normalizeName($entry['model']->name));
+        }
+
+        // All tokens of the provider must appear in the place name.
+        foreach ($tokens as $token) {
+            if (! preg_match('/\b'.preg_quote($token, '/').'\b/i', $haystack)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function normalizeName(?string $name): string

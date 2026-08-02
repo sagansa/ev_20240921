@@ -54,12 +54,17 @@ class ScrapeIngestController extends Controller
                         continue;
                     }
 
-                    // Prefer an explicit provider hint from the extension,
-                    // fall back to inferring it from the place name.
-                    $providerName = $placeData['provider_name'] ?? $this->dedup->guessProvider($name);
-                    $provider = $providerName
-                        ? Provider::where('name', $providerName)->first()
-                        : null;
+                    // Prefer an explicit provider hint from the extension;
+                    // fall back to inferring it from the place name against the
+                    // full provider table (returns a Provider model or null).
+                    $provider = null;
+                    if (! empty($placeData['provider_name'])) {
+                        $provider = Provider::where('name', $placeData['provider_name'])->first();
+                    }
+                    if (! $provider) {
+                        $provider = $this->dedup->guessProvider($name);
+                    }
+                    $providerName = $provider?->name;
 
                     $maxKw = isset($placeData['max_kw']) ? (int) $placeData['max_kw'] : null;
                     $typeCharge = $placeData['type_charge'] ?? $this->dedup->deriveTypeCharge($maxKw);

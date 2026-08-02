@@ -8,6 +8,7 @@ use App\Models\SpkluScrapeRaw;
 use App\Services\SpkluScrapeMergeService;
 use App\Tables\Columns\ScrapeStatusColumn;
 use Filament\Actions;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -17,6 +18,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -117,6 +119,14 @@ class SpkluScrapeRawResource extends Resource
                     ->label('Session')
                     ->searchable()
                     ->limit(10),
+                TextColumn::make('matched_spklu_location_id')
+                    ->label('Match Produksi')
+                    ->getStateUsing(fn (SpkluScrapeRaw $record): string => $record->matchedLocation
+                        ? "↻ {$record->matchedLocation->nama_lokasi} (#{$record->matchedLocation->id})"
+                        : ($record->status === SpkluScrapeRaw::STATUS_DUPLICATE ? 'Duplikat (match kosong)' : 'Baru'))
+                    ->placeholder('—')
+                    ->limit(40)
+                    ->color(fn (SpkluScrapeRaw $record): string => $record->matched_spklu_location_id ? 'info' : 'gray'),
                 ScrapeStatusColumn::make('status')
                     ->label('Status'),
                 TextColumn::make('created_at')
@@ -141,6 +151,16 @@ class SpkluScrapeRawResource extends Resource
                     ->label('Filter Provider')
                     ->options(fn () => SpkluScrapeRaw::query()->whereNotNull('provider_name')->distinct()->pluck('provider_name', 'provider_name')->toArray())
                     ->searchable(),
+                TernaryFilter::make('tanpa_provider')
+                    ->label('Tanpa Provider')
+                    ->placeholder('Semua')
+                    ->trueLabel('Tanpa provider')
+                    ->falseLabel('Punya provider')
+                    ->queries(
+                        true: fn ($query) => $query->whereNull('guessed_provider_id'),
+                        false: fn ($query) => $query->whereNotNull('guessed_provider_id'),
+                        blank: fn ($query) => $query,
+                    ),
             ])
             ->recordActions([
                 Actions\ActionGroup::make([
@@ -219,6 +239,19 @@ class SpkluScrapeRawResource extends Resource
     public static function getApproveFormSchema(): array
     {
         return [
+            Placeholder::make('merge_context')
+                ->label('Mode penggabungan')
+                ->content(function (?SpkluScrapeRaw $record): string {
+                    if (! $record) {
+                        return '—';
+                    }
+                    if ($record->matchedLocation) {
+                        return "↻ UPDATE lokasi produksi existing: {$record->matchedLocation->nama_lokasi} (#{$record->matchedLocation->id}). Field yang sudah terisi di produksi TIDAK akan ditimpa.";
+                    }
+
+                    return '+ BUAT lokasi baru di produksi.';
+                })
+                ->columnSpanFull(),
             Grid::make(2)->schema([
                 TextInput::make('nama_lokasi')
                     ->label('Nama Lokasi')
