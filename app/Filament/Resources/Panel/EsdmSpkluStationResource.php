@@ -110,12 +110,14 @@ class EsdmSpkluStationResource extends Resource
                     ->sortable()
                     ->weight('bold')
                     ->limit(40),
+                // Kolom virtual: nama provinsi di-derive dari kode_provinsi (BPS map).
+                // TIDAK searchable/sortable — itu akan diterjemahkan ke SQL pada kolom
+                // "provinsi" yang tidak ada di tabel raw ESDM. Filter provinsi sudah
+                // tersedia via SelectFilter kode_provinsi di bawah (yg map kode→nama).
                 TextColumn::make('provinsi')
                     ->label('Provinsi')
                     ->getStateUsing(fn (EsdmSinggatSpkluStation $record): string => \App\Services\CanonicalStationHydrateService::PROVINCE_BY_BPS_CODE[$record->kode_provinsi] ?? $record->kode_provinsi ?? '—')
-                    ->placeholder('—')
-                    ->searchable()
-                    ->sortable(),
+                    ->placeholder('—'),
                 TextColumn::make('nama_badan_usaha')
                     ->label('Badan Usaha')
                     ->searchable()

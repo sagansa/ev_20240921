@@ -110,12 +110,12 @@ class EsdmSpbkluStationResource extends Resource
                     ->sortable()
                     ->weight('bold')
                     ->limit(40),
+                // Kolom virtual: nama provinsi di-derive dari kode_provinsi. Lihat
+                // catatan di EsdmSpkluStationResource — tidak searchable/sortable.
                 TextColumn::make('provinsi')
                     ->label('Provinsi')
                     ->getStateUsing(fn (EsdmSinggatSpbkluStation $record): string => \App\Services\CanonicalStationHydrateService::PROVINCE_BY_BPS_CODE[$record->kode_provinsi] ?? $record->kode_provinsi ?? '—')
-                    ->placeholder('—')
-                    ->searchable()
-                    ->sortable(),
+                    ->placeholder('—'),
                 TextColumn::make('nama_badan_usaha')
                     ->label('Badan Usaha')
                     ->searchable()
