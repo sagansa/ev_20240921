@@ -29,13 +29,9 @@ class ChargingStationMap extends Page
         return Auth::user()?->hasRole('super_admin') ?? false;
     }
 
-    /**
-     * Data stasiun utk render marker di peta.
-     * Hanya stasiun dgn koordinat valid (bukan null).
-     */
-    public function getStationsProperty(): array
+    protected function getViewData(): array
     {
-        return ChargingStation::query()
+        $stations = ChargingStation::query()
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
             ->select(['id', 'nama_lokasi', 'latitude', 'longitude', 'availability_level', 'available_count', 'total_konektor', 'type_charge', 'provinsi'])
@@ -51,13 +47,11 @@ class ChargingStationMap extends Page
                 'type' => $s->type_charge ?? '—',
                 'provinsi' => $s->provinsi ?? '—',
             ])
+            ->values()
             ->toArray();
-    }
 
-    public function getViewData(): array
-    {
         return [
-            'stations' => $this->stations,
+            'stations' => $stations,
         ];
     }
 }
