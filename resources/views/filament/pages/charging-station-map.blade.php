@@ -7,7 +7,6 @@
         <span class="ml-auto text-gray-500">Total: <strong>{{ $totalCount }}</strong> stasiun</span>
     </div>
 
-    {{-- Loading indicator saat fetch data --}}
     <div id="cs-map-loading" class="flex items-center justify-center text-gray-500" style="height: 70vh; border-radius: 12px; background: #e5e7eb;">
         <div class="text-center">
             <div class="animate-spin inline-block w-8 h-8 border-4 border-gray-300 border-t-blue-500 rounded-full mb-3"></div>
@@ -107,30 +106,8 @@
         }
     }
 
-    // Fetch data via Livewire AJAX
+    // Fetch data via public API (reliable, no Livewire dependency)
     function fetchData() {
-        // Livewire 3: call component method via wire
-        var livewireEl = document.querySelector('[wire\\:id]');
-        if (livewireEl && typeof Livewire !== 'undefined') {
-            // Use Livewire's $wire to call PHP method
-            var component = Livewire.find(livewireEl.getAttribute('wire:id'));
-            if (component) {
-                component.call('fetchStations').then(function (result) {
-                    stationData = result;
-                    dataReady = true;
-                    tryRender();
-                }).catch(function (err) {
-                    console.error('Fetch error:', err);
-                    fetchFallback();
-                });
-                return;
-            }
-        }
-        fetchFallback();
-    }
-
-    // Fallback: fetch via dedicated route (if Livewire call fails)
-    function fetchFallback() {
         fetch('/api/v1/spklu?per_page=5000')
             .then(function (r) { return r.json(); })
             .then(function (d) {
@@ -148,7 +125,11 @@
                 dataReady = true;
                 tryRender();
             })
-            .catch(function (err) { console.error('Fetch fallback error:', err); });
+            .catch(function (err) {
+                console.error('Fetch error:', err);
+                var loading = document.getElementById('cs-map-loading');
+                if (loading) loading.innerHTML = '<div class="text-red-500">Gagal memuat data: ' + err.message + '</div>';
+            });
     }
 
     // Init
