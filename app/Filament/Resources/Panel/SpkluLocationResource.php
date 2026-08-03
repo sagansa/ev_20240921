@@ -23,7 +23,7 @@ class SpkluLocationResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-list-bullet';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Provider & SPKLU';
+    protected static string | \UnitEnum | null $navigationGroup = 'JSON SPKLU';
 
     protected static ?string $navigationLabel = 'List SPKLU Data';
 
@@ -31,7 +31,7 @@ class SpkluLocationResource extends Resource
 
     protected static ?string $pluralModelLabel = 'List SPKLU Data';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
 
     public static function canViewAny(): bool
     {

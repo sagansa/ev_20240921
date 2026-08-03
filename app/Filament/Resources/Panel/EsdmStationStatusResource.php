@@ -21,7 +21,7 @@ class EsdmStationStatusResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-signal';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Provider & SPKLU';
+    protected static string|\UnitEnum|null $navigationGroup = 'ESDM';
 
     protected static ?string $navigationLabel = 'ESDM Status Real-time';
 

@@ -22,7 +22,7 @@ class EsdmSpkluStationResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-circle-stack';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Provider & SPKLU';
+    protected static string|\UnitEnum|null $navigationGroup = 'ESDM';
 
     protected static ?string $navigationLabel = 'ESDM SPKLU (Raw)';
 
@@ -30,7 +30,7 @@ class EsdmSpkluStationResource extends Resource
 
     protected static ?string $pluralModelLabel = 'ESDM SPKLU (Raw)';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
 
     public static function canViewAny(): bool
     {
