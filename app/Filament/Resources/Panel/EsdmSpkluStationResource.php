@@ -6,6 +6,7 @@ use App\Filament\Resources\Panel\EsdmSpkluStationResource\Pages;
 use App\Filament\Resources\Panel\EsdmSpkluStationResource\RelationManagers\InstallationsRelationManager;
 use App\Models\EsdmSinggatSpkluStation;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -84,6 +85,31 @@ class EsdmSpkluStationResource extends Resource
                 ]),
             ]),
 
+            Section::make('Koreksi Manual Geolokasi')->schema([
+                Grid::make(3)->schema([
+                    TextInput::make('geo_verified_lat')
+                        ->label('Latitude (Hasil Koreksi)')
+                        ->helperText('Koordinat terbaik — dipakai canonical saat hydrate (prioritas: manual_fixed).')
+                        ->numeric()
+                        ->step(0.00000001),
+                    TextInput::make('geo_verified_lng')
+                        ->label('Longitude (Hasil Koreksi)')
+                        ->numeric()
+                        ->step(0.00000001),
+                    Placeholder::make('geo_verification_hint')
+                        ->label('Catatan')
+                        ->content(fn (EsdmSinggatSpkluStation $record): string => match ($record->geo_verification) {
+                            'manual_fixed' => 'Koordinat sudah diverifikasi manual (Google Maps).',
+                            'verified' => 'Lokasi OSM cocok (<200m).',
+                            'drift_minor' => 'Lokasi OSM bergeser 200m–2km — koordinat OSM disimpan.',
+                            'drift_major' => 'Lokasi OSM bergeser >2km — HARUS review manual.',
+                            'province_mismatch' => 'Di luar bbox provinsi — HARUS review manual.',
+                            'not_found' => 'Tidak ditemukan di OSM — HARUS review manual.',
+                            default => 'Belum diverifikasi.',
+                        }),
+                ]),
+            ])->collapsed(fn (EsdmSinggatSpkluStation $record): bool => $record->geo_verification !== 'manual_fixed'),
+
             Section::make('Metadata Import')->schema([
                 Grid::make(3)->schema([
                     Placeholder::make('import_batch')
@@ -141,6 +167,31 @@ class EsdmSpkluStationResource extends Resource
                         'unresolved' => 'danger',
                         default => 'gray',
                     }),
+                TextColumn::make('geo_verification')
+                    ->label('Verifikasi')
+                    ->sortable()
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'verified' => '✓ verified',
+                        'drift_minor' => 'drift_minor',
+                        'drift_major' => 'drift_major',
+                        'province_mismatch' => 'province_mismatch',
+                        'not_found' => 'not_found',
+                        'manual_fixed' => 'manual_fixed',
+                        default => '—',
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'verified', 'manual_fixed' => 'success',
+                        'drift_minor' => 'info',
+                        'drift_major' => 'warning',
+                        'province_mismatch', 'not_found' => 'danger',
+                        default => 'gray',
+                    }),
+                TextColumn::make('geo_distance_m')
+                    ->label('Δ Jarak')
+                    ->sortable()
+                    ->formatStateUsing(fn (?int $state): string => $state !== null ? number_format($state, 0, ',', '.').' m' : '—')
+                    ->alignRight(),
                 TextColumn::make('import_batch')
                     ->label('Import Batch')
                     ->searchable()
@@ -169,6 +220,16 @@ class EsdmSpkluStationResource extends Resource
                         'fixed_digits' => 'fixed_digits',
                         'unresolved' => 'unresolved',
                     ]),
+                SelectFilter::make('geo_verification')
+                    ->label('Filter Verifikasi')
+                    ->options([
+                        'verified' => 'Verified',
+                        'drift_minor' => 'Drift Minor',
+                        'drift_major' => 'Drift Major',
+                        'province_mismatch' => 'Province Mismatch',
+                        'not_found' => 'Not Found',
+                        'manual_fixed' => 'Manual Fixed',
+                    ]),
                 SelectFilter::make('nama_badan_usaha')
                     ->label('Filter Badan Usaha')
                     ->options(fn () => EsdmSinggatSpkluStation::query()->whereNotNull('nama_badan_usaha')->distinct()->pluck('nama_badan_usaha', 'nama_badan_usaha')->toArray())
@@ -177,6 +238,13 @@ class EsdmSpkluStationResource extends Resource
             ->recordActions([
                 \Filament\Actions\ActionGroup::make([
                     \Filament\Actions\ViewAction::make(),
+                    \Filament\Actions\EditAction::make(),
+                    \Filament\Actions\Action::make('google_maps')
+                        ->label('Google Maps')
+                        ->icon('heroicon-o-map')
+                        ->color('info')
+                        ->url(fn (EsdmSinggatSpkluStation $record): string => 'https://www.google.com/maps/search/?api=1&query='.urlencode($record->nama_stasiun ?? 'Stasiun SPKLU'))
+                        ->openUrlInNewTab(),
                 ]),
             ])
             ->defaultSort('esdm_id', 'asc');
@@ -194,6 +262,7 @@ class EsdmSpkluStationResource extends Resource
         return [
             'index' => Pages\ListEsdmSpkluStations::route('/'),
             'view' => Pages\ViewEsdmSpkluStation::route('/{record}'),
+            'edit' => Pages\EditEsdmSpkluStation::route('/{record}/edit'),
         ];
     }
 }

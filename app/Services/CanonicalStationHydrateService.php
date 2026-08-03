@@ -344,11 +344,16 @@ class CanonicalStationHydrateService
         $raw = $station->raw_payload;
         $status = $statusMap[$station->esdm_id] ?? null;
 
+        // Koordinat terbaik: manual_fixed > verified > drift_minor (OSM candidate)
+        // > cleaned > raw. drift_major / not_found / province_mismatch tidak
+        // dipakai karena butuh review manual — fallback ke koordinat cleaned.
+        $best = app(GeoVerificationService::class)->getBestCoordinate($station);
+
         return [
             'nama_lokasi' => $namaLokasi,
             'alamat' => $station->alamat_spklu,
-            'latitude' => $station->latitude,
-            'longitude' => $station->longitude,
+            'latitude' => $best['latitude'],
+            'longitude' => $best['longitude'],
             'kode_provinsi' => $station->kode_provinsi,
             'provinsi' => self::PROVINCE_BY_BPS_CODE[(string) $station->kode_provinsi] ?? null,
             'kabupaten_kota' => null, // ESDM hanya menyediakan kode_kota, bukan nama
