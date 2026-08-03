@@ -4,17 +4,23 @@
         <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-full inline-block" style="background:#EF4444"></span> Occupied</span>
         <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-full inline-block" style="background:#6B7280"></span> Offline</span>
         <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-full inline-block" style="background:#D1D5DB"></span> Unknown</span>
-        <span class="ml-auto text-gray-500">Total: <strong>{{ count($stations) }}</strong> stasiun</span>
+        <span class="ml-auto text-gray-500">Total: <strong>{{ $totalCount }}</strong> stasiun</span>
     </div>
 
-    <div id="cs-map" style="height: 70vh; border-radius: 12px; overflow: hidden; z-index: 0; position: relative;"></div>
+    {{-- Loading indicator saat fetch data --}}
+    <div id="cs-map-loading" class="flex items-center justify-center text-gray-500" style="height: 70vh; border-radius: 12px; background: #e5e7eb;">
+        <div class="text-center">
+            <div class="animate-spin inline-block w-8 h-8 border-4 border-gray-300 border-t-blue-500 rounded-full mb-3"></div>
+            <div>Memuat {{ $totalCount }} stasiun...</div>
+        </div>
+    </div>
+
+    <div id="cs-map" style="height: 70vh; border-radius: 12px; overflow: hidden; z-index: 0; position: relative; display: none;"></div>
 </x-filament-panels::page>
 
 @push('styles')
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <style>
-    #cs-map { background: #e5e7eb; }
     .leaflet-pane, .leaflet-top, .leaflet-bottom { z-index: 1 !important; }
     .leaflet-popup-pane { z-index: 2 !important; }
 </style>
@@ -23,26 +29,23 @@
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
-// Data stations di-embed sebagai variabel JS (bukan di atribut HTML — hindari parse issue)
-window.CS_STATIONS = @json($stations);
-
 (function () {
-    var attempts = 0;
-    function init() {
-        attempts++;
-        var container = document.getElementById('cs-map');
-        if (!container) {
-            if (attempts < 30) setTimeout(init, 200);
-            return;
-        }
-        if (typeof L === 'undefined') {
-            if (attempts < 30) setTimeout(init, 200);
-            return;
-        }
-        if (container._csMap) return; // already init
-        container._csMap = true;
+    var leafletReady = false;
+    var dataReady = false;
+    var stationData = null;
 
-        var stations = window.CS_STATIONS || [];
+    function tryRender() {
+        if (!leafletReady || !dataReady) return;
+
+        var loading = document.getElementById('cs-map-loading');
+        var container = document.getElementById('cs-map');
+        if (!container || container._csMap) return;
+
+        container._csMap = true;
+        container.style.display = 'block';
+        if (loading) loading.style.display = 'none';
+
+        var stations = stationData || [];
         var colors = {
             'available': '#10B981',
             'occupied': '#EF4444',
@@ -94,12 +97,68 @@ window.CS_STATIONS = @json($stations);
         }
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
+    // Poll for Leaflet load
+    function checkLeaflet() {
+        if (typeof L !== 'undefined') {
+            leafletReady = true;
+            tryRender();
+        } else {
+            setTimeout(checkLeaflet, 200);
+        }
     }
-    document.addEventListener('livewire:navigated', init);
+
+    // Fetch data via Livewire AJAX
+    function fetchData() {
+        // Livewire 3: call component method via wire
+        var livewireEl = document.querySelector('[wire\\:id]');
+        if (livewireEl && typeof Livewire !== 'undefined') {
+            // Use Livewire's $wire to call PHP method
+            var component = Livewire.find(livewireEl.getAttribute('wire:id'));
+            if (component) {
+                component.call('fetchStations').then(function (result) {
+                    stationData = result;
+                    dataReady = true;
+                    tryRender();
+                }).catch(function (err) {
+                    console.error('Fetch error:', err);
+                    fetchFallback();
+                });
+                return;
+            }
+        }
+        fetchFallback();
+    }
+
+    // Fallback: fetch via dedicated route (if Livewire call fails)
+    function fetchFallback() {
+        fetch('/api/v1/spklu?per_page=5000')
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                stationData = (d.data || []).map(function (s) {
+                    return {
+                        id: s.id, nama: s.nama_lokasi,
+                        lat: s.latitude, lng: s.longitude,
+                        level: s.availability_level || 'unknown',
+                        avail: s.available_count || 0,
+                        total: s.total_konektor || 0,
+                        type: s.type_charge || '—',
+                        provinsi: s.provinsi || '—'
+                    };
+                });
+                dataReady = true;
+                tryRender();
+            })
+            .catch(function (err) { console.error('Fetch fallback error:', err); });
+    }
+
+    // Init
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { checkLeaflet(); fetchData(); });
+    } else {
+        checkLeaflet();
+        fetchData();
+    }
+    document.addEventListener('livewire:navigated', function () { checkLeaflet(); fetchData(); });
 })();
 </script>
 @endpush

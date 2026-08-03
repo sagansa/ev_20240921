@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Auth;
 
 /**
  * Halaman peta Filament: tampilkan seluruh titik charging_stations di OSM.
- * Hanya super_admin yg bisa akses.
+ * Hanya super_admin yg bisa akses. Data di-fetch via AJAX (bukan inline)
+ * utk menghindari 500KB+ JSON di HTML yang bikin Livewire/browser berat.
  */
 class ChargingStationMap extends Page
 {
@@ -29,9 +30,13 @@ class ChargingStationMap extends Page
         return Auth::user()?->hasRole('super_admin') ?? false;
     }
 
-    protected function getViewData(): array
+    /**
+     * Endpoint AJAX: return stations sebagai GeoJSON-lite (lat, lng, level, nama).
+     * Dipanggil oleh fetch() di Blade view.
+     */
+    public function fetchStations(): array
     {
-        $stations = ChargingStation::query()
+        return ChargingStation::query()
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
             ->select(['id', 'nama_lokasi', 'latitude', 'longitude', 'availability_level', 'available_count', 'total_konektor', 'type_charge', 'provinsi'])
@@ -49,9 +54,12 @@ class ChargingStationMap extends Page
             ])
             ->values()
             ->toArray();
+    }
 
+    protected function getViewData(): array
+    {
         return [
-            'stations' => $stations,
+            'totalCount' => ChargingStation::whereNotNull('latitude')->whereNotNull('longitude')->count(),
         ];
     }
 }
