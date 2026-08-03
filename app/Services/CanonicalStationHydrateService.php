@@ -74,12 +74,18 @@ class CanonicalStationHydrateService
         'Ultra Fast Charging' => 4,
     ];
 
-    /** Label ESDM → label watt display (fallback; ESDM tidak menyediakan watt). */
+    /**
+     * Label ESDM → label watt display (fallback; ESDM tidak menyediakan watt).
+     * Kategori sesuai spesifikasi:
+     *  - Slow/Medium Charging = AC, ≤22 kW
+     *  - Fast Charging        = DC, 25–50 kW
+     *  - Ultra Fast Charging  = DC, >50 kW (50kW, 60kW, 120kW, 150kW, 380kW, dst)
+     */
     private const TYPE_CHARGE_WATT = [
-        'Slow Charging' => '7 kW',
-        'Medium Charging' => '22 kW',
-        'Fast Charging' => '50 kW',
-        'Ultra Fast Charging' => '150 kW',
+        'Slow Charging' => '≤7 kW AC',
+        'Medium Charging' => '≤22 kW AC',
+        'Fast Charging' => '25–50 kW DC',
+        'Ultra Fast Charging' => '>50 kW DC',
     ];
 
     /**
