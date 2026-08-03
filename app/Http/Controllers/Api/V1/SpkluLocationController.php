@@ -18,6 +18,7 @@ class SpkluLocationController extends Controller
     public function index(Request $request)
     {
         $query = ChargingStation::with(['chargerBoxes.connectors', 'provider'])
+            ->where('source', config('spklu.serving_source'))
             ->whereNotNull('latitude')
             ->whereNotNull('longitude');
 
@@ -83,7 +84,9 @@ class SpkluLocationController extends Controller
 
     public function show($id)
     {
-        $location = ChargingStation::with(['chargerBoxes.connectors', 'provider'])->findOrFail($id);
+        $location = ChargingStation::with(['chargerBoxes.connectors', 'provider'])
+            ->where('source', config('spklu.serving_source'))
+            ->findOrFail($id);
 
         return SpkluLocationResource::make($location)
             ->additional(['status' => 'success']);
@@ -92,12 +95,14 @@ class SpkluLocationController extends Controller
     public function metaFilters()
     {
         $provinces = ChargingStation::select('provinsi')
+            ->where('source', config('spklu.serving_source'))
             ->whereNotNull('provinsi')
             ->distinct()
             ->orderBy('provinsi')
             ->pluck('provinsi');
 
         $chargeTypes = ChargingStation::select('type_charge')
+            ->where('source', config('spklu.serving_source'))
             ->whereNotNull('type_charge')
             ->distinct()
             ->orderBy('type_charge')

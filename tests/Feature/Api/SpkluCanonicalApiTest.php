@@ -15,6 +15,18 @@ class SpkluCanonicalApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Test ini memvalidasi serving dari source ESDM (hydrateFromEsdm). Karena
+     * default serving_source sudah 'pln', pin ke ESDM agar pengujian tidak
+     * bergantung pada nilai env.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['spklu.serving_source' => CanonicalStationHydrateService::SOURCE_ESDM]);
+    }
+
     public function test_index_serves_canonical_stations_with_mobile_contract_shape(): void
     {
         $this->seedCanonical();

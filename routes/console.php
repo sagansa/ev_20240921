@@ -29,3 +29,14 @@ Schedule::command('esdm:hydrate-canonical')
     ->name('esdm-hydrate-canonical')
     ->description('Hydrate charging_stations (kanonik) dari master ESDM — daily');
 
+// Hydrate tabel kanonik charging_stations dari master PLN.
+// Re-roll master (nama, provinsi, provider, geo) — cukup harian karena master
+// PLN hanya berubah saat import manual (ImportSpkluCsv). Paralel dgn hydrate
+// ESDM; kedua source hidup berdampingan di charging_stations, serving memilih
+// source via config spklu.serving_source.
+Schedule::command('pln:hydrate-canonical')
+    ->dailyAt('03:30')
+    ->withoutOverlapping(60)
+    ->name('pln-hydrate-canonical')
+    ->description('Hydrate charging_stations (kanonik) dari master PLN — daily');
+

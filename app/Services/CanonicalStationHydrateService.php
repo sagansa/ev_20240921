@@ -7,6 +7,8 @@ use App\Models\ChargingStationCharger;
 use App\Models\ChargingStationConnector;
 use App\Models\EsdmSinggatSpkluStation;
 use App\Models\EsdmSinggatStationStatus;
+use App\Models\PlnChargerLocation;
+use App\Models\PlnChargerLocationDetail;
 use App\Models\Provider;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +29,8 @@ use Illuminate\Support\Facades\DB;
 class CanonicalStationHydrateService
 {
     public const SOURCE_ESDM = 'esdm';
+
+    public const SOURCE_PLN = 'pln';
 
     /** BPS kode_provinsi → nama provinsi (title case, konsisten dgn data historis). */
     public const PROVINCE_BY_BPS_CODE = [
@@ -86,6 +90,25 @@ class CanonicalStationHydrateService
         'Medium Charging' => '≤22 kW AC',
         'Fast Charging' => '25–50 kW DC',
         'Ultra Fast Charging' => '>50 kW DC',
+    ];
+
+    /**
+     * Nilai `is_active_charger` yang dianggap AKTIF. Sama dengan daftar yang
+     * dipakai PlnChargerLocationController (API web & mobile PLN) — import CSV
+     * menulis 'Y'/'N', tapi data lama bisa memakai varian lain.
+     */
+    private const ACTIVE_CHARGER_VALUES = ['Y', 'y', '1', 1, true, 'true', 'TRUE', 'aktif', 'Aktif', 'AKTIF'];
+
+    /**
+     * Label charging_type PLN (uppercase di charging_types) → label type_charge
+     * canonical. "STANDARD CHARGING" dipetakan ke "Slow Charging" (bukan
+     * "Standard") agar konsisten dgn konvensi label ESDM & filter mobile.
+     */
+    private const CHARGING_TYPE_TO_CANONICAL = [
+        'FAST CHARGING' => 'Fast Charging',
+        'MEDIUM CHARGING' => 'Medium Charging',
+        'STANDARD CHARGING' => 'Slow Charging',
+        'ULTRA FAST CHARGING' => 'Ultra Fast Charging',
     ];
 
     /**
@@ -157,6 +180,62 @@ class CanonicalStationHydrateService
         $stats['geo_cleaned'] = $geoCleaned;
         $stats['charger_boxes_folded'] = $chargerFolded;
         $stats['connectors_folded'] = $connectorFolded;
+
+        return $stats;
+    }
+
+    /**
+     * Hydrate seluruh stasiun PLN (pln_charger_locations) ke charging_stations.
+     *
+     * Satu lokasi PLN → satu stasiun canonical; satu detail charger aktif →
+     * satu child charging_station_chargers (tanpa connectors — PLN tidak
+     * melacak plug individual). Idempoten & re-runnable: upsert by (source,
+     * source_station_id), child charger di-replace per stasiun.
+     *
+     * Data ESDM di tabel charging_stations TIDAK disentuh (source berbeda);
+     * serving bisa dialihkan via config spklu.serving_source.
+     *
+     * @return array{processed: int, created: int, updated: int, skipped: int, chargers: int}
+     */
+    public function hydrateFromPln(): array
+    {
+        $locations = PlnChargerLocation::with([
+            'provider',
+            'province',
+            'plnChargerLocationDetails' => function ($query) {
+                $query->whereIn('is_active_charger', self::ACTIVE_CHARGER_VALUES);
+            },
+            'plnChargerLocationDetails.chargerCategory',
+            'plnChargerLocationDetails.merkCharger',
+            'plnChargerLocationDetails.chargingType',
+        ])
+            ->whereHas('plnChargerLocationDetails', function ($query) {
+                $query->whereIn('is_active_charger', self::ACTIVE_CHARGER_VALUES);
+            })
+            ->get();
+
+        $stats = ['processed' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0, 'chargers' => 0];
+
+        DB::connection('ev')->transaction(function () use ($locations, &$stats) {
+            foreach ($locations as $location) {
+                $stats['processed']++;
+
+                $data = $this->buildPlnStationData($location);
+                if ($data === null) {
+                    $stats['skipped']++;
+
+                    continue;
+                }
+
+                $canonical = ChargingStation::updateOrCreate(
+                    ['source' => self::SOURCE_PLN, 'source_station_id' => $location->id],
+                    $data
+                );
+                $stats[$canonical->wasRecentlyCreated ? 'created' : 'updated']++;
+
+                $stats['chargers'] += $this->replacePlnChargers($canonical, $location);
+            }
+        });
 
         return $stats;
     }
@@ -419,6 +498,120 @@ class CanonicalStationHydrateService
         }
 
         return $inserted;
+    }
+
+    // ─── PLN (pln_charger_locations) ────────────────────────────────────────
+
+    /**
+     * Bangun data kanonik untuk satu lokasi PLN. Return null bila tidak layak
+     * di-serving (mis. tanpa nama).
+     */
+    private function buildPlnStationData(PlnChargerLocation $location): ?array
+    {
+        $namaLokasi = trim((string) $location->name);
+        if ($namaLokasi === '') {
+            return null;
+        }
+
+        $details = $location->plnChargerLocationDetails;
+
+        $types = $details->map(fn ($detail) => $this->canonicalChargingType($detail))
+            ->filter()
+            ->values()
+            ->all();
+        $primaryType = $this->resolvePrimaryTypeCharge($types);
+
+        $totalKonektor = (int) $details->reduce(
+            fn ($carry, $detail) => $carry + (int) $detail->count_connector_charger,
+            0
+        );
+
+        return [
+            'nama_lokasi' => $namaLokasi,
+            'alamat' => $location->address,
+            'latitude' => $location->latitude,
+            'longitude' => $location->longitude,
+            'kode_provinsi' => null, // PLN memakai FK province_id, bukan kode BPS
+            'provinsi' => $location->province?->name,
+            'kabupaten_kota' => null, // PLN tidak menyediakan kabupaten/kota
+            'type_charge' => $primaryType,
+            'watt' => $primaryType !== null ? (self::TYPE_CHARGE_WATT[$primaryType] ?? null) : null,
+            'total_charger' => $details->count(),
+            'total_konektor' => $totalKonektor,
+            'provider_id' => $location->provider_id,
+            'provider_name' => $location->provider?->name,
+            'availability_level' => 'unknown',
+            'available_count' => 0,
+            'charging_count' => 0,
+            'finishing_count' => 0,
+            'status_updated_at' => null,
+            'raw_payload' => $this->buildPlnRawPayload($location),
+        ];
+    }
+
+    /** Replace seluruh child charger milik satu stasiun PLN (tanpa connectors). */
+    private function replacePlnChargers(ChargingStation $canonical, PlnChargerLocation $location): int
+    {
+        $canonical->chargers()->delete();
+
+        $inserted = 0;
+        foreach ($location->plnChargerLocationDetails as $detail) {
+            $typeCharge = $this->canonicalChargingType($detail);
+
+            ChargingStationCharger::create([
+                'station_id' => $canonical->id,
+                'source_charger_id' => $detail->id,
+                'chargerbox_id' => $detail->chargebox_id,
+                'type_charge' => $typeCharge,
+                'nama' => $detail->merkCharger?->name ?? $detail->chargebox_name,
+                'watt' => $typeCharge !== null ? (self::TYPE_CHARGE_WATT[$typeCharge] ?? null) : null,
+                'jumlah_charger' => 1,
+                'jumlah_konektor' => (int) $detail->count_connector_charger,
+                'icon' => null,
+                'gambar' => null,
+            ]);
+            $inserted++;
+        }
+
+        return $inserted;
+    }
+
+    /** Map label charging_type PLN (uppercase) ke label type_charge canonical. */
+    private function canonicalChargingType(PlnChargerLocationDetail $detail): ?string
+    {
+        $name = strtoupper(trim((string) $detail->chargingType?->name));
+        if ($name === '') {
+            return null;
+        }
+
+        return self::CHARGING_TYPE_TO_CANONICAL[$name] ?? null;
+    }
+
+    /** Snapshot raw data PLN (audit) — termasuk power numerik aktual per charger. */
+    private function buildPlnRawPayload(PlnChargerLocation $location): array
+    {
+        return [
+            'pln_charger_location_id' => $location->id,
+            'name' => $location->name,
+            'address' => $location->address,
+            'provider_id' => $location->provider_id,
+            'provider_name' => $location->provider?->name,
+            'province_name' => $location->province?->name,
+            'owner_machine' => $location->owner_machine,
+            'kategori_tol' => $location->kategori_tol,
+            'details' => $location->plnChargerLocationDetails->map(fn ($detail) => [
+                'chargebox_id' => $detail->chargebox_id,
+                'chargebox_name' => $detail->chargebox_name,
+                'power' => $detail->power,
+                'is_active_charger' => $detail->is_active_charger,
+                'count_connector_charger' => $detail->count_connector_charger,
+                'operation_date' => $detail->operation_date,
+                'year' => $detail->year,
+                'charging_type' => $detail->chargingType?->name,
+                'charger_category' => $detail->chargerCategory?->name,
+                'merk_charger' => $detail->merkCharger?->name,
+            ])->all(),
+        ];
     }
 
     /**

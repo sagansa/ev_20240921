@@ -14,6 +14,8 @@ class PlnChargerLocationDetail extends Model
     protected $table = 'pln_charger_location_details';
     protected $fillable = [
         'pln_charger_location_id',
+        'chargebox_id',
+        'chargebox_name',
         'power',
         'is_active_charger',
         'count_connector_charger',
