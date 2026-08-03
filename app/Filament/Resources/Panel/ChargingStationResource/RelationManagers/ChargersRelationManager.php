@@ -39,7 +39,7 @@ class ChargersRelationManager extends RelationManager
                     ->label('Konektor')
                     ->alignCenter(),
                 TextColumn::make('availability_level')
-                    ->label('Status')
+                    ->label('Status Box')
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => \App\Filament\Concerns\AvailabilityLevelColors::availabilityLevelLabel($state))
                     ->color(fn (string $state): string => \App\Filament\Concerns\AvailabilityLevelColors::availabilityLevelColor($state)),
@@ -47,6 +47,18 @@ class ChargersRelationManager extends RelationManager
                     ->label('Siap/Konektor')
                     ->getStateUsing(fn ($record): string => $record->available_count.'/'.$record->jumlah_konektor)
                     ->alignCenter(),
+                // Plug individual — badge per-konektor (available/charging/finishing)
+                TextColumn::make('connectors_summary')
+                    ->label('Plug')
+                    ->getStateUsing(function ($record): string {
+                        $conn = $record->connectors;
+                        if ($conn->isEmpty()) return '—';
+                        return $conn->map(fn ($c) => ($c->nama_konektor ?? '?').': '.($c->status_konektor ?? '?'))
+                            ->implode(' · ');
+                    })
+                    ->limit(50)
+                    ->badge()
+                    ->color('gray'),
                 TextColumn::make('status_updated_at')
                     ->label('Update')
                     ->dateTime('d M Y H:i')

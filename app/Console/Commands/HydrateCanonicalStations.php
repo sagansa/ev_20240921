@@ -34,6 +34,8 @@ class HydrateCanonicalStations extends Command
                     ['Dilewati (tidak layak)', $stats['skipped']],
                     ['Child charger ditulis', $stats['chargers']],
                     ['Geo cleaning otomatis', $stats['geo_cleaned'] ?? 0],
+                    ['Charger box status di-fold', $stats['charger_boxes_folded'] ?? 0],
+                    ['Konektor status di-fold', $stats['connectors_folded'] ?? 0],
                 ]
             );
 

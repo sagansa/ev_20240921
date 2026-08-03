@@ -83,7 +83,7 @@ class SpkluLocationController extends Controller
 
     public function show($id)
     {
-        $location = ChargingStation::with(['chargerBoxes', 'provider'])->findOrFail($id);
+        $location = ChargingStation::with(['chargerBoxes.connectors', 'provider'])->findOrFail($id);
 
         return SpkluLocationResource::make($location)
             ->additional(['status' => 'success']);
