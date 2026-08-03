@@ -134,9 +134,9 @@ class GeoVerificationService
                 $this->persist($station, $dryRun);
             }
 
-            // Nominatim policy: max 1 request/detik. Jeda antar request.
+            // Nominatim policy: max 1 request/detik. Jeda 2 detik utk margin IP shared.
             if (! $bboxOnly) {
-                usleep(1_000_000);
+                usleep(2_000_000);
             }
         }
 
@@ -259,35 +259,22 @@ class GeoVerificationService
             $street = preg_replace('/^(jl\.?|jalan|ds?|jln)\s+/i', '', trim($street));
             $street = preg_replace('/\s*no\.?\s*[\dA-Za-z\-\/]+$/i', '', trim($street));
 
-            // Cari segmen "Kecamatan X" dan "Kota/Kabupaten Y".
-            $kecamatan = null;
+            // Cari segmen "Kota/Kabupaten Y".
             $kota = null;
             foreach ($parts as $part) {
-                if (preg_match('/^kecamatan\s+/i', $part)) {
-                    $kecamatan = preg_replace('/^kecamatan\s+/i', '', trim($part));
-                } elseif (preg_match('/^kec\.?\s+/i', $part)) {
-                    $kecamatan = preg_replace('/^kec\.?\s+/i', '', trim($part));
-                }
                 if (preg_match('/^(kota|kab\.?|kabupaten|daerah khusus ibukota)\s+/i', $part)) {
                     $kota = preg_replace('/\s+\d{5}$/i', '', trim($part));
                 }
             }
 
-            // Varian ringkas yang terbukti lebih sering match di Nominatim:
-            // 1) "jalan, kecamatan, kota"
-            // 2) "jalan, kota"
-            if ($street !== '' && $kecamatan !== null) {
-                $queries[] = trim($street.', '.$kecamatan.($kota !== null ? ', '.$kota : ''));
-            }
+            // Varian ringkas: "jalan, kota" (lebih sering match di Nominatim).
             if ($street !== '' && $kota !== null) {
                 $queries[] = trim($street.', '.$kota);
             }
-            if ($street !== '') {
-                $queries[] = $street;
-            }
         }
 
-        return array_values(array_unique(array_filter($queries, fn ($q) => $q !== '')));
+        // Batasi max 2 query per station utk mengurangi beban Nominatim.
+        return array_slice(array_values(array_unique(array_filter($queries, fn ($q) => $q !== ''))), 0, 2);
     }
 
     /**
@@ -298,29 +285,56 @@ class GeoVerificationService
      */
     public function osmSearch(string $query): ?array
     {
-        $response = Http::withHeaders(['User-Agent' => self::UA])
-            ->timeout(15)
-            ->retry(2, 300)
-            ->get('https://nominatim.openstreetmap.org/search', [
-                'q' => $query,
-                'format' => 'json',
-                'limit' => 1,
-                'countrycodes' => 'id',
-            ]);
+        // Nominatim policy ketat: 1 req/detik per IP. Server shared hosting
+        // sering kena 429 krn IP dipakai user lain. Backoff eksponensial saat
+        // 429 (coba ulang setelah tunggu lebih lama), tanpa retry agresif.
+        $maxAttempts = 3;
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                $response = Http::withHeaders(['User-Agent' => self::UA])
+                    ->timeout(15)
+                    ->get('https://nominatim.openstreetmap.org/search', [
+                        'q' => $query,
+                        'format' => 'json',
+                        'limit' => 1,
+                        'countrycodes' => 'id',
+                    ]);
+            } catch (\Throwable $e) {
+                // Network error → tunggu & retry
+                if ($attempt < $maxAttempts) {
+                    sleep(5 * $attempt);
+                    continue;
+                }
 
-        if (! $response->successful()) {
-            return null;
+                return null;
+            }
+
+            // 429 Too Many Requests → backoff eksponensial (10s, 20s)
+            if ($response->status() === 429) {
+                if ($attempt < $maxAttempts) {
+                    sleep(10 * $attempt);
+                    continue;
+                }
+
+                return null; // give up setelah 3x
+            }
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $data = $response->json();
+            if (empty($data) || ! isset($data[0]['lat']) || ! isset($data[0]['lon'])) {
+                return null;
+            }
+
+            return [
+                'latitude' => (float) $data[0]['lat'],
+                'longitude' => (float) $data[0]['lon'],
+            ];
         }
 
-        $data = $response->json();
-        if (empty($data) || ! isset($data[0]['lat']) || ! isset($data[0]['lon'])) {
-            return null;
-        }
-
-        return [
-            'latitude' => (float) $data[0]['lat'],
-            'longitude' => (float) $data[0]['lon'],
-        ];
+        return null;
     }
 
     /**
