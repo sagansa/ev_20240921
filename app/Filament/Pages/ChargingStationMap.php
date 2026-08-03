@@ -8,8 +8,12 @@ use Illuminate\Support\Facades\Auth;
 
 /**
  * Halaman peta Filament: tampilkan seluruh titik charging_stations di OSM.
- * Hanya super_admin yg bisa akses. Data di-fetch via AJAX (bukan inline)
- * utk menghindari 500KB+ JSON di HTML yang bikin Livewire/browser berat.
+ * Hanya super_admin yg bisa akses.
+ *
+ * Catatan: Leaflet JS/CSS + init dirender via Filament render hook
+ * (PanelsRenderHook::STYLES_AFTER / SCRIPTS_AFTER, lihat AdminPanelProvider)
+ * karena Livewire wire:navigate (SPA) strip <script> inline dari output
+ * komponen — render hook menempel di layout sehingga bertahan saat navigasi.
  */
 class ChargingStationMap extends Page
 {
@@ -28,32 +32,6 @@ class ChargingStationMap extends Page
     public static function canAccess(): bool
     {
         return Auth::user()?->hasRole('super_admin') ?? false;
-    }
-
-    /**
-     * Endpoint AJAX: return stations sebagai GeoJSON-lite (lat, lng, level, nama).
-     * Dipanggil oleh fetch() di Blade view.
-     */
-    public function fetchStations(): array
-    {
-        return ChargingStation::query()
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->select(['id', 'nama_lokasi', 'latitude', 'longitude', 'availability_level', 'available_count', 'total_konektor', 'type_charge', 'provinsi'])
-            ->get()
-            ->map(fn ($s) => [
-                'id' => $s->id,
-                'nama' => $s->nama_lokasi,
-                'lat' => (float) $s->latitude,
-                'lng' => (float) $s->longitude,
-                'level' => $s->availability_level ?? 'unknown',
-                'avail' => $s->available_count,
-                'total' => $s->total_konektor,
-                'type' => $s->type_charge ?? '—',
-                'provinsi' => $s->provinsi ?? '—',
-            ])
-            ->values()
-            ->toArray();
     }
 
     protected function getViewData(): array
