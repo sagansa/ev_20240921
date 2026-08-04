@@ -27,6 +27,12 @@ class Charge extends Model
         'date',
         'charger_location_id',
         'charger_id',
+        'charging_station_id',
+        'station_name_snapshot',
+        'station_address_snapshot',
+        'station_lat_snapshot',
+        'station_lng_snapshot',
+        'station_provider_snapshot',
         'km_now',
         'is_finish_charging',
         'start_charging_now',
@@ -51,6 +57,12 @@ class Charge extends Model
     public function chargerLocation()
     {
         return $this->belongsTo(ChargerLocation::class);
+    }
+
+    /** Soft-link ke charging_stations.id (alternatif charger_location_id untuk mobile SPKLU). */
+    public function chargingStation()
+    {
+        return $this->belongsTo(ChargingStation::class, 'charging_station_id');
     }
 
     public function user()

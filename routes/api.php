@@ -10,7 +10,6 @@ use App\Http\Controllers\Api\V1\DualSourceLocationController;
 use App\Http\Controllers\Api\V1\HomeChargingDiscountController;
 use App\Http\Controllers\Api\V1\LocationCategoryController;
 use App\Http\Controllers\Api\V1\LocationReportController;
-use App\Http\Controllers\Api\V1\LogbookEntryController;
 use App\Http\Controllers\Api\V1\PlnChargerLocationController;
 use App\Http\Controllers\Api\V1\ProviderController;
 use App\Http\Controllers\Api\V1\ScrapeIngestController;
@@ -65,9 +64,10 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/social-logout', [SocialAuthController::class, 'logout']);
 
         // User-specific routes
+        Route::get('/vehicles/options', [VehicleController::class, 'options']);
         Route::apiResource('vehicles', VehicleController::class);
-        Route::apiResource('logbook-entries', LogbookEntryController::class);
         Route::apiResource('charging-locations', ChargerLocationController::class)->except(['index', 'show']);
+        Route::get('/charging-sessions/analytics', [ChargingSessionController::class, 'analytics']);
         Route::apiResource('charging-sessions', ChargingSessionController::class);
         Route::apiResource('state-of-health', StateOfHealthController::class);
         Route::get('/state-of-health/{vehicleId}/trend-analysis', [StateOfHealthController::class, 'trendAnalysis']);

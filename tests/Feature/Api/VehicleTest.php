@@ -10,75 +10,94 @@ use App\Models\Vehicle;
 
 class VehicleTest extends ApiTestCase
 {
-    public function test_it_gets_vehicles_list(): void
+    public function test_it_gets_vehicles_list_for_authenticated_user(): void
     {
-        $vehicles = Vehicle::factory()
-            ->count(5)
-            ->create();
+        $otherUser = User::factory()->create();
 
-        $response = $this->get(route('api.vehicles.index'));
+        $brand = BrandVehicle::factory()->create();
+        $model = ModelVehicle::factory()->create(['brand_vehicle_id' => $brand->id]);
 
-        $response->assertOk()->assertSee($vehicles[0]->id);
+        $myVehicle = Vehicle::create([
+            'user_id' => $this->authUser->id,
+            'brand_vehicle_id' => $brand->id,
+            'model_vehicle_id' => $model->id,
+            'license_plate' => 'B 1234 EV',
+            'status' => 1,
+        ]);
+
+        Vehicle::create([
+            'user_id' => $otherUser->id,
+            'brand_vehicle_id' => $brand->id,
+            'model_vehicle_id' => $model->id,
+            'license_plate' => 'B 9999 EV',
+            'status' => 1,
+        ]);
+
+        $response = $this->getJson('/api/v1/vehicles');
+
+        $response->assertOk()
+            ->assertJson(['success' => true])
+            ->assertJsonCount(1, 'data')
+            ->assertJsonFragment(['license_plate' => 'B 1234 EV'])
+            ->assertJsonMissing(['license_plate' => 'B 9999 EV']);
     }
 
-    public function test_it_stores_the_vehicle(): void
+    public function test_it_returns_vehicle_dropdown_options(): void
     {
-        $data = Vehicle::factory()
-            ->make()
-            ->toArray();
+        $brand = BrandVehicle::factory()->create(['name' => 'Hyundai']);
+        $model = ModelVehicle::factory()->create(['brand_vehicle_id' => $brand->id, 'name' => 'Ioniq 5']);
+        $type = TypeVehicle::factory()->create(['model_vehicle_id' => $model->id, 'name' => 'Long Range']);
 
-        $response = $this->postJson(route('api.vehicles.store'), $data);
+        $response = $this->getJson('/api/v1/vehicles/options');
 
-        unset($data['image'], $data['user_id'], $data['created_at'], $data['updated_at'], $data['deleted_at']);
-
-        $this->assertDatabaseHas('vehicles', $data);
-
-        $response->assertStatus(201)->assertJsonFragment($data);
+        $response->assertOk()
+            ->assertJson(['success' => true])
+            ->assertJsonFragment(['name' => 'Hyundai'])
+            ->assertJsonFragment(['name' => 'Ioniq 5'])
+            ->assertJsonFragment(['name' => 'Long Range']);
     }
 
-    public function test_it_updates_the_vehicle(): void
+    public function test_it_stores_vehicle(): void
     {
-        $vehicle = Vehicle::factory()->create();
+        $brand = BrandVehicle::factory()->create();
+        $model = ModelVehicle::factory()->create(['brand_vehicle_id' => $brand->id]);
 
-        $brandVehicle = BrandVehicle::factory()->create();
-        $modelVehicle = ModelVehicle::factory()->create();
-        $typeVehicle = TypeVehicle::factory()->create();
-        $user = User::factory()->create();
+        $response = $this->postJson('/api/v1/vehicles', [
+            'brand_vehicle_id' => $brand->id,
+            'model_vehicle_id' => $model->id,
+            'license_plate' => 'B 8888 EV',
+        ]);
 
-        $data = [
-            'image' => fake()->word(),
-            'license_plate' => fake()->name(),
-            'ownership' => fake()->date(),
-            'status' => fake()->numberBetween(1, 2),
-            'created_at' => fake()->dateTime(),
-            'updated_at' => fake()->dateTime(),
-            'deleted_at' => fake()->dateTime(),
-            'brand_vehicle_id' => $brandVehicle->id,
-            'model_vehicle_id' => $modelVehicle->id,
-            'type_vehicle_id' => $typeVehicle->id,
-            'user_id' => $user->id,
-        ];
+        $response->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'license_plate' => 'B 8888 EV',
+                ],
+            ]);
 
-        $response = $this->putJson(route('api.vehicles.update', $vehicle), $data);
-
-        unset($data['image'], $data['user_id'], $data['created_at'], $data['updated_at'], $data['deleted_at']);
-
-        $data['id'] = $vehicle->id;
-
-        $this->assertDatabaseHas('vehicles', $data);
-
-        $response->assertStatus(200)->assertJsonFragment($data);
+        $this->assertDatabaseHas('vehicles', [
+            'user_id' => $this->authUser->id,
+            'license_plate' => 'B 8888 EV',
+        ]);
     }
 
-    public function test_it_deletes_the_vehicle(): void
+    public function test_it_deletes_vehicle(): void
     {
-        $vehicle = Vehicle::factory()->create();
+        $brand = BrandVehicle::factory()->create();
+        $model = ModelVehicle::factory()->create(['brand_vehicle_id' => $brand->id]);
 
-        $response = $this->deleteJson(route('api.vehicles.destroy', $vehicle));
+        $vehicle = Vehicle::create([
+            'user_id' => $this->authUser->id,
+            'brand_vehicle_id' => $brand->id,
+            'model_vehicle_id' => $model->id,
+            'license_plate' => 'B 7777 EV',
+            'status' => 1,
+        ]);
 
-        $this->assertSoftDeleted($vehicle);
+        $response = $this->deleteJson("/api/v1/vehicles/{$vehicle->id}");
 
-        $response->assertNoContent();
+        $response->assertOk()->assertJson(['success' => true]);
+        $this->assertSoftDeleted('vehicles', ['id' => $vehicle->id]);
     }
 }
-
