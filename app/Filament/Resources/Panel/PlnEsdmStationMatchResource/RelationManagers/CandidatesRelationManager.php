@@ -82,6 +82,48 @@ class CandidatesRelationManager extends RelationManager
             ->filters([])
             ->heading('Kandidat ESDM — pilih satu sebagai pemenang')
             ->recordActions([
+                Actions\Action::make('detail')
+                    ->label('Lihat Detail')
+                    ->icon('heroicon-o-eye')
+                    ->color('gray')
+                    ->modalHeading('Detail Kandidat ESDM')
+                    ->modalDescription('Bandingkan kandidat ESDM dengan stasiun PLN di atas. Pilih aksi di bawah untuk memutuskan.')
+                    ->modalSubmitActionLabel('Tutup')
+                    ->extraModalFooterActions([
+                        Actions\Action::make('approve_from_detail')
+                            ->label('Jadikan Pemenang')
+                            ->icon('heroicon-o-trophy')
+                            ->color('success')
+                            ->visible(fn (PlnEsdmStationMatch $record): bool => $record->match_status !== PlnEsdmMatchService::STATUS_APPROVED)
+                            ->action(function (PlnEsdmStationMatch $record): void {
+                                app(PlnEsdmMatchService::class)->approve($record->id, Auth::user()?->email);
+
+                                Notification::make()
+                                    ->title('Pemenang dipilih')
+                                    ->body('Status PLN kini mengikuti ESDM. Kandidat lain ditolak otomatis.')
+                                    ->success()
+                                    ->send();
+                            }),
+                        Actions\Action::make('reject_from_detail')
+                            ->label('Tolak')
+                            ->icon('heroicon-o-x-circle')
+                            ->color('danger')
+                            ->visible(fn (PlnEsdmStationMatch $record): bool => ! in_array($record->match_status, [PlnEsdmMatchService::STATUS_REJECTED, PlnEsdmMatchService::STATUS_REJECTED_AI], true))
+                            ->action(function (PlnEsdmStationMatch $record): void {
+                                app(PlnEsdmMatchService::class)->reject(
+                                    $record->id,
+                                    'Ditolak dari modal detail.',
+                                    Auth::user()?->email,
+                                );
+
+                                Notification::make()
+                                    ->title('Kandidat ditolak')
+                                    ->success()
+                                    ->send();
+                            }),
+                    ])
+                    ->form(\App\Filament\Resources\Panel\PlnEsdmStationMatchResource::comparisonSchema())
+                    ->action(fn () => null),
                 Actions\Action::make('approve')
                     ->label('Jadikan Pemenang')
                     ->icon('heroicon-o-trophy')
