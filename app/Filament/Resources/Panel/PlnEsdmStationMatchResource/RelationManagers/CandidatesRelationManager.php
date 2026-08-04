@@ -81,7 +81,6 @@ class CandidatesRelationManager extends RelationManager
             ])
             ->filters([])
             ->heading('Kandidat ESDM — pilih satu sebagai pemenang')
-            ->description(fn (RelationManager $livewire): string => null)
             ->recordActions([
                 Actions\Action::make('approve')
                     ->label('Jadikan Pemenang')
