@@ -61,6 +61,58 @@ class PlnEsdmStationMatchResource extends Resource
             ->whereHas('plnEsdmMatches');
     }
 
+    /**
+     * Form ViewRecord — menampilkan info stasiun PLN (owner) di atas RelationManager.
+     * Membantu admin melihat "PLN mana" saat memilih kandidat ESDM pemenang.
+     */
+    public static function form(Schema $schema): Schema
+    {
+        return $schema->components([
+            Section::make('Stasiun PLN (master) — pilih kandidat ESDM di bawah')->schema([
+                Grid::make(3)->schema([
+                    Placeholder::make('nama_lokasi')
+                        ->label('Nama')
+                        ->content(fn (ChargingStation $record): string => (string) ($record->nama_lokasi ?? '—')),
+                    Placeholder::make('alamat')
+                        ->label('Alamat')
+                        ->content(fn (ChargingStation $record): string => (string) ($record->alamat ?? '—')),
+                    Placeholder::make('provinsi')
+                        ->label('Provinsi')
+                        ->content(fn (ChargingStation $record): string => (string) ($record->provinsi ?? '—')),
+                    Placeholder::make('koordinat')
+                        ->label('Koordinat')
+                        ->content(fn (ChargingStation $record): string => $record->latitude !== null
+                            ? $record->latitude.', '.$record->longitude
+                            : '—'),
+                    Placeholder::make('maps')
+                        ->label('Google Maps')
+                        ->content(fn (ChargingStation $record): \Illuminate\Support\HtmlString => self::mapsLinkHtml(
+                            $record->latitude ? (float) $record->latitude : null,
+                            $record->longitude ? (float) $record->longitude : null,
+                            'Buka lokasi PLN ↗',
+                        )),
+                    Placeholder::make('matching_status')
+                        ->label('Status Matching')
+                        ->content(function (ChargingStation $record): \Illuminate\Support\HtmlString {
+                            $winner = $record->plnEsdmMatches->firstWhere('match_status', PlnEsdmMatchService::STATUS_APPROVED);
+                            if ($winner !== null) {
+                                return new \Illuminate\Support\HtmlString(
+                                    '<span style="color:#16a34a;font-weight:600">✓ Sudah punya pemenang:</span> '.
+                                    e($winner->esdm_name ?? '—')
+                                );
+                            }
+                            $jumlahKandidat = $record->plnEsdmMatches->count();
+
+                            return new \Illuminate\Support\HtmlString(
+                                '<span style="color:#d97706;font-weight:600">⏳ Belum punya pemenang</span> — '.
+                                $jumlahKandidat.' kandidat di bawah, pilih satu.'
+                            );
+                        }),
+                ]),
+            ])->compact(),
+        ]);
+    }
+
     public static function table(Table $table): Table
     {
         return $table
