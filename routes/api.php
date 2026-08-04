@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\DualSourceLocationController;
 use App\Http\Controllers\Api\V1\HomeChargingDiscountController;
 use App\Http\Controllers\Api\V1\LocationCategoryController;
 use App\Http\Controllers\Api\V1\LocationReportController;
+use App\Http\Controllers\Api\V1\LogbookEntryController;
 use App\Http\Controllers\Api\V1\PlnChargerLocationController;
 use App\Http\Controllers\Api\V1\ProviderController;
 use App\Http\Controllers\Api\V1\ScrapeIngestController;
@@ -24,6 +25,9 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
     Route::post('/auth/verify-email', [AuthController::class, 'verifyEmail']);
+    Route::post('/auth/verify-otp', [AuthController::class, 'confirmVerification']);
+    Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 
     // Public EV data routes
     Route::get('/charging-locations/nearby', [ChargerLocationController::class, 'nearby']);
@@ -62,6 +66,7 @@ Route::prefix('v1')->group(function () {
 
         // User-specific routes
         Route::apiResource('vehicles', VehicleController::class);
+        Route::apiResource('logbook-entries', LogbookEntryController::class);
         Route::apiResource('charging-locations', ChargerLocationController::class)->except(['index', 'show']);
         Route::apiResource('charging-sessions', ChargingSessionController::class);
         Route::apiResource('state-of-health', StateOfHealthController::class);
