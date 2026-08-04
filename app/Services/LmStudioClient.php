@@ -106,7 +106,12 @@ PROMPT;
             ]);
 
         if (! $response->successful()) {
-            throw new RuntimeException('LM Studio request gagal: '.$response->status().' '.$response->reason());
+            // Sertakan body error LM Studio (mis. "No models loaded", detail validasi)
+            // supaya root cause terlihat di ai_reasoning.error — bukan hanya status code.
+            $body = trim((string) $response->body());
+            $bodyShort = mb_substr($body, 0, 300);
+
+            throw new RuntimeException('LM Studio request gagal: '.$response->status().' '.$response->reason().($bodyShort !== '' ? ' — '.$bodyShort : ''));
         }
 
         $content = $response->json('choices.0.message.content');

@@ -72,10 +72,13 @@ class PlnEsdmMatchService
     /**
      * Jalankan pipeline matching utk semua stasiun PLN.
      *
+     * @param  int|null  $aiLimit  Batas jumlah panggilan AI (stage 2). Null = tanpa batas.
+     *                              Panggilan ke-n setelah limit akan fallback ke `pending`
+     *                              (review admin) — memungkinkan run AI inkremental.
      * @param  callable(string $message, int $done, int $total): void|null  $progress
-     * @return array{processed: int, auto_linked: int, ai_suggested: int, ai_rejected: int, pending_review: int, ai_errors: int, fallbacks: int, skipped_preserved: int}
+     * @return array{processed: int, auto_linked: int, ai_suggested: int, ai_rejected: int, pending_review: int, ai_errors: int, fallbacks: int, skipped_preserved: int, ai_capped: int}
      */
-    public function match(bool $force = false, bool $dryRun = false, ?callable $progress = null): array
+    public function match(bool $force = false, bool $dryRun = false, ?callable $progress = null, ?int $aiLimit = null): array
     {
         $summary = [
             'processed' => 0,
@@ -86,6 +89,7 @@ class PlnEsdmMatchService
             'ai_errors' => 0,
             'fallbacks' => 0,
             'skipped_preserved' => 0,
+            'ai_capped' => 0,
         ];
 
         $plnStations = ChargingStation::query()
@@ -97,6 +101,7 @@ class PlnEsdmMatchService
 
         $total = $plnStations->count();
         $done = 0;
+        $aiUsed = 0;
 
         foreach ($plnStations as $plnStation) {
             $done++;
@@ -112,7 +117,13 @@ class PlnEsdmMatchService
             $summary['processed']++;
 
             foreach ($candidates as $candidate) {
-                $result = $this->classify($plnStation, $candidate['esdm'], $candidate);
+                // Cap AI: kandidat setelah aiLimit → fallback pending (run inkremental).
+                $result = $this->classify($plnStation, $candidate['esdm'], $candidate, $aiLimit, $aiUsed);
+                if (($result['capped'] ?? false)) {
+                    $summary['ai_capped']++;
+                } elseif (($result['ai_error'] ?? false) === false && ($result['fallback'] ?? false) === false && $result['method'] === self::METHOD_AI) {
+                    $aiUsed++;
+                }
                 $this->upsertMatch($plnStation, $candidate['esdm'], $result, $force, $dryRun, $summary);
             }
         }
@@ -255,8 +266,8 @@ class PlnEsdmMatchService
             }
 
             similar_text(
-                $this->dedup->normalizeName($pln->nama_lokasi),
-                $this->dedup->normalizeName($esdm->nama_lokasi),
+                $this->normalizeMatchName($pln->nama_lokasi),
+                $this->normalizeMatchName($esdm->nama_lokasi),
                 $percent
             );
 
@@ -303,9 +314,11 @@ class PlnEsdmMatchService
     // ─── Klasifikasi (stage 1 + 2) ──────────────────────────────────────────
 
     /**
-     * @return array{status: string, method: string, similarity_pct: int, distance_m: int, ai_confidence: float|null, ai_reasoning: array|null, ai_error: bool, fallback: bool}
+     * @param  int|null  $aiLimit  Batas panggilan AI (null = tanpa batas).
+     * @param  int  $aiUsed  Jumlah panggilan AI yg sudah dipakai (pass-by-value, cap check).
+     * @return array{status: string, method: string, similarity_pct: int, distance_m: int, ai_confidence: float|null, ai_reasoning: array|null, ai_error: bool, fallback: bool, capped: bool}
      */
-    private function classify(ChargingStation $pln, ChargingStation $esdm, array $candidate): array
+    private function classify(ChargingStation $pln, ChargingStation $esdm, array $candidate, ?int $aiLimit = null, int $aiUsed = 0): array
     {
         $distanceM = $candidate['distance_m'];
         $sim = $candidate['similarity_pct'];
@@ -317,6 +330,19 @@ class PlnEsdmMatchService
 
         // Stage 2 — ambiguous (jarak ≤500m, nama ≥60%) → kirim ke AI.
         if ($distanceM <= self::DIST_AI_M && $sim >= self::SIM_AI_PCT) {
+            // Cap: bila aiLimit tercapai → fallback pending (run inkremental), bukan error.
+            if ($aiLimit !== null && $aiUsed >= $aiLimit) {
+                return $this->result(
+                    self::STATUS_PENDING,
+                    self::METHOD_AI,
+                    $sim,
+                    $distanceM,
+                    null,
+                    ['note' => 'AI capped (ai-limit tercapai) — defer ke run berikutnya.'],
+                    capped: true,
+                );
+            }
+
             return $this->classifyWithAi($pln, $esdm, $candidate);
         }
 
@@ -422,6 +448,7 @@ class PlnEsdmMatchService
         ?array $aiReasoning,
         bool $aiError = false,
         bool $fallback = false,
+        bool $capped = false,
     ): array {
         return [
             'status' => $status,
@@ -432,7 +459,39 @@ class PlnEsdmMatchService
             'ai_reasoning' => $aiReasoning,
             'ai_error' => $aiError,
             'fallback' => $fallback,
+            'capped' => $capped,
         ];
+    }
+
+    /**
+     * Normalisasi nama SPKLU utk perbandingan kemiripan — lebih agresif dari
+     * ScrapeDedupService::normalizeName() agar pasangan dengan konvensi nama
+     * berbeda (prefix operator, suffix watt) tetap cocok.
+     *
+     * Yang di-strip:
+     *  - Prefix operator dalam kurung: "(BLUECHARGE) X" → "X"
+     *  - Prefix kata generik: "SPKLU X" → "X"
+     *  - Suffix watt + urutan: "X 22 kW (1)" → "X"
+     * Lalu upper + alnum-only + collapse spaces (pola normalizeName).
+     */
+    private function normalizeMatchName(?string $name): string
+    {
+        $s = strtoupper(trim((string) $name));
+
+        // Strip prefix dalam kurung di awal: "(BRAND) Rest" → "Rest".
+        $s = preg_replace('/^\([^)]*\)\s*/', '', $s) ?? $s;
+
+        // Strip prefix kata generik SPKLU / SPBU di awal.
+        $s = preg_replace('/^\s*(SPKLU|SPBU)\b\s*/i', '', $s) ?? $s;
+
+        // Strip suffix watt + opsi urutan: " 22 kW", " 7,4 kW (1)".
+        $s = preg_replace('/\s+\d+(?:[.,]\d+)?\s*KW(?:\s*\(\d+\))?\s*$/i', '', $s) ?? $s;
+
+        // Alnum-only + collapse spaces (sama dengan ScrapeDedupService::normalizeName).
+        $s = preg_replace('/[^A-Z0-9]+/', ' ', $s) ?? '';
+        $s = trim(preg_replace('/\s+/', ' ', $s) ?? '');
+
+        return $s;
     }
 
     // ─── Upsert & audit ─────────────────────────────────────────────────────

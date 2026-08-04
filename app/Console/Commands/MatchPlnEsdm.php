@@ -9,7 +9,8 @@ class MatchPlnEsdm extends Command
 {
     protected $signature = 'pln:match-esdm
                             {--force : Overwrite keputusan final admin/system}
-                            {--dry-run : Hitung tanpa menulis ke DB}';
+                            {--dry-run : Hitung tanpa menulis ke DB}
+                            {--ai-limit= : Batas jumlah panggilan AI (sisanya defer ke run berikutnya). Kosongkan utk tanpa batas.}';
 
     protected $description = 'Match stasiun PLN ↔ ESDM (geo+nama deterministik → AI utk kasus ambiguous). Menghasilkan tabel link pln_esdm_station_matches; lalu fold status ESDM ke PLN (non dry-run).';
 
@@ -19,12 +20,17 @@ class MatchPlnEsdm extends Command
 
         $force = (bool) $this->option('force');
         $dryRun = (bool) $this->option('dry-run');
+        $aiLimitRaw = $this->option('ai-limit');
+        $aiLimit = is_numeric($aiLimitRaw) ? (int) $aiLimitRaw : null;
 
         if ($dryRun) {
             $this->warn('MODE DRY-RUN — tidak ada perubahan ke DB.');
         }
         if ($force) {
             $this->warn('MODE FORCE — keputusan final admin/system akan di-overwrite.');
+        }
+        if ($aiLimit !== null) {
+            $this->warn("AI LIMIT — maks {$aiLimit} panggilan AI; sisanya defer (pending) ke run berikutnya.");
         }
 
         $this->info('Matching PLN ↔ ESDM dimulai...');
@@ -38,6 +44,7 @@ class MatchPlnEsdm extends Command
                         $this->line("  … {$message}");
                     }
                 },
+                aiLimit: $aiLimit,
             );
         } catch (\Throwable $e) {
             $this->error('Matching gagal: '.$e->getMessage());
@@ -57,6 +64,7 @@ class MatchPlnEsdm extends Command
                 ['Pending review', $summary['pending_review']],
                 ['AI errors', $summary['ai_errors']],
                 ['Fallback (AI down)', $summary['fallbacks']],
+                ['AI capped (defer)', $summary['ai_capped']],
                 ['Keputusan final dipertahankan', $summary['skipped_preserved']],
             ]
         );
