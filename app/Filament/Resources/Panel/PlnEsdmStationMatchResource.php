@@ -65,7 +65,7 @@ class PlnEsdmStationMatchResource extends Resource
     {
         return $table
             ->poll('60s')
-            ->defaultPaginationPageOptions([25, 50, 100])
+            ->paginationPageOptions([25, 50, 100])
             ->columns([
                 TextColumn::make('nama_lokasi')
                     ->label('Stasiun PLN')
