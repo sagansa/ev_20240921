@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Panel;
 
 use App\Filament\Resources\Panel\PlnChargerLocationResource\Pages;
+use App\Filament\Resources\Panel\PlnChargerLocationResource\RelationManagers\DetailsRelationManager;
 use App\Models\PlnChargerLocation;
 use Filament\Actions;
 use Filament\Resources\Resource;
@@ -92,7 +93,7 @@ class PlnChargerLocationResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\DetailsRelationManager::class,
+            DetailsRelationManager::class,
         ];
     }
 
