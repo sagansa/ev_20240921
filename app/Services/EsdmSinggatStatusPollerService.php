@@ -83,6 +83,10 @@ class EsdmSinggatStatusPollerService
         // 5. Agregasi per stasiun + fold charger box status
         $stationStats = $this->aggregateStations($fetchedAt, $stats['touched_installations']);
 
+        // 6. Fold status ESDM → stasiun PLN yang match-approved. Status stasiun
+        // PLN auto-fresh mengikuti ESDM tiap poll (10 menit), tanpa re-run matching.
+        $plnMatchesFolded = app(PlnEsdmMatchService::class)->applyStatusToCanonical();
+
         return [
             'batch' => $batch,
             'fetched_at' => $fetchedAt->toDateTimeString(),
@@ -95,6 +99,7 @@ class EsdmSinggatStatusPollerService
             'stations_aggregated' => $stationStats['aggregated'],
             'canonical_folded' => $stationStats['folded_to_canonical'],
             'charger_boxes_folded' => $stationStats['charger_boxes_folded'],
+            'pln_matches_folded' => $plnMatchesFolded,
         ];
     }
 

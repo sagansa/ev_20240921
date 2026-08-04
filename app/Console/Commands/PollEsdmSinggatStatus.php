@@ -53,6 +53,7 @@ class PollEsdmSinggatStatus extends Command
                 ['Konektor baru', $summary['new_connectors']],
                 ['Log transisi dicatat', $summary['logs_inserted']],
                 ['Stasiun diagregasi', $summary['stations_aggregated']],
+                ['Status PLN di-fold (match)', $summary['pln_matches_folded'] ?? 0],
             ]
         );
 
