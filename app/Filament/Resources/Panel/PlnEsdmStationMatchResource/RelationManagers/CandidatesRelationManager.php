@@ -82,7 +82,7 @@ class CandidatesRelationManager extends RelationManager
             ->filters([])
             ->heading('Kandidat ESDM — pilih satu sebagai pemenang')
             ->recordActions([
-                Actions\Action::make('detail')
+                Actions\Action::make('compare')
                     ->label('Lihat Detail')
                     ->icon('heroicon-o-eye')
                     ->color('gray')
