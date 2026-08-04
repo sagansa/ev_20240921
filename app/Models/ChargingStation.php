@@ -83,4 +83,13 @@ class ChargingStation extends Model
     {
         return $this->hasMany(ChargingStationCharger::class, 'station_id');
     }
+
+    /**
+     * Kandidat match PLN ↔ ESDM (hanya relevan utk station source='pln').
+     * Satu PLN boleh punya banyak kandidat, tapi hanya 1 approved (pemenang).
+     */
+    public function plnEsdmMatches()
+    {
+        return $this->hasMany(PlnEsdmStationMatch::class, 'pln_station_id');
+    }
 }

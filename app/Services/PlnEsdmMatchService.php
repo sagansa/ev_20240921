@@ -179,20 +179,25 @@ class PlnEsdmMatchService
     }
 
     /**
-     * Approve satu match (admin). Hanya 1 approved per stasiun PLN — match
-     * approved lain utk PLN yg sama di-demote (superseded). Lalu re-fold status.
+     * Approve satu match (admin) sebagai pemenang utk PLN-nya. SEMUA kandidat
+     * lain (approved/pending/ai_suggested) utk PLN yg sama auto-reject
+     * ("Superseded") — tiap PLN hanya boleh punya 1 pemenang. Lalu re-fold
+     * status canonical (status ESDM pemenang di-teruskan ke PLN).
      */
     public function approve(int $matchId, ?string $user): PlnEsdmStationMatch
     {
         $match = PlnEsdmStationMatch::findOrFail($matchId);
 
+        // Demote SEMUA kandidat lain utk PLN yg sama (apa pun statusnya).
+        // Kandidat yg sudah rejected/rejected_ai tetap (sudah final, tidak
+        // perlu ditimpa reason-nya).
         PlnEsdmStationMatch::query()
             ->where('pln_station_id', $match->pln_station_id)
             ->where('id', '!=', $match->id)
-            ->where('match_status', self::STATUS_APPROVED)
+            ->whereIn('match_status', [self::STATUS_APPROVED, self::STATUS_PENDING, self::STATUS_AI_SUGGESTED])
             ->update([
                 'match_status' => self::STATUS_REJECTED,
-                'rejected_reason' => 'Superseded — match lain di-approve admin.',
+                'rejected_reason' => 'Superseded — kandidat lain di-approve admin sebagai pemenang.',
                 'decided_by' => $user,
                 'decided_at' => now(),
             ]);
@@ -223,6 +228,36 @@ class PlnEsdmMatchService
         ]);
 
         return $match->fresh();
+    }
+
+    /**
+     * Cleanup retroaktif: utk setiap PLN yang sudah punya pemenang (approved),
+     * demote kandidat lain yg masih pending/ai_suggested menjadi rejected
+     * ("Superseded"). Dipakai utk konsistensi data lama setelah perubahan
+     * approve() — idempoten.
+     *
+     * @return int Jumlah kandidat yg di-demote.
+     */
+    public function cleanupSupersededCandidates(): int
+    {
+        $plnIdsWithWinner = PlnEsdmStationMatch::query()
+            ->where('match_status', self::STATUS_APPROVED)
+            ->pluck('pln_station_id')
+            ->unique();
+
+        if ($plnIdsWithWinner->isEmpty()) {
+            return 0;
+        }
+
+        return PlnEsdmStationMatch::query()
+            ->whereIn('pln_station_id', $plnIdsWithWinner)
+            ->whereIn('match_status', [self::STATUS_PENDING, self::STATUS_AI_SUGGESTED])
+            ->update([
+                'match_status' => self::STATUS_REJECTED,
+                'rejected_reason' => 'Superseded (cleanup) — PLN ini sudah punya pemenang.',
+                'decided_by' => 'system',
+                'decided_at' => now(),
+            ]);
     }
 
     // ─── Stage 1: kandidat deterministik ────────────────────────────────────

@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Panel;
 
 use App\Filament\Resources\Panel\PlnEsdmStationMatchResource\Pages;
+use App\Filament\Resources\Panel\PlnEsdmStationMatchResource\RelationManagers;
+use App\Models\ChargingStation;
 use App\Models\PlnEsdmStationMatch;
 use App\Services\PlnEsdmMatchService;
 use Filament\Actions;
@@ -14,15 +16,25 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * Review matching PLN ↔ ESDM — ditampilkan per-PLN (1 baris = 1 stasiun PLN).
+ *
+ * Klik baris → halaman View menampilkan SEMUA kandidat ESDM (RelationManager),
+ * admin pilih satu sebagai pemenang (approve). Sisa kandidat otomatis di-reject
+ * oleh PlnEsdmMatchService::approve() ("Superseded").
+ *
+ * Filter "Perlu pilih pemenang" = PLN yang punya kandidat pending/ai_suggested
+ * tapi belum ada approved. PLN yang sudah punya pemenang (approved) dianggap
+ * selesai dan disembunyikan dari review default.
+ */
 class PlnEsdmStationMatchResource extends Resource
 {
-    protected static ?string $model = PlnEsdmStationMatch::class;
+    protected static ?string $model = ChargingStation::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-link';
 
@@ -41,215 +53,100 @@ class PlnEsdmStationMatchResource extends Resource
         return Auth::user()?->hasRole('super_admin') ?? false;
     }
 
+    /** Hanya PLN yang punya ≥1 kandidat match. */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->where('source', 'pln')
+            ->whereHas('plnEsdmMatches');
+    }
+
     public static function table(Table $table): Table
     {
         return $table
             ->poll('60s')
+            ->defaultPaginationPageOptions([25, 50, 100])
             ->columns([
-                TextColumn::make('id')
-                    ->label('ID')
-                    ->sortable(),
-                TextColumn::make('plnStation.nama_lokasi')
-                    ->label('PLN')
+                TextColumn::make('nama_lokasi')
+                    ->label('Stasiun PLN')
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
-                    ->limit(35),
-                TextColumn::make('esdmStation.nama_lokasi')
-                    ->label('ESDM')
+                    ->limit(40),
+                TextColumn::make('provinsi')
+                    ->label('Provinsi')
                     ->searchable()
                     ->sortable()
-                    ->limit(35),
-                TextColumn::make('distance_m')
-                    ->label('Jarak')
-                    ->formatStateUsing(fn (?int $state): string => $state !== null ? number_format($state, 0, ',', '.').' m' : '—')
-                    ->alignRight()
-                    ->sortable(),
-                TextColumn::make('similarity_pct')
-                    ->label('Kemiripan Nama')
-                    ->formatStateUsing(fn (?int $state): string => $state !== null ? $state.'%' : '—')
-                    ->color(fn (?int $state): string => match (true) {
-                        $state === null => 'gray',
-                        $state >= 85 => 'success',
-                        $state >= 60 => 'warning',
-                        default => 'danger',
-                    })
-                    ->alignCenter(),
-                TextColumn::make('ai_confidence')
-                    ->label('AI Confidence')
-                    ->formatStateUsing(fn (?string $state): string => $state !== null ? $state.'%' : '—')
-                    ->placeholder('—')
-                    ->alignCenter(),
-                TextColumn::make('match_method')
-                    ->label('Metode')
-                    ->badge()
-                    ->color(fn (?string $state): string => match ($state) {
-                        'auto_geo_name' => 'success',
-                        'auto_geo' => 'info',
-                        'ai' => 'warning',
-                        'manual' => 'primary',
-                        default => 'gray',
-                    }),
-                TextColumn::make('match_status')
-                    ->label('Status')
-                    ->badge()
-                    ->color(fn (?string $state): string => match ($state) {
-                        'approved' => 'success',
-                        'ai_suggested' => 'warning',
-                        'pending' => 'info',
-                        'rejected' => 'danger',
-                        default => 'gray',
-                    }),
-                TextColumn::make('decided_by')
-                    ->label('Diputus oleh')
                     ->placeholder('—')
                     ->limit(20),
-                TextColumn::make('created_at')
-                    ->label('Dibuat')
-                    ->since()
-                    ->sortable(),
+                TextColumn::make('pln_esdm_matches_count')
+                    ->label('Kandidat')
+                    ->counts('plnEsdmMatches')
+                    ->sortable()
+                    ->alignCenter()
+                    ->badge()
+                    ->color('gray'),
+                TextColumn::make('winner')
+                    ->label('Pemenang (ESDM)')
+                    ->getStateUsing(function (ChargingStation $record): ?string {
+                        $winner = $record->plnEsdmMatches->firstWhere('match_status', PlnEsdmMatchService::STATUS_APPROVED);
+                        if ($winner === null) {
+                            return null;
+                        }
+
+                        return $winner->esdm_name ?? $winner->esdmStation?->nama_lokasi;
+                    })
+                    ->placeholder('— belum dipilih —')
+                    ->limit(40),
+                TextColumn::make('has_winner')
+                    ->label('Status')
+                    ->getStateUsing(fn (ChargingStation $record): string => $record->plnEsdmMatches->contains('match_status', PlnEsdmMatchService::STATUS_APPROVED) ? 'Sudah dipilih' : 'Perlu pilih')
+                    ->badge()
+                    ->color(fn (string $state): string => $state === 'Sudah dipilih' ? 'success' : 'warning'),
             ])
             ->filters([
-                SelectFilter::make('match_status')
-                    ->label('Filter Status')
-                    ->options([
-                        'pending' => 'Pending (review)',
-                        'ai_suggested' => 'AI suggest (review)',
-                        'approved' => 'Approved',
-                        'rejected' => 'Rejected (admin)',
-                        'rejected_ai' => 'Rejected (AI)',
-                    ]),
-                TernaryFilter::make('perlu_review')
-                    ->label('Perlu Review')
+                TernaryFilter::make('has_winner')
+                    ->label('Status pemenang')
                     ->placeholder('Semua')
-                    ->trueLabel('Perlu review (pending + AI suggest)')
-                    ->falseLabel('Sudah final')
+                    ->trueLabel('Sudah punya pemenang')
+                    ->falseLabel('Perlu pilih (belum ada approved)')
                     ->queries(
-                        true: fn ($query) => $query->whereIn('match_status', ['pending', 'ai_suggested']),
-                        false: fn ($query) => $query->whereNotIn('match_status', ['pending', 'ai_suggested']),
-                        blank: fn ($query) => $query,
+                        true: fn (Builder $query) => $query->whereHas('plnEsdmMatches', fn ($q) => $q->where('match_status', PlnEsdmMatchService::STATUS_APPROVED)),
+                        false: fn (Builder $query) => $query->whereDoesntHave('plnEsdmMatches', fn ($q) => $q->where('match_status', PlnEsdmMatchService::STATUS_APPROVED)),
+                        blank: fn (Builder $query) => $query,
                     ),
-                SelectFilter::make('match_method')
-                    ->label('Filter Metode')
-                    ->options([
-                        'auto_geo' => 'auto_geo',
-                        'auto_geo_name' => 'auto_geo_name',
-                        'ai' => 'ai',
-                        'manual' => 'manual',
-                    ]),
             ])
-            ->recordActions([
-                Actions\ActionGroup::make([
-                    Actions\Action::make('approve')
-                        ->label('Approve Match')
-                        ->icon('heroicon-o-check-circle')
-                        ->color('success')
-                        ->visible(fn (PlnEsdmStationMatch $record): bool => $record->match_status !== 'approved')
-                        ->modalHeading('Approve Match PLN ↔ ESDM')
-                        ->modalSubmitActionLabel('Approve')
-                        ->form(static::comparisonSchema())
-                        ->action(function (PlnEsdmStationMatch $record): void {
-                            app(PlnEsdmMatchService::class)->approve($record->id, Auth::user()?->email);
-
-                            Notification::make()
-                                ->title('Match di-approve')
-                                ->body('Status stasiun PLN kini mengikuti status real-time ESDM.')
-                                ->success()
-                                ->send();
-                        }),
-                    Actions\Action::make('reject')
-                        ->label('Tolak Match')
-                        ->icon('heroicon-o-x-circle')
-                        ->color('danger')
-                        ->visible(fn (PlnEsdmStationMatch $record): bool => $record->match_status !== 'rejected')
-                        ->modalHeading('Tolak Match PLN ↔ ESDM')
-                        ->modalSubmitActionLabel('Tolak')
-                        ->form([
-                            ...static::comparisonSchema(),
-                            Textarea::make('rejected_reason')
-                                ->label('Alasan Penolakan')
-                                ->required()
-                                ->rows(3)
-                                ->columnSpanFull()
-                                ->helperText('Alasan wajib diisi untuk audit.'),
-                        ])
-                        ->action(function (PlnEsdmStationMatch $record, array $data): void {
-                            app(PlnEsdmMatchService::class)->reject(
-                                $record->id,
-                                $data['rejected_reason'] ?? null,
-                                Auth::user()?->email,
-                            );
-
-                            Notification::make()
-                                ->title('Match ditolak')
-                                ->success()
-                                ->send();
-                        }),
-                ]),
+            ->actions([
+                Actions\Action::make('pilih_pemenang')
+                    ->label('Pilih Pemenang')
+                    ->icon('heroicon-o-trophy')
+                    ->color('warning')
+                    ->visible(fn (ChargingStation $record): bool => ! $record->plnEsdmMatches->contains('match_status', PlnEsdmMatchService::STATUS_APPROVED))
+                    ->url(fn (ChargingStation $record): string => static::getUrl('view', ['record' => $record]))
+                    ->openUrlInNewTab(false),
+                Actions\ViewAction::make()
+                    ->label('Lihat Kandidat')
+                    ->icon('heroicon-o-eye'),
             ])
-            ->toolbarActions([
-                Actions\BulkActionGroup::make([
-                    Actions\BulkAction::make('bulkApprove')
-                        ->label('Approve Terpilih')
-                        ->icon('heroicon-o-check-circle')
-                        ->color('success')
-                        ->requiresConfirmation()
-                        ->action(function (Collection $records): void {
-                            $service = app(PlnEsdmMatchService::class);
-                            $user = Auth::user()?->email;
-                            foreach ($records as $record) {
-                                $service->approve($record->id, $user);
-                            }
-
-                            Notification::make()
-                                ->title(count($records).' match di-approve')
-                                ->body('Status stasiun PLN mengikuti status ESDM.')
-                                ->success()
-                                ->send();
-                        }),
-                    Actions\BulkAction::make('bulkReject')
-                        ->label('Tolak Terpilih')
-                        ->icon('heroicon-o-x-circle')
-                        ->color('danger')
-                        ->form([
-                            Textarea::make('rejected_reason')
-                                ->label('Alasan Penolakan')
-                                ->required()
-                                ->rows(3)
-                                ->helperText('Alasan yang sama diterapkan ke semua match terpilih.'),
-                        ])
-                        ->action(function (Collection $records, array $data): void {
-                            $service = app(PlnEsdmMatchService::class);
-                            $user = Auth::user()?->email;
-                            foreach ($records as $record) {
-                                $service->reject($record->id, $data['rejected_reason'] ?? null, $user);
-                            }
-
-                            Notification::make()
-                                ->title(count($records).' match ditolak')
-                                ->success()
-                                ->send();
-                        }),
-                ]),
-            ])
-            ->defaultSort('id', 'desc');
+            ->recordUrl(fn (ChargingStation $record): string => static::getUrl('view', ['record' => $record]))
+            ->defaultSort('nama_lokasi');
     }
 
     /**
      * Skema perbandingan side-by-side PLN vs ESDM + skor + AI reasoning.
-     * Dipakai di modal approve & reject.
+     * Dipakai di modal approve & reject di RelationManager.
      */
     public static function comparisonSchema(): array
     {
         return [
             Grid::make(2)->schema([
-                Section::make('PLN (sumber status kosong)')->schema([
+                Section::make('PLN (sumber master)')->schema([
                     Placeholder::make('pln_name')
                         ->label('Nama')
                         ->content(fn (PlnEsdmStationMatch $record): string => (string) $record->pln_name),
                     Placeholder::make('pln_address')
                         ->label('Alamat')
-                        ->content(fn (PlnEsdmStationMatch $record): string => (string) $record->plnStation?->alamat ?? '—'),
+                        ->content(fn (PlnEsdmStationMatch $record): string => (string) ($record->plnStation?->alamat ?? '—')),
                     Placeholder::make('pln_coord')
                         ->label('Koordinat')
                         ->content(fn (PlnEsdmStationMatch $record): string => $record->plnStation
@@ -263,13 +160,13 @@ class PlnEsdmStationMatchResource extends Resource
                             'Buka lokasi PLN',
                         )),
                 ]),
-                Section::make('ESDM (sumber status)')->schema([
+                Section::make('ESDM (kandidat pemenang)')->schema([
                     Placeholder::make('esdm_name')
                         ->label('Nama')
                         ->content(fn (PlnEsdmStationMatch $record): string => (string) $record->esdm_name),
                     Placeholder::make('esdm_address')
                         ->label('Alamat')
-                        ->content(fn (PlnEsdmStationMatch $record): string => (string) $record->esdmStation?->alamat ?? '—'),
+                        ->content(fn (PlnEsdmStationMatch $record): string => (string) ($record->esdmStation?->alamat ?? '—')),
                     Placeholder::make('esdm_coord')
                         ->label('Koordinat')
                         ->content(fn (PlnEsdmStationMatch $record): string => $record->esdmStation
@@ -312,7 +209,7 @@ class PlnEsdmStationMatchResource extends Resource
         ];
     }
 
-    private static function mapsLinkHtml(?float $lat, ?float $lng, string $label): \Illuminate\Support\HtmlString
+    public static function mapsLinkHtml(?float $lat, ?float $lng, string $label): \Illuminate\Support\HtmlString
     {
         if ($lat === null || $lng === null) {
             return new \Illuminate\Support\HtmlString('—');
@@ -325,7 +222,7 @@ class PlnEsdmStationMatchResource extends Resource
         );
     }
 
-    private static function aiReasoningHtml(PlnEsdmStationMatch $record): \Illuminate\Support\HtmlString
+    public static function aiReasoningHtml(PlnEsdmStationMatch $record): \Illuminate\Support\HtmlString
     {
         $ai = $record->ai_reasoning;
         if (empty($ai)) {
@@ -360,10 +257,18 @@ class PlnEsdmStationMatchResource extends Resource
         return new \Illuminate\Support\HtmlString('<div style="line-height:1.7">'.implode('<br>', $lines).'</div>');
     }
 
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\CandidatesRelationManager::class,
+        ];
+    }
+
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListPlnEsdmStationMatches::route('/'),
+            'view' => Pages\ViewPlnEsdmStationMatch::route('/{record}'),
         ];
     }
 }
