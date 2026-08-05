@@ -44,6 +44,17 @@ class ChargingSessionResource extends JsonResource
                 return [
                     'id' => $this->vehicle?->id,
                     'license_plate' => $this->vehicle?->license_plate,
+                    // type_vehicle + battery_capacity dibutuhkan client utk
+                    // hitung losses (%) & efisiensi (km/kWh). Preseden LossesChart.
+                    // Di-serve langsung (bukan whenLoaded nested) karena sudah
+                    // eager-load via controller.
+                    'type_vehicle' => $this->vehicle?->typeVehicle ? [
+                        'id' => $this->vehicle->typeVehicle->id,
+                        'name' => $this->vehicle->typeVehicle->name,
+                        'battery_capacity' => isset($this->vehicle->typeVehicle->battery_capacity)
+                            ? (float) $this->vehicle->typeVehicle->battery_capacity
+                            : null,
+                    ] : null,
                 ];
             }),
 

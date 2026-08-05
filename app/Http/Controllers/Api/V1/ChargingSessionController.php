@@ -24,7 +24,7 @@ class ChargingSessionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Charge::where('charges.user_id', Auth::id())
-            ->with(['vehicle', 'chargingStation', 'chargerLocation', 'chargerLocation.provider']);
+            ->with(['vehicle.typeVehicle', 'chargingStation', 'chargerLocation', 'chargerLocation.provider']);
 
         if ($request->filled('charging_station_id')) {
             $query->where('charging_station_id', $request->charging_station_id);
@@ -54,15 +54,25 @@ class ChargingSessionController extends Controller
             $query->where('date', '<=', $request->date_to);
         }
 
-        // get() (bukan paginate()) supaya Resource::collection() menghasilkan
-        // array murni `data: [...]`, cocok dgn kontrak mobile. Paginator justru
-        // membungkus data jadi `{data, links, meta}` yang gagal deserialize.
-        $entries = $query->orderByDesc('date')->get();
+        // paginate() utk performa (hindari load all ratusan sesi sekaligus),
+        // lalu reshape ke kontrak mobile: `data:[...]` array murni + info
+        // pagination di `meta`. Paginator bawaan Laravel membungkus data jadi
+        // `{data, links, meta}` yang gagal deserialize di mobile.
+        $perPage = (int) ($request->per_page ?? 20);
+        $perPage = max(1, min(100, $perPage));
+        $paginator = $query->orderByDesc('date')->paginate($perPage);
 
         return response()->json([
             'success' => true,
             'message' => 'Charging sessions retrieved successfully',
-            'data' => ChargingSessionResource::collection($entries),
+            'data' => ChargingSessionResource::collection($paginator->getCollection()),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'has_more' => $paginator->hasMorePages(),
+            ],
         ]);
     }
 
