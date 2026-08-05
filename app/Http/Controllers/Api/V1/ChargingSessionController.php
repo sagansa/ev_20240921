@@ -24,7 +24,7 @@ class ChargingSessionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Charge::where('charges.user_id', Auth::id())
-            ->with(['vehicle', 'chargingStation', 'chargerLocation']);
+            ->with(['vehicle', 'chargingStation', 'chargerLocation', 'chargerLocation.provider']);
 
         if ($request->filled('charging_station_id')) {
             $query->where('charging_station_id', $request->charging_station_id);

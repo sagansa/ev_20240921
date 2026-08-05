@@ -23,14 +23,20 @@ class ChargingSessionResource extends JsonResource
             'date' => $this->date ? Carbon::parse($this->date)->toDateString() : null,
 
             // Lokasi — dua kemungkinan: charging_stations (mobile SPKLU) atau
-            // charger_locations (legacy Filament admin). Snapshot selalu di-serve.
+            // charger_locations (legacy Filament admin). Snapshot dipakai utk
+            // sesi mobile; utk sesi legacy (snapshot NULL) fallback ke relasi
+            // chargerLocation supaya nama/alamat/provider tetap terisi.
             'charging_station_id' => $this->charging_station_id,
             'charger_location_id' => $this->charger_location_id,
-            'station_name' => $this->station_name_snapshot,
-            'station_address' => $this->station_address_snapshot,
-            'station_latitude' => isset($this->station_lat_snapshot) ? (float) $this->station_lat_snapshot : null,
-            'station_longitude' => isset($this->station_lng_snapshot) ? (float) $this->station_lng_snapshot : null,
-            'station_provider' => $this->station_provider_snapshot,
+            'station_name' => $this->station_name_snapshot ?? $this->chargerLocation?->name,
+            'station_address' => $this->station_address_snapshot ?? $this->chargerLocation?->address,
+            'station_latitude' => isset($this->station_lat_snapshot)
+                ? (float) $this->station_lat_snapshot
+                : ($this->chargerLocation?->latitude !== null ? (float) $this->chargerLocation->latitude : null),
+            'station_longitude' => isset($this->station_lng_snapshot)
+                ? (float) $this->station_lng_snapshot
+                : ($this->chargerLocation?->longitude !== null ? (float) $this->chargerLocation->longitude : null),
+            'station_provider' => $this->station_provider_snapshot ?? $this->whenLoaded('chargerLocation', fn () => $this->chargerLocation?->provider?->name),
 
             // Kendaraan (opsional — sesi mobile tanpa vehicle).
             'vehicle_id' => $this->vehicle_id,
