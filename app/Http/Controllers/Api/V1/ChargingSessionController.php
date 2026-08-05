@@ -218,26 +218,27 @@ class ChargingSessionController extends Controller
         $totalKwh = (float) ((clone $query)->sum('kWh') ?? 0);
         $totalCost = (float) ((clone $query)->sum('total_cost') ?? 0);
 
-        // Hitung totalKm: jumlah selisih (km_now - km_before) per sesi di mana km_now > km_before.
-        // Jika km_before null, ambil selisih antara km_now maksimum & minimum.
-        $sessions = (clone $query)->whereNotNull('km_now')->get();
-        $totalKm = 0.0;
-        foreach ($sessions as $s) {
-            if ($s->km_now !== null && $s->km_before !== null && $s->km_now > $s->km_before) {
-                $totalKm += ($s->km_now - $s->km_before);
-            }
-        }
-        if ($totalKm <= 0 && $sessions->count() >= 2) {
-            $minKm = $sessions->min('km_now');
-            $maxKm = $sessions->max('km_now');
-            if ($maxKm > $minKm) {
-                $totalKm = (float) ($maxKm - $minKm);
+        // Kalkulasi Total Km persis seperti Filament ChargeStats widget ($kmNow - $kmBefore)
+        $kmNowSum = (float) ((clone $query)->sum('km_now') ?? 0);
+        $kmBeforeSum = (float) ((clone $query)->sum('km_before') ?? 0);
+        $totalKm = max($kmNowSum - $kmBeforeSum, 0);
+
+        // Fallback per-sesi jika km_before 0 atau belum terisi
+        if ($totalKm <= 0) {
+            $sessions = (clone $query)->whereNotNull('km_now')->where('km_now', '>', 0)->get();
+            if ($sessions->count() >= 2) {
+                $minKm = $sessions->min('km_now');
+                $maxKm = $sessions->max('km_now');
+                $totalKm = (float) max($maxKm - $minKm, 0);
+            } elseif ($sessions->count() == 1) {
+                $first = $sessions->first();
+                $totalKm = (float) max(($first->km_now - ($first->km_before ?? 0)), 0);
             }
         }
 
         // Efisiensi & biaya
         $kwhPer100km = $totalKm > 0 ? ($totalKwh / $totalKm) * 100 : 0;
-        $kmPerKwh = $totalKwh > 0 ? ($totalKm > 0 ? $totalKm / $totalKwh : 0) : 0;
+        $kmPerKwh = $totalKwh > 0 ? $totalKm / $totalKwh : 0;
         $costPerKm = $totalKm > 0 ? $totalCost / $totalKm : 0;
         $costPerKwh = $totalKwh > 0 ? $totalCost / $totalKwh : 0;
         $estimatedBbmCost = ($totalKm / 12) * 13700;
