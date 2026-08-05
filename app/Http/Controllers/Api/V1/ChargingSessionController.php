@@ -35,6 +35,11 @@ class ChargingSessionController extends Controller
         if ($request->filled('vehicle_id')) {
             $query->where('vehicle_id', $request->vehicle_id);
         }
+        if ($request->filled('type_vehicle_id')) {
+            $query->whereHas('vehicle', function ($q) use ($request) {
+                $q->where('type_vehicle_id', $request->type_vehicle_id);
+            });
+        }
         if ($request->filled('date_from')) {
             $query->where('date', '>=', $request->date_from);
         }
@@ -194,13 +199,18 @@ class ChargingSessionController extends Controller
     public function analytics(Request $request): JsonResponse
     {
         $query = Charge::where('charges.user_id', Auth::id());
-        if ($request->has('vehicle_id')) {
+        if ($request->filled('vehicle_id')) {
             $query->where('vehicle_id', $request->vehicle_id);
         }
-        if ($request->has('date_from')) {
+        if ($request->filled('type_vehicle_id')) {
+            $query->whereHas('vehicle', function ($q) use ($request) {
+                $q->where('type_vehicle_id', $request->type_vehicle_id);
+            });
+        }
+        if ($request->filled('date_from')) {
             $query->where('date', '>=', $request->date_from);
         }
-        if ($request->has('date_to')) {
+        if ($request->filled('date_to')) {
             $query->where('date', '<=', $request->date_to);
         }
 
@@ -225,10 +235,11 @@ class ChargingSessionController extends Controller
             }
         }
 
-        // Efisiensi & savings vs BBM (Pertamax ~Rp 13.700/L, 12 km/L).
+        // Efisiensi & biaya
         $kwhPer100km = $totalKm > 0 ? ($totalKwh / $totalKm) * 100 : 0;
         $kmPerKwh = $totalKwh > 0 ? ($totalKm > 0 ? $totalKm / $totalKwh : 0) : 0;
         $costPerKm = $totalKm > 0 ? $totalCost / $totalKm : 0;
+        $costPerKwh = $totalKwh > 0 ? $totalCost / $totalKwh : 0;
         $estimatedBbmCost = ($totalKm / 12) * 13700;
         $totalSavings = max($estimatedBbmCost - $totalCost, 0);
 
@@ -240,9 +251,10 @@ class ChargingSessionController extends Controller
                 'total_energy_kwh' => round($totalKwh, 2),
                 'total_cost' => round($totalCost, 0),
                 'total_distance_km' => round($totalKm, 1),
+                'cost_per_kwh' => round($costPerKwh, 0),
+                'cost_per_km' => round($costPerKm, 0),
                 'kwh_per_100km' => round($kwhPer100km, 2),
                 'km_per_kwh' => round($kmPerKwh, 2),
-                'cost_per_km' => round($costPerKm, 0),
                 'estimated_bbm_cost' => round($estimatedBbmCost, 0),
                 'total_savings' => round($totalSavings, 0),
             ],
