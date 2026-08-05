@@ -78,7 +78,7 @@ class ChargingSessionController extends Controller
         $charge = Charge::create(array_merge(
             ['user_id' => Auth::id()],
             $validated,
-            $this->stationSnapshot($validated['charging_station_id'] ?? null),
+            $this->stationSnapshot($request),
         ));
 
         $charge->load(['vehicle', 'chargingStation', 'chargerLocation']);
@@ -113,8 +113,8 @@ class ChargingSessionController extends Controller
 
         $data = $validated;
         // Re-snapshot bila charging_station_id berubah (termasuk dihapus).
-        if (array_key_exists('charging_station_id', $validated)) {
-            $data = array_merge($data, $this->stationSnapshot($validated['charging_station_id']));
+        if (array_key_exists('charging_station_id', $validated) || array_key_exists('station_name', $validated)) {
+            $data = array_merge($data, $this->stationSnapshot($request));
         }
         $chargingSession->update($data);
         $chargingSession->load(['vehicle', 'chargingStation', 'chargerLocation']);
@@ -189,8 +189,8 @@ class ChargingSessionController extends Controller
         }
 
         $totalSessions = (clone $query)->count();
-        $totalKwh = (float) (clone $query)->sum('kWh');
-        $totalCost = (float) (clone $query)->sum('total_cost');
+        $totalKwh = (float) ((clone $query)->sum('kWh') ?? 0);
+        $totalCost = (float) ((clone $query)->sum('total_cost') ?? 0);
 
         // Hitung totalKm: jumlah selisih (km_now - km_before) per sesi di mana km_now > km_before.
         // Jika km_before null, ambil selisih antara km_now maksimum & minimum.
@@ -270,6 +270,9 @@ class ChargingSessionController extends Controller
             'charging_station_id' => $sometimes.'nullable|integer',
             'charger_location_id' => $sometimes.'nullable|uuid',
             'charger_id' => $sometimes.'nullable|uuid',
+            'station_name' => $sometimes.'nullable|string|max:255',
+            'station_address' => $sometimes.'nullable|string|max:500',
+            'station_provider' => $sometimes.'nullable|string|max:255',
             'date' => $sometimes.'nullable|date',
             'km_before' => $sometimes.'nullable|numeric|min:0',
             'km_now' => $sometimes.'nullable|numeric|min:0',
@@ -294,16 +297,31 @@ class ChargingSessionController extends Controller
             unset($validated['kwh']);
         }
 
+        // Map custom station fields → snapshot columns jika diinput manual
+        if (! empty($validated['station_name'])) {
+            $validated['station_name_snapshot'] = $validated['station_name'];
+            unset($validated['station_name']);
+        }
+        if (! empty($validated['station_address'])) {
+            $validated['station_address_snapshot'] = $validated['station_address'];
+            unset($validated['station_address']);
+        }
+        if (! empty($validated['station_provider'])) {
+            $validated['station_provider_snapshot'] = $validated['station_provider'];
+            unset($validated['station_provider']);
+        }
+
         return $validated;
     }
 
     /**
      * Snapshot denormalized dari charging_stations saat sesi dibuat/diupdate.
      * Bila charging_station_id diberikan & station ditemukan, snapshot mengisi
-     * station_*; jika tidak, snapshot dikosongkan (input manual tanpa link DB).
+     * station_*; jika tidak, gunakan snapshot manual jika ada.
      */
-    private function stationSnapshot(?int $stationId): array
+    private function stationSnapshot(Request $request): array
     {
+        $stationId = $request->input('charging_station_id');
         if ($stationId) {
             $station = ChargingStation::find($stationId);
             if ($station) {
@@ -318,11 +336,11 @@ class ChargingSessionController extends Controller
         }
 
         return [
-            'station_name_snapshot' => null,
-            'station_address_snapshot' => null,
+            'station_name_snapshot' => $request->input('station_name'),
+            'station_address_snapshot' => $request->input('station_address'),
             'station_lat_snapshot' => null,
             'station_lng_snapshot' => null,
-            'station_provider_snapshot' => null,
+            'station_provider_snapshot' => $request->input('station_provider'),
         ];
     }
 }
