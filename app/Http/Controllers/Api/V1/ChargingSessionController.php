@@ -128,6 +128,36 @@ class ChargingSessionController extends Controller
     }
 
     /**
+     * Sesi charging terakhir milik user untuk kendaraan tertentu — dipakai form
+     * mobile utk auto-fill `km_before` (odometer berkelanjutan) &
+     * `finish_charging_before` (battery akhir = battery awal sesi berikutnya).
+     * Preseden: ChargeResource::getLatestKmNowForVehicle /
+     * getLatestChargingNowForVehicle.
+     */
+    public function latest(Request $request): JsonResponse
+    {
+        $request->validate(['vehicle_id' => 'required']);
+
+        // Eager-load `vehicle` — tanpa ini, ChargingSessionResource `whenLoaded`
+        // merender `"vehicle": {}` (object kosong, bukan null) yang gagal
+        // deserialize di Kotlin (VehicleDto.id non-null wajib). Akibatnya fetch
+        // latest meledak saat parsing & field auto-fill form mobile diam-diam
+        // kosong. Konsisten dgn index()/store() yang sudah `with('vehicle')`.
+        $session = Charge::where('charges.user_id', Auth::id())
+            ->where('vehicle_id', $request->vehicle_id)
+            ->with(['vehicle', 'chargingStation', 'chargerLocation'])
+            ->latest('date')
+            ->latest('created_at')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Latest charging session retrieved successfully',
+            'data' => $session ? new ChargingSessionResource($session) : null,
+        ]);
+    }
+
+    /**
      * Ringkasan analytics untuk dashboard mobile — total sesi, kWh, biaya,
      * jarak, efisiensi (kWh/100km, cost/km), dan penghematan vs BBM.
      */
