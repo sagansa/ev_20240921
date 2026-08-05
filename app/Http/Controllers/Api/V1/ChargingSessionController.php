@@ -63,6 +63,18 @@ class ChargingSessionController extends Controller
     {
         $validated = $this->validateSession($request, true);
 
+        // Auto-fill data "sebelum" dari sesi terakhir kendaraan yg sama —
+        // supaya perhitungan turunan (km trip, delta battery → losses,
+        // Rp/km, kWh/km) konsisten tanpa user mengingat/mengisi field tsb.
+        // `km_before` ← sesi terakhir `km_now`; `finish_charging_before` ←
+        // sesi terakhir `finish_charging_now`. Override input mobile (field
+        // tsb sudah tidak ada di form).
+        if (! empty($validated['vehicle_id'])) {
+            $previous = $this->latestForVehicle($validated['vehicle_id']);
+            $validated['km_before'] = $previous?->km_now;
+            $validated['finish_charging_before'] = $previous?->finish_charging_now;
+        }
+
         $charge = Charge::create(array_merge(
             ['user_id' => Auth::id()],
             $validated,
@@ -128,33 +140,35 @@ class ChargingSessionController extends Controller
     }
 
     /**
-     * Sesi charging terakhir milik user untuk kendaraan tertentu — dipakai form
-     * mobile utk auto-fill `km_before` (odometer berkelanjutan) &
-     * `finish_charging_before` (battery akhir = battery awal sesi berikutnya).
-     * Preseden: ChargeResource::getLatestKmNowForVehicle /
-     * getLatestChargingNowForVehicle.
+     * Sesi charging terakhir milik user untuk kendaraan tertentu. Kini dipakai
+     * internal utk auto-fill `km_before`/`finish_charging_before` di store();
+     * tetap diekspos sebagai endpoint utk kompatibilitas (mis. debug/admin).
      */
     public function latest(Request $request): JsonResponse
     {
         $request->validate(['vehicle_id' => 'required']);
 
-        // Eager-load `vehicle` — tanpa ini, ChargingSessionResource `whenLoaded`
-        // merender `"vehicle": {}` (object kosong, bukan null) yang gagal
-        // deserialize di Kotlin (VehicleDto.id non-null wajib). Akibatnya fetch
-        // latest meledak saat parsing & field auto-fill form mobile diam-diam
-        // kosong. Konsisten dgn index()/store() yang sudah `with('vehicle')`.
-        $session = Charge::where('charges.user_id', Auth::id())
-            ->where('vehicle_id', $request->vehicle_id)
-            ->with(['vehicle', 'chargingStation', 'chargerLocation'])
-            ->latest('date')
-            ->latest('created_at')
-            ->first();
+        $session = $this->latestForVehicle($request->vehicle_id)?->load(['vehicle', 'chargingStation', 'chargerLocation']);
 
         return response()->json([
             'success' => true,
             'message' => 'Latest charging session retrieved successfully',
             'data' => $session ? new ChargingSessionResource($session) : null,
         ]);
+    }
+
+    /**
+     * Query sesi terakhir milik user utk kendaraan tertentu (shared oleh
+     * endpoint latest() dan store() auto-fill). Ordered by date lalu
+     * created_at agar sesi hari sama urut konsisten.
+     */
+    private function latestForVehicle(string $vehicleId): ?Charge
+    {
+        return Charge::where('charges.user_id', Auth::id())
+            ->where('vehicle_id', $vehicleId)
+            ->latest('date')
+            ->latest('created_at')
+            ->first();
     }
 
     /**
