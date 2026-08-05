@@ -191,15 +191,30 @@ class ChargingSessionController extends Controller
         $totalSessions = (clone $query)->count();
         $totalKwh = (float) (clone $query)->sum('kWh');
         $totalCost = (float) (clone $query)->sum('total_cost');
-        $kmNow = (float) (clone $query)->sum('km_now');
-        $kmBefore = (float) (clone $query)->sum('km_before');
-        $totalKm = max($kmNow - $kmBefore, 0);
+
+        // Hitung totalKm: jumlah selisih (km_now - km_before) per sesi di mana km_now > km_before.
+        // Jika km_before null, ambil selisih antara km_now maksimum & minimum.
+        $sessions = (clone $query)->whereNotNull('km_now')->get();
+        $totalKm = 0.0;
+        foreach ($sessions as $s) {
+            if ($s->km_now !== null && $s->km_before !== null && $s->km_now > $s->km_before) {
+                $totalKm += ($s->km_now - $s->km_before);
+            }
+        }
+        if ($totalKm <= 0 && $sessions->count() >= 2) {
+            $minKm = $sessions->min('km_now');
+            $maxKm = $sessions->max('km_now');
+            if ($maxKm > $minKm) {
+                $totalKm = (float) ($maxKm - $minKm);
+            }
+        }
 
         // Efisiensi & savings vs BBM (Pertamax ~Rp 13.700/L, 12 km/L).
         $kwhPer100km = $totalKm > 0 ? ($totalKwh / $totalKm) * 100 : 0;
+        $kmPerKwh = $totalKwh > 0 ? ($totalKm > 0 ? $totalKm / $totalKwh : 0) : 0;
         $costPerKm = $totalKm > 0 ? $totalCost / $totalKm : 0;
         $estimatedBbmCost = ($totalKm / 12) * 13700;
-        $totalSavings = $estimatedBbmCost - $totalCost;
+        $totalSavings = max($estimatedBbmCost - $totalCost, 0);
 
         return response()->json([
             'success' => true,
@@ -210,6 +225,7 @@ class ChargingSessionController extends Controller
                 'total_cost' => round($totalCost, 0),
                 'total_distance_km' => round($totalKm, 1),
                 'kwh_per_100km' => round($kwhPer100km, 2),
+                'km_per_kwh' => round($kmPerKwh, 2),
                 'cost_per_km' => round($costPerKm, 0),
                 'estimated_bbm_cost' => round($estimatedBbmCost, 0),
                 'total_savings' => round($totalSavings, 0),
