@@ -47,6 +47,14 @@ class ChargingSessionController extends Controller
                 })->orWhereNull('vehicle_id');
             });
         }
+        if ($request->filled('model_vehicle_id')) {
+            $modelId = $request->model_vehicle_id;
+            $query->where(function ($q) use ($modelId) {
+                $q->whereHas('vehicle.typeVehicle', function ($sub) use ($modelId) {
+                    $sub->where('model_vehicle_id', $modelId);
+                })->orWhereNull('vehicle_id');
+            });
+        }
         if ($request->filled('date_from')) {
             $query->where('date', '>=', $request->date_from);
         }
@@ -235,6 +243,14 @@ class ChargingSessionController extends Controller
             $query->where(function ($q) use ($typeId) {
                 $q->whereHas('vehicle', function ($sub) use ($typeId) {
                     $sub->where('type_vehicle_id', $typeId);
+                })->orWhereNull('vehicle_id');
+            });
+        }
+        if ($request->filled('model_vehicle_id')) {
+            $modelId = $request->model_vehicle_id;
+            $query->where(function ($q) use ($modelId) {
+                $q->whereHas('vehicle.typeVehicle', function ($sub) use ($modelId) {
+                    $sub->where('model_vehicle_id', $modelId);
                 })->orWhereNull('vehicle_id');
             });
         }
