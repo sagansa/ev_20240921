@@ -60,7 +60,7 @@ class ChargingSessionController extends Controller
         // `{data, links, meta}` yang gagal deserialize di mobile.
         $perPage = (int) ($request->per_page ?? 20);
         $perPage = max(1, min(100, $perPage));
-        $paginator = $query->orderByDesc('date')->paginate($perPage);
+        $paginator = $query->orderByDesc('date')->orderByDesc('created_at')->paginate($perPage);
 
         return response()->json([
             'success' => true,
