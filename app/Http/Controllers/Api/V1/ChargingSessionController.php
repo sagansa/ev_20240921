@@ -33,11 +33,18 @@ class ChargingSessionController extends Controller
             $query->where('charger_location_id', $request->charger_location_id);
         }
         if ($request->filled('vehicle_id')) {
-            $query->where('vehicle_id', $request->vehicle_id);
+            $vId = $request->vehicle_id;
+            $query->where(function ($q) use ($vId) {
+                $q->where('vehicle_id', $vId)
+                  ->orWhereNull('vehicle_id');
+            });
         }
         if ($request->filled('type_vehicle_id')) {
-            $query->whereHas('vehicle', function ($q) use ($request) {
-                $q->where('type_vehicle_id', $request->type_vehicle_id);
+            $typeId = $request->type_vehicle_id;
+            $query->where(function ($q) use ($typeId) {
+                $q->whereHas('vehicle', function ($sub) use ($typeId) {
+                    $sub->where('type_vehicle_id', $typeId);
+                })->orWhereNull('vehicle_id');
             });
         }
         if ($request->filled('date_from')) {
@@ -74,6 +81,13 @@ class ChargingSessionController extends Controller
         // `km_before` ← sesi terakhir `km_now`; `finish_charging_before` ←
         // sesi terakhir `finish_charging_now`. Override input mobile (field
         // tsb sudah tidak ada di form).
+        if (empty($validated['vehicle_id'])) {
+            $firstVehicle = Auth::user()?->vehicles()->first();
+            if ($firstVehicle) {
+                $validated['vehicle_id'] = $firstVehicle->id;
+            }
+        }
+
         if (! empty($validated['vehicle_id'])) {
             $previous = $this->latestForVehicle($validated['vehicle_id']);
             $validated['km_before'] = $previous?->km_now;
@@ -200,11 +214,18 @@ class ChargingSessionController extends Controller
     {
         $query = Charge::where('charges.user_id', Auth::id());
         if ($request->filled('vehicle_id')) {
-            $query->where('vehicle_id', $request->vehicle_id);
+            $vId = $request->vehicle_id;
+            $query->where(function ($q) use ($vId) {
+                $q->where('vehicle_id', $vId)
+                  ->orWhereNull('vehicle_id');
+            });
         }
         if ($request->filled('type_vehicle_id')) {
-            $query->whereHas('vehicle', function ($q) use ($request) {
-                $q->where('type_vehicle_id', $request->type_vehicle_id);
+            $typeId = $request->type_vehicle_id;
+            $query->where(function ($q) use ($typeId) {
+                $q->whereHas('vehicle', function ($sub) use ($typeId) {
+                    $sub->where('type_vehicle_id', $typeId);
+                })->orWhereNull('vehicle_id');
             });
         }
         if ($request->filled('date_from')) {
