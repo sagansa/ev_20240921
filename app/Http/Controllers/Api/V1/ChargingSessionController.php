@@ -26,19 +26,19 @@ class ChargingSessionController extends Controller
         $query = Charge::where('charges.user_id', Auth::id())
             ->with(['vehicle', 'chargingStation', 'chargerLocation']);
 
-        if ($request->has('charging_station_id')) {
+        if ($request->filled('charging_station_id')) {
             $query->where('charging_station_id', $request->charging_station_id);
         }
-        if ($request->has('charger_location_id')) {
+        if ($request->filled('charger_location_id')) {
             $query->where('charger_location_id', $request->charger_location_id);
         }
-        if ($request->has('vehicle_id')) {
+        if ($request->filled('vehicle_id')) {
             $query->where('vehicle_id', $request->vehicle_id);
         }
-        if ($request->has('date_from')) {
+        if ($request->filled('date_from')) {
             $query->where('date', '>=', $request->date_from);
         }
-        if ($request->has('date_to')) {
+        if ($request->filled('date_to')) {
             $query->where('date', '<=', $request->date_to);
         }
 
@@ -73,6 +73,22 @@ class ChargingSessionController extends Controller
             $previous = $this->latestForVehicle($validated['vehicle_id']);
             $validated['km_before'] = $previous?->km_now;
             $validated['finish_charging_before'] = $previous?->finish_charging_now;
+        }
+
+        if (empty($validated['charging_station_id']) && ! empty($request->input('station_name'))) {
+            $customLoc = \App\Models\ChargerLocation::firstOrCreate(
+                [
+                    'user_id' => Auth::id(),
+                    'name' => $request->input('station_name'),
+                ],
+                [
+                    'address' => $request->input('station_address'),
+                    'data_source' => 'user_custom',
+                    'status' => 1,
+                    'location_on' => 1,
+                ]
+            );
+            $validated['charger_location_id'] = $customLoc->id;
         }
 
         $charge = Charge::create(array_merge(
