@@ -23,13 +23,6 @@ class ChargingSessionController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        // TEMP-DEBUG: log token & auth state
-        \Log::info('[ANALYTICS-DBG] index() called', [
-            'auth_id' => Auth::id(),
-            'auth_check' => Auth::check(),
-            'bearer' => $request->bearerToken(),
-            'has_auth_header' => $request->hasHeader('Authorization'),
-        ]);
         $query = Charge::where('charges.user_id', Auth::id())
             ->with(['vehicle', 'chargingStation', 'chargerLocation']);
 
@@ -219,13 +212,6 @@ class ChargingSessionController extends Controller
      */
     public function analytics(Request $request): JsonResponse
     {
-        // TEMP-DEBUG: log token & auth state
-        \Log::info('[ANALYTICS-DBG] analytics() called', [
-            'auth_id' => Auth::id(),
-            'auth_check' => Auth::check(),
-            'bearer' => $request->bearerToken(),
-            'has_auth_header' => $request->hasHeader('Authorization'),
-        ]);
         $query = Charge::where('charges.user_id', Auth::id());
         if ($request->filled('vehicle_id')) {
             $vId = $request->vehicle_id;
