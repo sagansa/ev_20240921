@@ -6,9 +6,9 @@ use App\Models\FuelPrice;
 use Illuminate\Database\Seeder;
 
 /**
- * Riwayat harga Pertamax (RON 92) sebagai titik awal. Admin dapat mengubah
- * harga kapan pun via Filament; sesi charging lama memakai harga yang berlaku
- * pada tanggal sesi (harga terakhir dengan effective_date <= tanggal sesi).
+ * Pertamax (RON 92) price history as a starting point. Admin can update the
+ * price anytime via Filament; old charging sessions use the price effective on
+ * the session date (latest price with effective_date <= session date).
  */
 class FuelPriceSeeder extends Seeder
 {

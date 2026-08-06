@@ -341,13 +341,13 @@ class ChargingSessionController extends Controller
     }
 
     /**
-     * Ringkasan analytics untuk dashboard mobile — total sesi, kWh, biaya,
-     * jarak, efisiensi (kWh/100km, cost/km), dan penghematan vs BBM.
+     * Analytics summary for the mobile dashboard — total sessions, kWh, cost,
+     * distance, efficiency (kWh/100km, cost/km), and savings vs BBM.
      *
-     * Estimasi BBM memakai harga historis tabel `fuel_prices` per tanggal sesi
-     * (bukan konstanta): km tiap sesi × harga BBM yang berlaku saat itu.
-     * Konsumsi dikalibrasi via `bbm_km_per_liter` (default 12) supaya mobile
-     * bisa mengirim nilai interaktif user.
+     * The BBM estimate uses the historical `fuel_prices` table per session
+     * date (not a constant): per-session km × fuel price effective at that
+     * time. Consumption is calibrated via `bbm_km_per_liter` (default 12) so
+     * the mobile app can send the user's interactive value.
      */
     public function analytics(Request $request): JsonResponse
     {
@@ -384,12 +384,12 @@ class ChargingSessionController extends Controller
         $totalKwh = (float) ((clone $query)->sum('kWh') ?? 0);
         $totalCost = (float) ((clone $query)->sum('total_cost') ?? 0);
 
-        // Kalkulasi Total Km persis seperti Filament ChargeStats widget ($kmNow - $kmBefore)
+        // Total Km computed exactly like the Filament ChargeStats widget ($kmNow - $kmBefore)
         $kmNowSum = (float) ((clone $query)->sum('km_now') ?? 0);
         $kmBeforeSum = (float) ((clone $query)->sum('km_before') ?? 0);
         $totalKm = max($kmNowSum - $kmBeforeSum, 0);
 
-        // Fallback per-sesi jika km_before 0 atau belum terisi
+        // Per-session fallback when km_before is 0 or not filled
         if ($totalKm <= 0) {
             $sessions = (clone $query)->whereNotNull('km_now')->where('km_now', '>', 0)->get();
             if ($sessions->count() >= 2) {
@@ -402,13 +402,13 @@ class ChargingSessionController extends Controller
             }
         }
 
-        // Efisiensi & biaya
+        // Efficiency & cost
         $kwhPer100km = $totalKm > 0 ? ($totalKwh / $totalKm) * 100 : 0;
         $kmPerKwh = $totalKwh > 0 ? $totalKm / $totalKwh : 0;
         $costPerKm = $totalKm > 0 ? $totalCost / $totalKm : 0;
         $costPerKwh = $totalKwh > 0 ? $totalCost / $totalKwh : 0;
 
-        // Estimasi BBM berbasis harga historis per tanggal sesi.
+        // BBM estimate based on historical prices per session date.
         $kmPerLiter = max((float) ($request->input('bbm_km_per_liter', 12)), 0.1);
         $bbm = $this->estimateBbmCost($query, $kmPerLiter);
         $estimatedBbmCost = $bbm['cost'];
@@ -435,11 +435,11 @@ class ChargingSessionController extends Controller
     }
 
     /**
-     * Estimasi biaya BBM untuk query sesi yang sama dgn `analytics`. Mengambil
-     * tiap sesi (date, km_before, km_now), hitung km trip per-sesi
-     * (max(km_now - km_before, 0)), lalu kalikan dgn harga BBM yang berlaku
-     * pada tanggal sesi (fuel_prices). Mengembalikan total biaya & km yang
-     * dipakai utk estimasi.
+     * BBM cost estimate for the same session query as `analytics`. Reads each
+     * session (date, km_before, km_now), computes the per-session trip km
+     * (max(km_now - km_before, 0)), then multiplies by the fuel price
+     * effective on the session date (fuel_prices). Returns the total cost and
+     * the km used for the estimate.
      */
     private function estimateBbmCost($query, float $kmPerLiter): array
     {
@@ -472,9 +472,9 @@ class ChargingSessionController extends Controller
     }
 
     /**
-     * Harga BBM yang berlaku pada tanggal sesi: harga terakhir dengan
-     * effective_date <= tanggal. Fallback harga termuda; tanpa data apa pun
-     * gunakan 13.700 (harga Pertamax terakhir yang dikenal).
+     * Fuel price effective on the session date: latest price with
+     * effective_date <= date. Falls back to the oldest price; with no data at
+     * all uses 13.700 (the last known Pertamax price).
      */
     private function fuelPriceAt(?string $date, array $schedule): float
     {

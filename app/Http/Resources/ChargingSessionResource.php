@@ -38,9 +38,10 @@ class ChargingSessionResource extends JsonResource
                 : ($this->chargerLocation?->longitude !== null ? (float) $this->chargerLocation->longitude : null),
             'station_provider' => $this->station_provider_snapshot ?? $this->whenLoaded('chargerLocation', fn () => $this->chargerLocation?->provider?->name),
 
-            // Rumah vs umum. Sesi charging_station (SPKLU publik) selalu umum;
-            // sesi charger_location dikategorikan "rumah" bila location_on = 2
-            // (private). Dipakai dashboard utk split biaya rumah/publik.
+            // Home vs public. Charging_station sessions (public SPKLU) are
+            // always public; charger_location sessions are "home" when
+            // location_on = 2 (private). Used by the dashboard for the
+            // home/public cost split.
             'is_home_charging' => $this->charging_station_id !== null
                 ? false
                 : (int) ($this->chargerLocation?->location_on ?? 0) === 2,

@@ -7,14 +7,14 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Riwayat harga BBM (fuel_prices) untuk dashboard mobile — dipakai client
- * menghitung estimasi biaya BBM per tanggal sesi (fitur "penghematan BBM").
+ * Historical fuel prices (fuel_prices) for the mobile dashboard — used by the
+ * client to compute the BBM cost estimate per session date (BBM savings).
  */
 class FuelPriceController extends Controller
 {
     /**
-     * Daftar harga BBM urut tanggal terbaru. Sesi charging lama memakai harga
-     * yang berlaku pada tanggal sesi (harga terakhir dengan tanggal <= sesi).
+     * Fuel price list ordered by newest date. Old charging sessions use the
+     * price effective on the session date (latest price with date <= session).
      */
     public function index(Request $request): JsonResponse
     {
