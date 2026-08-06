@@ -328,16 +328,20 @@ class ChargingSessionController extends Controller
      * tersedia untuk sesi itu — mencegah sumber lemah (snapshot nama) menarik
      * sesi yang sudah punya sumber definitif (mis. charger DC dgn nama AC).
      *
-     *  1. charger.typeCharger.name (enum 'AC'/'DC') — PRIMARY. Saat input via
-     *     Filament admin, user memilih Charger spesifik (charger_id); Charger
-     *     ber-relasi ke TypeCharger dgn name enum.
+     *  0. station_chargerbox_type_snapshot — PRIMARY utk sesi mobile. User
+     *     memilih charger box spesifik (mobile picker); type_charge charger
+     *     box tsb lebih akurat daripada tipe stasiun campuran.
+     *  1. charger.typeCharger.name (enum 'AC'/'DC') — PRIMARY utk input
+     *     Filament admin (charger_id spesifik); Charger ber-relasi ke
+     *     TypeCharger dgn name enum.
      *  2. chargingStation.type_charge / .chargers.type_charge canonical —
      *     fallback utk sesi mobile SPKLU (charging_station_id, tanpa charger_id).
      *     medium/standard = AC, fast/ultra_fast = DC.
      *  3. Snapshot nama — fallback terakhir utk sesi tanpa relasi apa pun.
      *
      * Keyakinan "sumber definitif ada" dipakai sebagai penutup fallback: bila
-     * charger_id terisi, snapshot tidak dipakai lagi (tidak ambigu).
+     * chargerbox snapshot / charger_id terisi, snapshot tidak dipakai lagi
+     * (tidak ambigu).
      */
     private function applyChargingTypeScope($query, string $cType): void
     {
@@ -364,55 +368,74 @@ class ChargingSessionController extends Controller
 
         if ($cType === 'DC') {
             $query->where(function ($q) use ($dcConnectors, $dcTokens, $dcStationTypes) {
-                // (1) Charger → TypeCharger (connector name) DC.
-                $q->whereHas('charger.typeCharger', $dcConnectors)
-                // (2) Tanpa charger_id, tapi dgn station canonical DC.
-                  ->orWhere(function ($s) use ($dcStationTypes) {
-                      $s->whereNull('charger_id')
-                        ->where(function ($ss) use ($dcStationTypes) {
-                            $ss->whereHas('chargingStation', fn ($st) => $st->whereIn('type_charge', $dcStationTypes))
-                               ->orWhereHas('chargingStation.chargers', fn ($cq) => $cq->whereIn('type_charge', $dcStationTypes));
-                        });
-                  })
-                // (3) Tanpa charger_id & charging_station_id → snapshot mengandung token DC.
-                  ->orWhere(function ($s) use ($dcTokens) {
-                      $s->whereNull('charger_id')
-                        ->whereNull('charging_station_id')
-                        ->where(function ($snap) use ($dcTokens) {
-                            foreach ($dcTokens as $token) {
-                                $snap->orWhere('station_name_snapshot', 'LIKE', "%{$token}%")
-                                     ->orWhere('station_provider_snapshot', 'LIKE', "%{$token}%");
-                            }
+                // (0) Charger box spesifik terpilih user — paling akurat.
+                $q->whereNotNull('station_chargerbox_type_snapshot')
+                  ->whereIn('station_chargerbox_type_snapshot', $dcStationTypes)
+                // (1)-(3) Fallback cascade — HANYA bila tanpa chargerbox snapshot
+                //         (sumber (0) lebih definitif, tidak boleh di-override).
+                  ->orWhere(function ($w) use ($dcConnectors, $dcTokens, $dcStationTypes) {
+                      $w->whereNull('station_chargerbox_type_snapshot')
+                        ->where(function ($q) use ($dcConnectors, $dcTokens, $dcStationTypes) {
+                            // (1) Charger → TypeCharger (connector name) DC.
+                            $q->whereHas('charger.typeCharger', $dcConnectors)
+                            // (2) Tanpa charger_id, tapi dgn station canonical DC.
+                              ->orWhere(function ($s) use ($dcStationTypes) {
+                                  $s->whereNull('charger_id')
+                                    ->where(function ($ss) use ($dcStationTypes) {
+                                        $ss->whereHas('chargingStation', fn ($st) => $st->whereIn('type_charge', $dcStationTypes))
+                                           ->orWhereHas('chargingStation.chargers', fn ($cq) => $cq->whereIn('type_charge', $dcStationTypes));
+                                    });
+                              })
+                            // (3) Tanpa charger_id & charging_station_id → snapshot mengandung token DC.
+                              ->orWhere(function ($s) use ($dcTokens) {
+                                  $s->whereNull('charger_id')
+                                    ->whereNull('charging_station_id')
+                                    ->where(function ($snap) use ($dcTokens) {
+                                        foreach ($dcTokens as $token) {
+                                            $snap->orWhere('station_name_snapshot', 'LIKE', "%{$token}%")
+                                                 ->orWhere('station_provider_snapshot', 'LIKE', "%{$token}%");
+                                        }
+                                    });
+                              });
                         });
                   });
             });
         } elseif ($cType === 'AC') {
             $query->where(function ($q) use ($acConnectors, $dcTokens, $acStationTypes) {
-                // (1) Charger → TypeCharger (connector name) AC.
-                $q->whereHas('charger.typeCharger', $acConnectors)
-                // (2) Tanpa charger_id, tapi dgn station canonical AC.
-                  ->orWhere(function ($s) use ($acStationTypes) {
-                      $s->whereNull('charger_id')
-                        ->where(function ($ss) use ($acStationTypes) {
-                            $ss->whereHas('chargingStation', fn ($st) => $st->whereIn('type_charge', $acStationTypes))
-                               ->orWhereHas('chargingStation.chargers', fn ($cq) => $cq->whereIn('type_charge', $acStationTypes));
-                        });
-                  })
-                // (3) Tanpa charger_id & charging_station_id → snapshot bersih token DC.
-                //     NULL-safe: (col IS NULL OR col NOT LIKE token) per kolom/token.
-                  ->orWhere(function ($s) use ($dcTokens) {
-                      $s->whereNull('charger_id')
-                        ->whereNull('charging_station_id')
-                        ->where(function ($c) use ($dcTokens) {
-                            foreach ($dcTokens as $token) {
-                                $c->where(function ($cc) use ($token) {
-                                    $cc->whereNull('station_name_snapshot')
-                                       ->orWhere('station_name_snapshot', 'NOT LIKE', "%{$token}%");
-                                })->where(function ($cc) use ($token) {
-                                    $cc->whereNull('station_provider_snapshot')
-                                       ->orWhere('station_provider_snapshot', 'NOT LIKE', "%{$token}%");
-                                });
-                            }
+                // (0) Charger box spesifik terpilih user — paling akurat.
+                $q->whereNotNull('station_chargerbox_type_snapshot')
+                  ->whereIn('station_chargerbox_type_snapshot', $acStationTypes)
+                // (1)-(3) Fallback cascade — HANYA bila tanpa chargerbox snapshot.
+                  ->orWhere(function ($w) use ($acConnectors, $dcTokens, $acStationTypes) {
+                      $w->whereNull('station_chargerbox_type_snapshot')
+                        ->where(function ($q) use ($acConnectors, $dcTokens, $acStationTypes) {
+                            // (1) Charger → TypeCharger (connector name) AC.
+                            $q->whereHas('charger.typeCharger', $acConnectors)
+                            // (2) Tanpa charger_id, tapi dgn station canonical AC.
+                              ->orWhere(function ($s) use ($acStationTypes) {
+                                  $s->whereNull('charger_id')
+                                    ->where(function ($ss) use ($acStationTypes) {
+                                        $ss->whereHas('chargingStation', fn ($st) => $st->whereIn('type_charge', $acStationTypes))
+                                           ->orWhereHas('chargingStation.chargers', fn ($cq) => $cq->whereIn('type_charge', $acStationTypes));
+                                    });
+                              })
+                            // (3) Tanpa charger_id & charging_station_id → snapshot bersih token DC.
+                            //     NULL-safe: (col IS NULL OR col NOT LIKE token) per kolom/token.
+                              ->orWhere(function ($s) use ($dcTokens) {
+                                  $s->whereNull('charger_id')
+                                    ->whereNull('charging_station_id')
+                                    ->where(function ($c) use ($dcTokens) {
+                                        foreach ($dcTokens as $token) {
+                                            $c->where(function ($cc) use ($token) {
+                                                $cc->whereNull('station_name_snapshot')
+                                                   ->orWhere('station_name_snapshot', 'NOT LIKE', "%{$token}%");
+                                            })->where(function ($cc) use ($token) {
+                                                $cc->whereNull('station_provider_snapshot')
+                                                   ->orWhere('station_provider_snapshot', 'NOT LIKE', "%{$token}%");
+                                            });
+                                        }
+                                    });
+                              });
                         });
                   });
             });
@@ -442,6 +465,9 @@ class ChargingSessionController extends Controller
             'station_name' => $sometimes.'nullable|string|max:255',
             'station_address' => $sometimes.'nullable|string|max:500',
             'station_provider' => $sometimes.'nullable|string|max:255',
+            'station_chargerbox_id' => $sometimes.'nullable|string|max:255',
+            'station_chargerbox_name' => $sometimes.'nullable|string|max:255',
+            'station_chargerbox_type' => $sometimes.'nullable|string|max:100',
             'date' => $sometimes.'nullable|date',
             'km_before' => $sometimes.'nullable|numeric|min:0',
             'km_now' => $sometimes.'nullable|numeric|min:0',
@@ -478,6 +504,19 @@ class ChargingSessionController extends Controller
         if (! empty($validated['station_provider'])) {
             $validated['station_provider_snapshot'] = $validated['station_provider'];
             unset($validated['station_provider']);
+        }
+
+        // Map charger box terpilih user → snapshot columns. Prioritas utama
+        // utk filter AC/DC per-sesi (mobile picker — mengalahkan tipe station).
+        foreach ([
+            'station_chargerbox_id' => 'station_chargerbox_id_snapshot',
+            'station_chargerbox_name' => 'station_chargerbox_name_snapshot',
+            'station_chargerbox_type' => 'station_chargerbox_type_snapshot',
+        ] as $input => $col) {
+            if (! empty($validated[$input])) {
+                $validated[$col] = $validated[$input];
+                unset($validated[$input]);
+            }
         }
 
         return $validated;

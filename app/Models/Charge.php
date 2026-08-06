@@ -33,6 +33,9 @@ class Charge extends Model
         'station_lat_snapshot',
         'station_lng_snapshot',
         'station_provider_snapshot',
+        'station_chargerbox_id_snapshot',
+        'station_chargerbox_name_snapshot',
+        'station_chargerbox_type_snapshot',
         'km_now',
         'is_finish_charging',
         'start_charging_now',
@@ -78,6 +81,8 @@ class Charge extends Model
     /**
      * Tipe arus charging (AC/DC) — sumber kebenaran deterministik utk badge UI.
      * Cascade sama dgn ChargingSessionController::applyChargingTypeScope:
+     *  0. Charger box spesifik terpilih user (station_chargerbox_type_snapshot)
+     *     — paling akurat per-sesi (mobile picker).
      *  1. charger.typeCharger.name (nama konektor: Type 2/AC GBT=AC, CCS2/Chademo/DC*=DC).
      *  2. chargingStation.type_charge canonical (medium=AC, fast/ultra=DC).
      *  3. Heuristic nama snapshot — fallback terakhir.
@@ -85,6 +90,13 @@ class Charge extends Model
      */
     public function getChargingTypeAttribute(): ?string
     {
+        // (0) Charger box spesifik terpilih user (mobile SPKLU picker) —
+        //     paling akurat karena mengalahkan tipe station campuran.
+        $fromChargerbox = self::resolveCanonicalTypeCharge($this->station_chargerbox_type_snapshot);
+        if ($fromChargerbox !== null) {
+            return $fromChargerbox;
+        }
+
         // (1) Charger spesifik → TypeCharger (nama konektor).
         if ($this->charger && $this->charger->typeCharger) {
             $resolved = self::resolveConnectorToAcDc($this->charger->typeCharger->name);

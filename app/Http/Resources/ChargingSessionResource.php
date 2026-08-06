@@ -38,6 +38,13 @@ class ChargingSessionResource extends JsonResource
                 : ($this->chargerLocation?->longitude !== null ? (float) $this->chargerLocation->longitude : null),
             'station_provider' => $this->station_provider_snapshot ?? $this->whenLoaded('chargerLocation', fn () => $this->chargerLocation?->provider?->name),
 
+            // Charger box spesifik terpilih user (mobile picker) — snapshot
+            // per-sesi. Sumber kebenaran AC/DC paling akurat (mengalahkan
+            // tipe stasiun campuran). Null utk sesi lama/tanpa pilihan.
+            'station_chargerbox_id' => $this->station_chargerbox_id_snapshot,
+            'station_chargerbox_name' => $this->station_chargerbox_name_snapshot,
+            'station_chargerbox_type' => $this->station_chargerbox_type_snapshot,
+
             // Tipe arus (AC/DC) deterministik — turunan cascade yang sama dgn
             // filter backend (charger.typeCharger → station.type_charge → snapshot).
             // UI pakai ini utk badge tanpa heuristic sendiri.

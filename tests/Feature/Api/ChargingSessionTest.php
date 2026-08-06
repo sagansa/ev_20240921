@@ -322,6 +322,90 @@ class ChargingSessionTest extends ApiTestCase
             ->assertJsonPath('data.0.charging_type', 'DC');
     }
 
+    public function test_it_creates_session_with_chargerbox_snapshot_and_filters_by_it(): void
+    {
+        // Skenario REAL: stasiun campuran (AC + DC charger box). User memilih
+        // charger box spesifik (mobile picker) → type_charge per-sesi harus
+        // mengalahkan tipe stasiun saat filter AC/DC.
+        $mixedStation = ChargingStation::create([
+            'source' => 'esdm', 'nama_lokasi' => 'SPKLU Grand Indonesia',
+            'latitude' => -6.2, 'longitude' => 106.8, 'type_charge' => 'medium',
+        ]);
+        ChargingStationCharger::create([
+            'station_id' => $mixedStation->id, 'type_charge' => 'ultra_fast',
+            'nama' => 'ABB Terra 184', 'jumlah_charger' => 1, 'jumlah_konektor' => 2,
+        ]);
+        ChargingStationCharger::create([
+            'station_id' => $mixedStation->id, 'type_charge' => 'medium',
+            'nama' => 'Wallbox Pulsar', 'jumlah_charger' => 1, 'jumlah_konektor' => 1,
+        ]);
+
+        // Sesi A: user charge di charger box DC (ABB) di stasiun bertipe medium.
+        $response = $this->postJson('/api/v1/charging-sessions', [
+            'charging_station_id' => $mixedStation->id,
+            'station_chargerbox_id' => 'CB-0001',
+            'station_chargerbox_name' => 'ABB Terra 184',
+            'station_chargerbox_type' => 'ultra_fast',
+            'date' => '2026-08-06',
+            'kwh' => 30.0,
+            'total_cost' => 90000,
+        ]);
+        $response->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'station_chargerbox_name' => 'ABB Terra 184',
+                    'station_chargerbox_type' => 'ultra_fast',
+                    'charging_type' => 'DC',
+                ],
+            ]);
+
+        // Sesi B: user charge di charger box AC (Wallbox) di stasiun yang sama.
+        $this->postJson('/api/v1/charging-sessions', [
+            'charging_station_id' => $mixedStation->id,
+            'station_chargerbox_id' => 'CB-0002',
+            'station_chargerbox_name' => 'Wallbox Pulsar',
+            'station_chargerbox_type' => 'medium',
+            'date' => '2026-08-06',
+            'kwh' => 7.0,
+            'total_cost' => 20000,
+        ])->assertStatus(201)
+            ->assertJsonPath('data.charging_type', 'AC');
+
+        // Filter DC → HANYA sesi yg memilih charger box DC, walau stasiun
+        // canonical-nya medium (station-level saja tidak akan membedakan).
+        $this->getJson('/api/v1/charging-sessions?charging_type=DC')
+            ->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.station_chargerbox_name', 'ABB Terra 184');
+
+        // Filter AC → HANYA sesi charger box AC.
+        $this->getJson('/api/v1/charging-sessions?charging_type=AC')
+            ->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.station_chargerbox_name', 'Wallbox Pulsar');
+    }
+
+    public function test_chargerbox_snapshot_wins_over_station_snapshot_name(): void
+    {
+        // Sesi manual custom (tanpa charging_station_id) tapi dgn charger box
+        // type snapshot. Nama station generik (tidak ada token DC) — snapshot
+        // charger box harus jadi sumber kebenaran, bukan heuristic nama.
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'station_name_snapshot' => 'Rumah',
+            'station_chargerbox_id_snapshot' => 'HOME-01',
+            'station_chargerbox_name_snapshot' => 'Wallbox Home',
+            'station_chargerbox_type_snapshot' => 'medium',
+            'date' => now()->toDateString(), 'kWh' => 5,
+        ]);
+
+        $this->getJson('/api/v1/charging-sessions?charging_type=DC')
+            ->assertOk()->assertJsonCount(0, 'data');
+
+        $this->getJson('/api/v1/charging-sessions?charging_type=AC')
+            ->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.charging_type', 'AC');
+    }
+
     public function test_charging_session_resource_includes_model_vehicle(): void
     {
         $model = ModelVehicle::factory()->create(['name' => 'Air Ev']);
