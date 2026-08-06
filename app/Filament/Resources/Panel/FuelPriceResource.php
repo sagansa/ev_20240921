@@ -4,18 +4,18 @@ namespace App\Filament\Resources\Panel;
 
 use App\Filament\Columns\CurrencyTextColumn;
 use App\Filament\Forms\CurrencyTextInput;
-use Filament\Actions;
-use Filament\Schemas\Schema;
-use Filament\Tables\Table;
+use App\Filament\Forms\TodayDatePicker;
+use App\Filament\Resources\Panel\FuelPriceResource\Pages;
 use App\Models\FuelPrice;
+use Filament\Actions;
+use Filament\Actions\ActionGroup;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\DatePicker;
-use App\Filament\Resources\Panel\FuelPriceResource\Pages;
-use Filament\Actions\ActionGroup;
+use Filament\Tables\Table;
 
 class FuelPriceResource extends Resource
 {
@@ -53,23 +53,31 @@ class FuelPriceResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Section::make()->schema([
-                Grid::make(['default' => 2])->schema([
-                    DatePicker::make('effective_date')
-                        ->label('Tanggal Berlaku')
-                        ->required(),
+            Section::make('Informasi Harga BBM')
+                ->description('Atur tanggal berlaku, jenis BBM, dan harga per liter.')
+                ->schema([
+                    Grid::make([
+                        'default' => 1,
+                        'sm' => 3,
+                    ])->schema([
+                        TodayDatePicker::make('effective_date')
+                            ->label('Tanggal Berlaku')
+                            ->native(false)
+                            ->displayFormat('d/m/Y')
+                            ->required(),
 
-                    TextInput::make('fuel_name')
-                        ->label('Jenis BBM')
-                        ->default('Pertamax')
-                        ->required(),
+                        TextInput::make('fuel_name')
+                            ->label('Jenis BBM')
+                            ->default('Pertamax')
+                            ->placeholder('contoh: Pertamax')
+                            ->required(),
 
-                    CurrencyTextInput::make('price_per_liter')
-                        ->label('Harga per Liter')
-                        ->prefix('Rp')
-                        ->required(),
+                        CurrencyTextInput::make('price_per_liter')
+                            ->label('Harga per Liter')
+                            ->prefix('Rp')
+                            ->required(),
+                    ]),
                 ]),
-            ]),
         ]);
     }
 
@@ -80,10 +88,13 @@ class FuelPriceResource extends Resource
             ->columns([
                 TextColumn::make('effective_date')
                     ->label('Tanggal Berlaku')
+                    ->date('d M Y')
+                    ->icon('heroicon-m-calendar')
                     ->sortable(),
 
                 TextColumn::make('fuel_name')
                     ->label('Jenis BBM')
+                    ->searchable()
                     ->sortable(),
 
                 CurrencyTextColumn::make('price_per_liter')
@@ -119,3 +130,4 @@ class FuelPriceResource extends Resource
         ];
     }
 }
+
