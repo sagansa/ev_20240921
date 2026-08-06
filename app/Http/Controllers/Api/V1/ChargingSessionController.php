@@ -343,6 +343,11 @@ class ChargingSessionController extends Controller
     /**
      * Ringkasan analytics untuk dashboard mobile — total sesi, kWh, biaya,
      * jarak, efisiensi (kWh/100km, cost/km), dan penghematan vs BBM.
+     *
+     * Estimasi BBM memakai harga historis tabel `fuel_prices` per tanggal sesi
+     * (bukan konstanta): km tiap sesi × harga BBM yang berlaku saat itu.
+     * Konsumsi dikalibrasi via `bbm_km_per_liter` (default 12) supaya mobile
+     * bisa mengirim nilai interaktif user.
      */
     public function analytics(Request $request): JsonResponse
     {
@@ -402,7 +407,11 @@ class ChargingSessionController extends Controller
         $kmPerKwh = $totalKwh > 0 ? $totalKm / $totalKwh : 0;
         $costPerKm = $totalKm > 0 ? $totalCost / $totalKm : 0;
         $costPerKwh = $totalKwh > 0 ? $totalCost / $totalKwh : 0;
-        $estimatedBbmCost = ($totalKm / 12) * 13700;
+
+        // Estimasi BBM berbasis harga historis per tanggal sesi.
+        $kmPerLiter = max((float) ($request->input('bbm_km_per_liter', 12)), 0.1);
+        $bbm = $this->estimateBbmCost($query, $kmPerLiter);
+        $estimatedBbmCost = $bbm['cost'];
         $totalSavings = max($estimatedBbmCost - $totalCost, 0);
 
         return response()->json([
@@ -419,8 +428,75 @@ class ChargingSessionController extends Controller
                 'km_per_kwh' => round($kmPerKwh, 2),
                 'estimated_bbm_cost' => round($estimatedBbmCost, 0),
                 'total_savings' => round($totalSavings, 0),
+                'bbm_km_per_liter' => $kmPerLiter,
+                'bbm_km_used' => round($bbm['km'], 1),
             ],
         ]);
+    }
+
+    /**
+     * Estimasi biaya BBM untuk query sesi yang sama dgn `analytics`. Mengambil
+     * tiap sesi (date, km_before, km_now), hitung km trip per-sesi
+     * (max(km_now - km_before, 0)), lalu kalikan dgn harga BBM yang berlaku
+     * pada tanggal sesi (fuel_prices). Mengembalikan total biaya & km yang
+     * dipakai utk estimasi.
+     */
+    private function estimateBbmCost($query, float $kmPerLiter): array
+    {
+        $sessions = (clone $query)
+            ->whereNotNull('km_now')
+            ->where('km_now', '>', 0)
+            ->get(['id', 'date', 'km_before', 'km_now']);
+
+        $schedule = \App\Models\FuelPrice::orderBy('effective_date')
+            ->get(['effective_date', 'price_per_liter'])
+            ->map(fn ($p) => [
+                'effective_date' => $p->effective_date?->toDateString(),
+                'price_per_liter' => (float) $p->price_per_liter,
+            ])
+            ->all();
+
+        $cost = 0.0;
+        $usedKm = 0.0;
+
+        foreach ($sessions as $session) {
+            $km = max((float) $session->km_now - (float) ($session->km_before ?? 0), 0);
+            if ($km <= 0) {
+                continue;
+            }
+            $usedKm += $km;
+            $cost += ($km / $kmPerLiter) * $this->fuelPriceAt($session->date, $schedule);
+        }
+
+        return ['cost' => $cost, 'km' => $usedKm];
+    }
+
+    /**
+     * Harga BBM yang berlaku pada tanggal sesi: harga terakhir dengan
+     * effective_date <= tanggal. Fallback harga termuda; tanpa data apa pun
+     * gunakan 13.700 (harga Pertamax terakhir yang dikenal).
+     */
+    private function fuelPriceAt(?string $date, array $schedule): float
+    {
+        if ($date === null) {
+            return 13700.0;
+        }
+        $price = null;
+        foreach ($schedule as $entry) {
+            if ($entry['effective_date'] <= $date) {
+                $price = $entry['price_per_liter'];
+            } else {
+                break;
+            }
+        }
+        if ($price !== null) {
+            return $price;
+        }
+        if ($schedule !== []) {
+            return $schedule[0]['price_per_liter'];
+        }
+
+        return 13700.0;
     }
 
     // ─────────────────────────────────────────────────────────────────────

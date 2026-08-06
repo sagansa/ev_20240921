@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\ChargerLocationController;
 use App\Http\Controllers\Api\V1\ChargingSessionController;
 use App\Http\Controllers\Api\V1\ContributorController;
 use App\Http\Controllers\Api\V1\DualSourceLocationController;
+use App\Http\Controllers\Api\V1\FuelPriceController;
 use App\Http\Controllers\Api\V1\HomeChargingDiscountController;
 use App\Http\Controllers\Api\V1\LocationCategoryController;
 use App\Http\Controllers\Api\V1\LocationReportController;
@@ -71,6 +72,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/charging-sessions/latest', [ChargingSessionController::class, 'latest']);
         Route::get('/charging-sessions/journey', [ChargingSessionController::class, 'journey']);
         Route::apiResource('charging-sessions', ChargingSessionController::class);
+        Route::get('/fuel-prices', [FuelPriceController::class, 'index']);
         Route::apiResource('state-of-health', StateOfHealthController::class);
         Route::get('/state-of-health/{vehicleId}/trend-analysis', [StateOfHealthController::class, 'trendAnalysis']);
         Route::apiResource('home-charging-discounts', HomeChargingDiscountController::class);
