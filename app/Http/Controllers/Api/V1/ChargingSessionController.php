@@ -223,6 +223,124 @@ class ChargingSessionController extends Controller
     }
 
     /**
+     * Peta perjalanan charging user: seluruh lokasi tempat pernah charging
+     * (diagregasi per stasiun/lokasi) + seluruh sesi urut kronologis utk
+     * digambar sebagai polyline perjalanan di mobile. Filter sama dgn index().
+     *
+     * Response:
+     *  - locations: agregasi per lokasi (nama, koordinat, provider, jumlah
+     *    sesi, total kWh, total biaya, kunjungan pertama/terakhir).
+     *  - sessions:  semua sesi urut tanggal (id, date, location_key, koordinat,
+     *    kWh, biaya) agar client bisa menggambar rute perjalanan + interaksi.
+     */
+    public function journey(Request $request): JsonResponse
+    {
+        $query = Charge::where('charges.user_id', Auth::id())
+            ->with(['chargerLocation', 'chargerLocation.provider', 'vehicle']);
+
+        if ($request->filled('vehicle_id')) {
+            $query->where('vehicle_id', $request->vehicle_id);
+        }
+        if ($request->filled('type_vehicle_id')) {
+            $typeId = $request->type_vehicle_id;
+            $query->whereHas('vehicle', function ($sub) use ($typeId) {
+                $sub->where('type_vehicle_id', $typeId);
+            });
+        }
+        if ($request->filled('model_vehicle_id')) {
+            $modelId = $request->model_vehicle_id;
+            $query->whereHas('vehicle', function ($sub) use ($modelId) {
+                $sub->where('model_vehicle_id', $modelId)
+                    ->orWhereHas('typeVehicle', function ($typeSub) use ($modelId) {
+                        $typeSub->where('model_vehicle_id', $modelId);
+                    });
+            });
+        }
+        if ($request->filled('charging_type')) {
+            $this->applyChargingTypeScope($query, strtoupper($request->charging_type));
+        }
+        if ($request->filled('date_from')) {
+            $query->where('date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->where('date', '<=', $request->date_to);
+        }
+
+        $sessions = $query->orderBy('date')->orderBy('created_at')->get();
+
+        // Resolve nama/koordinat/provider via resource supaya persis dgn list —
+        // satu sumber kebenaran utk nilai yang sama di dua visualisasi.
+        $dtos = \App\Http\Resources\ChargingSessionResource::collection($sessions)->resolve();
+
+        $locations = [];
+        $journeySessions = [];
+
+        foreach ($dtos as $dto) {
+            if ($dto['charging_station_id'] !== null) {
+                $key = 's'.$dto['charging_station_id'];
+            } elseif ($dto['charger_location_id'] !== null) {
+                $key = 'l'.$dto['charger_location_id'];
+            } else {
+                $key = 'm'.md5((string) ($dto['station_name'] ?? $dto['id']));
+            }
+
+            $journeySessions[] = [
+                'id' => $dto['id'],
+                'date' => $dto['date'],
+                'location_key' => $key,
+                'latitude' => $dto['station_latitude'],
+                'longitude' => $dto['station_longitude'],
+                'kwh' => $dto['kwh'],
+                'total_cost' => $dto['total_cost'],
+            ];
+
+            $loc = $locations[$key] ?? [
+                'key' => $key,
+                'name' => $dto['station_name'],
+                'address' => $dto['station_address'],
+                'latitude' => $dto['station_latitude'],
+                'longitude' => $dto['station_longitude'],
+                'provider' => $dto['station_provider'],
+                'total_sessions' => 0,
+                'total_kwh' => 0.0,
+                'total_cost' => 0.0,
+                'first_visit' => $dto['date'],
+                'last_visit' => $dto['date'],
+            ];
+            $loc['total_sessions']++;
+            $loc['total_kwh'] += (float) ($dto['kwh'] ?? 0);
+            $loc['total_cost'] += (float) ($dto['total_cost'] ?? 0);
+            // Jaga first/last visit saat urut naik (sudah dijamin order by date,
+            // tapi defensif kalau date null).
+            if ($dto['date'] !== null) {
+                if ($loc['first_visit'] === null || $dto['date'] < $loc['first_visit']) {
+                    $loc['first_visit'] = $dto['date'];
+                }
+                if ($loc['last_visit'] === null || $dto['date'] > $loc['last_visit']) {
+                    $loc['last_visit'] = $dto['date'];
+                }
+            }
+            $loc['total_kwh'] = round($loc['total_kwh'], 2);
+            $loc['total_cost'] = round($loc['total_cost'], 0);
+            $locations[$key] = $loc;
+        }
+
+        $locations = array_values($locations);
+        usort($locations, fn ($a, $b) => $b['total_sessions'] <=> $a['total_sessions']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Charging journey retrieved successfully',
+            'data' => [
+                'total_locations' => count($locations),
+                'total_sessions' => count($journeySessions),
+                'locations' => $locations,
+                'sessions' => $journeySessions,
+            ],
+        ]);
+    }
+
+    /**
      * Ringkasan analytics untuk dashboard mobile — total sesi, kWh, biaya,
      * jarak, efisiensi (kWh/100km, cost/km), dan penghematan vs BBM.
      */

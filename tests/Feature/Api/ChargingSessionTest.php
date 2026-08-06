@@ -429,4 +429,91 @@ class ChargingSessionTest extends ApiTestCase
         $response->assertJsonPath('data.0.vehicle.model_vehicle.id', $model->id);
         $response->assertJsonPath('data.0.vehicle.model_vehicle.name', 'Air Ev');
     }
+
+    public function test_journey_aggregates_locations_and_chronological_sessions(): void
+    {
+        // Lokasi A dikunjungi 2x, lokasi B 1x — hanya utk user terautentikasi.
+        $otherUser = User::factory()->create();
+
+        foreach (['2026-07-01', '2026-07-10'] as $i => $date) {
+            Charge::create([
+                'user_id' => $this->authUser->id,
+                'station_name_snapshot' => 'SPKLU Rumah',
+                'station_address_snapshot' => 'Jl. Mangga 1',
+                'station_provider_snapshot' => 'PLN',
+                'station_lat_snapshot' => -6.20,
+                'station_lng_snapshot' => 106.82,
+                'date' => $date,
+                'kWh' => 15 + $i,
+                'total_cost' => 45000 + $i * 1000,
+            ]);
+        }
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'station_name_snapshot' => 'SPKLU Kantor',
+            'station_lat_snapshot' => -6.30,
+            'station_lng_snapshot' => 106.90,
+            'date' => '2026-07-15',
+            'kWh' => 25.0,
+            'total_cost' => 90000,
+        ]);
+        Charge::create([
+            'user_id' => $otherUser->id,
+            'station_name_snapshot' => 'SPKLU Orang Lain',
+            'station_lat_snapshot' => -7.0,
+            'station_lng_snapshot' => 110.0,
+            'date' => '2026-07-20',
+            'kWh' => 50.0,
+            'total_cost' => 150000,
+        ]);
+
+        $response = $this->getJson('/api/v1/charging-sessions/journey');
+
+        $response->assertOk()->assertJson(['success' => true]);
+        $response->assertJsonPath('data.total_locations', 2);
+        $response->assertJsonPath('data.total_sessions', 3);
+
+        // Lokasi agregasi per kunci — urut jumlah sesi desc.
+        $locations = $response->json('data.locations');
+        $this->assertCount(2, $locations);
+        $this->assertSame('SPKLU Rumah', $locations[0]['name']);
+        $this->assertSame(2, $locations[0]['total_sessions']);
+        $this->assertEqualsWithDelta(31.0, $locations[0]['total_kwh'], 0.01);
+        $this->assertSame(91000, $locations[0]['total_cost']);
+        $this->assertSame('2026-07-01', $locations[0]['first_visit']);
+        $this->assertSame('2026-07-10', $locations[0]['last_visit']);
+        $this->assertSame('PLN', $locations[0]['provider']);
+        $this->assertEqualsWithDelta(-6.20, $locations[0]['latitude'], 0.0001);
+
+        // Sesi urut kronologis & tidak memuat sesi user lain.
+        $sessions = $response->json('data.sessions');
+        $this->assertCount(3, $sessions);
+        $this->assertSame('2026-07-01', $sessions[0]['date']);
+        $this->assertSame('2026-07-10', $sessions[1]['date']);
+        $this->assertSame('2026-07-15', $sessions[2]['date']);
+        $this->assertNotContains('SPKLU Orang Lain', array_column($sessions, 'id'));
+    }
+
+    public function test_journey_respects_vehicle_filter(): void
+    {
+        $vehicle = Vehicle::factory()->for($this->authUser)->create();
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'station_name_snapshot' => 'SPKLU Rumah',
+            'vehicle_id' => $vehicle->id,
+            'date' => '2026-07-01',
+            'kWh' => 10,
+        ]);
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'station_name_snapshot' => 'SPKLU Kantor',
+            'date' => '2026-07-02',
+            'kWh' => 20,
+        ]);
+
+        $this->getJson('/api/v1/charging-sessions/journey?vehicle_id='.$vehicle->id)
+            ->assertOk()
+            ->assertJsonPath('data.total_locations', 1)
+            ->assertJsonPath('data.locations.0.name', 'SPKLU Rumah');
+    }
 }

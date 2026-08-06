@@ -69,6 +69,7 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('charging-locations', ChargerLocationController::class)->except(['index', 'show']);
         Route::get('/charging-sessions/analytics', [ChargingSessionController::class, 'analytics']);
         Route::get('/charging-sessions/latest', [ChargingSessionController::class, 'latest']);
+        Route::get('/charging-sessions/journey', [ChargingSessionController::class, 'journey']);
         Route::apiResource('charging-sessions', ChargingSessionController::class);
         Route::apiResource('state-of-health', StateOfHealthController::class);
         Route::get('/state-of-health/{vehicleId}/trend-analysis', [StateOfHealthController::class, 'trendAnalysis']);
