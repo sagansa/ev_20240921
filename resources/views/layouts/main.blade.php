@@ -30,6 +30,12 @@
     <!-- Favicon -->
     <link rel="icon" href="{{ asset('images/logo-files/favicon-32x32.png') }}" type="image/png">
 
+    @if(config('services.admob.enabled', true))
+        <!-- Google AdSense / AdMob Web Script -->
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ config('services.admob.client_id', 'ca-pub-3940256099942544') }}"
+                crossorigin="anonymous"></script>
+    @endif
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @yield('additional_head')
     @livewireStyles
@@ -103,7 +109,7 @@
         <div class="container px-4 mx-auto">
             <div class="flex items-center justify-between py-4">
                 <a href="{{ route('home') }}" class="ev-nav-brand flex items-center text-xl font-bold text-ev-white">
-                    <img src="{{ asset('images/logo-files/logo.png') }}" alt="Sagansa EV Logo" class="ev-nav-logo h-8 mr-2">
+                    <img src="{{ asset('images/logo-files/logo.png') }}" alt="Sagansa EV Logo" class="ev-nav-logo h-8 w-8 object-contain rounded-lg mr-2">
                     Sagansa - EV
                 </a>
 

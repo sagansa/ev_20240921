@@ -15,4 +15,10 @@ return [
         'service_id' => env('APPLE_SERVICE_ID'),
     ],
 
+    'admob' => [
+        'client_id' => env('ADMOB_WEB_CLIENT_ID', 'ca-pub-3940256099942544'),
+        'banner_slot' => env('ADMOB_WEB_BANNER_SLOT', '6300978111'),
+        'enabled' => env('ADMOB_ENABLED', true),
+    ],
+
 ];

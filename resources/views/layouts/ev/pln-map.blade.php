@@ -53,6 +53,7 @@
         #mapContainer {
             position: relative;
             width: 100%;
+            height: calc(100dvh - 64px);
             height: calc(100vh - 64px);
             margin: 64px 0 0 0;
             padding: 20px;
@@ -279,21 +280,25 @@
 
         #locateMe {
             position: absolute;
-            bottom: 96px;
+            bottom: 110px;
             right: 30px;
-            z-index: 1000;
+            z-index: 1050;
             background-color: var(--ev-surface);
             border: none;
             border-radius: 50%;
             width: 44px;
             height: 44px;
-            box-shadow: 0 18px 36px -20px rgba(15, 23, 42, 0.45);
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.3s ease;
             color: var(--ev-primary);
+            -webkit-appearance: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            pointer-events: auto;
         }
 
         #locateMe:hover {
@@ -303,6 +308,52 @@
 
         #locateMe.locating {
             animation: spin 1s linear infinite;
+        }
+
+        /* AdMob Floating Bottom Banner */
+        .map-ad-bottom-container {
+            position: absolute;
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1040;
+            max-width: 728px;
+            width: calc(100% - 32px);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 12px;
+            padding: 4px 12px 8px 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .dark .map-ad-bottom-container {
+            background: rgba(15, 23, 42, 0.95);
+            border-color: rgba(51, 65, 85, 0.8);
+        }
+
+        .map-ad-close-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 22px;
+            height: 22px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            font-size: 13px;
+            line-height: 1;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid #ffffff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            z-index: 1041;
         }
 
         .map-marker {
@@ -475,8 +526,15 @@
             }
 
             #locateMe {
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+                bottom: calc(env(safe-area-inset-bottom, 12px) + 100px);
                 right: 16px;
+                z-index: 1050;
+            }
+
+            .map-ad-bottom-container {
+                bottom: calc(env(safe-area-inset-bottom, 8px) + 12px);
+                max-width: calc(100% - 24px);
+                padding: 4px 8px;
             }
         }
 
@@ -625,6 +683,23 @@
                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
             </button>
+
+            @if(config('services.admob.enabled', true))
+                <!-- AdMob / AdSense Floating Bottom Banner -->
+                <div id="mapAdContainer" class="map-ad-bottom-container">
+                    <button type="button" class="map-ad-close-btn" onclick="document.getElementById('mapAdContainer').style.display='none';" title="Tutup Iklan">&times;</button>
+                    <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1 font-semibold">Iklan</div>
+                    <ins class="adsbygoogle"
+                         style="display:block"
+                         data-ad-client="{{ config('services.admob.client_id', 'ca-pub-3940256099942544') }}"
+                         data-ad-slot="{{ config('services.admob.banner_slot', '6300978111') }}"
+                         data-ad-format="horizontal"
+                         data-full-width-responsive="true"></ins>
+                    <script>
+                         (adsbygoogle = window.adsbygoogle || []).push({});
+                    </script>
+                </div>
+            @endif
         </div>
     </div>
 

@@ -33,6 +33,8 @@ class AdminPanelProvider extends PanelProvider
             ->passwordReset()
             ->emailVerification()
             ->maxContentWidth('full')
+            ->brandLogo(fn () => asset('images/logo.png'))
+            ->brandLogoHeight('2.2rem')
             ->profile()
             ->navigationGroups([
                 'Aplikasi',

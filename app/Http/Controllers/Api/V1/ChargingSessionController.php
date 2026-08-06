@@ -33,27 +33,40 @@ class ChargingSessionController extends Controller
             $query->where('charger_location_id', $request->charger_location_id);
         }
         if ($request->filled('vehicle_id')) {
-            $vId = $request->vehicle_id;
-            $query->where(function ($q) use ($vId) {
-                $q->where('vehicle_id', $vId)
-                  ->orWhereNull('vehicle_id');
-            });
+            $query->where('vehicle_id', $request->vehicle_id);
         }
         if ($request->filled('type_vehicle_id')) {
             $typeId = $request->type_vehicle_id;
-            $query->where(function ($q) use ($typeId) {
-                $q->whereHas('vehicle', function ($sub) use ($typeId) {
-                    $sub->where('type_vehicle_id', $typeId);
-                })->orWhereNull('vehicle_id');
+            $query->whereHas('vehicle', function ($sub) use ($typeId) {
+                $sub->where('type_vehicle_id', $typeId);
             });
         }
         if ($request->filled('model_vehicle_id')) {
             $modelId = $request->model_vehicle_id;
-            $query->where(function ($q) use ($modelId) {
-                $q->whereHas('vehicle.typeVehicle', function ($sub) use ($modelId) {
-                    $sub->where('model_vehicle_id', $modelId);
-                })->orWhereNull('vehicle_id');
+            $query->whereHas('vehicle', function ($sub) use ($modelId) {
+                $sub->where('model_vehicle_id', $modelId)
+                    ->orWhereHas('typeVehicle', function ($typeSub) use ($modelId) {
+                        $typeSub->where('model_vehicle_id', $modelId);
+                    });
             });
+        }
+        if ($request->filled('charging_type')) {
+            $cType = strtoupper($request->charging_type);
+            if ($cType === 'DC') {
+                $query->where(function ($q) {
+                    $q->whereRaw("UPPER(CONCAT(COALESCE(station_name, ''), ' ', COALESCE(station_provider, ''))) REGEXP 'DC|FAST|ULTRA|CCS|CHADEMO|SUPERCHARGER|50KW|60KW|100KW|120KW|150KW|200KW'")
+                      ->orWhereHas('chargingStation.chargers', function ($cq) {
+                          $cq->whereRaw("UPPER(type_charge) LIKE '%DC%'");
+                      });
+                });
+            } else if ($cType === 'AC') {
+                $query->where(function ($q) {
+                    $q->whereRaw("UPPER(CONCAT(COALESCE(station_name, ''), ' ', COALESCE(station_provider, ''))) NOT REGEXP 'DC|FAST|ULTRA|CCS|CHADEMO|SUPERCHARGER|50KW|60KW|100KW|120KW|150KW|200KW'")
+                      ->orWhereHas('chargingStation.chargers', function ($cq) {
+                          $cq->whereRaw("UPPER(type_charge) LIKE '%AC%'");
+                      });
+                });
+            }
         }
         if ($request->filled('date_from')) {
             $query->where('date', '>=', $request->date_from);
@@ -232,27 +245,40 @@ class ChargingSessionController extends Controller
     {
         $query = Charge::where('charges.user_id', Auth::id());
         if ($request->filled('vehicle_id')) {
-            $vId = $request->vehicle_id;
-            $query->where(function ($q) use ($vId) {
-                $q->where('vehicle_id', $vId)
-                  ->orWhereNull('vehicle_id');
-            });
+            $query->where('vehicle_id', $request->vehicle_id);
         }
         if ($request->filled('type_vehicle_id')) {
             $typeId = $request->type_vehicle_id;
-            $query->where(function ($q) use ($typeId) {
-                $q->whereHas('vehicle', function ($sub) use ($typeId) {
-                    $sub->where('type_vehicle_id', $typeId);
-                })->orWhereNull('vehicle_id');
+            $query->whereHas('vehicle', function ($sub) use ($typeId) {
+                $sub->where('type_vehicle_id', $typeId);
             });
         }
         if ($request->filled('model_vehicle_id')) {
             $modelId = $request->model_vehicle_id;
-            $query->where(function ($q) use ($modelId) {
-                $q->whereHas('vehicle.typeVehicle', function ($sub) use ($modelId) {
-                    $sub->where('model_vehicle_id', $modelId);
-                })->orWhereNull('vehicle_id');
+            $query->whereHas('vehicle', function ($sub) use ($modelId) {
+                $sub->where('model_vehicle_id', $modelId)
+                    ->orWhereHas('typeVehicle', function ($typeSub) use ($modelId) {
+                        $typeSub->where('model_vehicle_id', $modelId);
+                    });
             });
+        }
+        if ($request->filled('charging_type')) {
+            $cType = strtoupper($request->charging_type);
+            if ($cType === 'DC') {
+                $query->where(function ($q) {
+                    $q->whereRaw("UPPER(CONCAT(COALESCE(station_name, ''), ' ', COALESCE(station_provider, ''))) REGEXP 'DC|FAST|ULTRA|CCS|CHADEMO|SUPERCHARGER|50KW|60KW|100KW|120KW|150KW|200KW'")
+                      ->orWhereHas('chargingStation.chargers', function ($cq) {
+                          $cq->whereRaw("UPPER(type_charge) LIKE '%DC%'");
+                      });
+                });
+            } else if ($cType === 'AC') {
+                $query->where(function ($q) {
+                    $q->whereRaw("UPPER(CONCAT(COALESCE(station_name, ''), ' ', COALESCE(station_provider, ''))) NOT REGEXP 'DC|FAST|ULTRA|CCS|CHADEMO|SUPERCHARGER|50KW|60KW|100KW|120KW|150KW|200KW'")
+                      ->orWhereHas('chargingStation.chargers', function ($cq) {
+                          $cq->whereRaw("UPPER(type_charge) LIKE '%AC%'");
+                      });
+                });
+            }
         }
         if ($request->filled('date_from')) {
             $query->where('date', '>=', $request->date_from);

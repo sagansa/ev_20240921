@@ -40,6 +40,7 @@
             .map-container {
                 position: relative;
                 width: 100%;
+                height: calc(100dvh - 64px);
                 height: calc(100vh - 64px);
                 margin: 0;
                 padding: 20px;
@@ -101,11 +102,11 @@
 
             .map-locate-button {
                 position: absolute;
-                bottom: 30px;
+                bottom: 110px;
                 right: 30px;
-                z-index: 1000;
-                width: 40px;
-                height: 40px;
+                z-index: 1050;
+                width: 44px;
+                height: 44px;
                 background-color: white;
                 border: 2px solid #3b82f6;
                 border-radius: 50%;
@@ -114,7 +115,25 @@
                 justify-content: center;
                 cursor: pointer;
                 transition: all 0.3s ease;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+                -webkit-appearance: none;
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
+                pointer-events: auto;
+            }
+
+            @media (max-width: 768px) {
+                .map-container {
+                    height: calc(100dvh - 64px);
+                    height: calc(100vh - 64px);
+                    padding: 0;
+                }
+
+                .map-locate-button {
+                    bottom: calc(env(safe-area-inset-bottom, 12px) + 100px);
+                    right: 16px;
+                    z-index: 1050;
+                }
             }
 
             .map-locate-button:hover {
