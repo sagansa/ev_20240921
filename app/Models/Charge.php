@@ -78,39 +78,28 @@ class Charge extends Model
     /**
      * Tipe arus charging (AC/DC) — sumber kebenaran deterministik utk badge UI.
      * Cascade sama dgn ChargingSessionController::applyChargingTypeScope:
-     *  1. charger.typeCharger.name (enum) — definitif saat input via admin.
+     *  1. charger.typeCharger.name (nama konektor: Type 2/AC GBT=AC, CCS2/Chademo/DC*=DC).
      *  2. chargingStation.type_charge canonical (medium=AC, fast/ultra=DC).
      *  3. Heuristic nama snapshot — fallback terakhir.
      * Return null bila tidak dapat ditentukan.
      */
     public function getChargingTypeAttribute(): ?string
     {
-        // (1) Charger spesifik → TypeCharger enum.
+        // (1) Charger spesifik → TypeCharger (nama konektor).
         if ($this->charger && $this->charger->typeCharger) {
-            $name = strtoupper($this->charger->typeCharger->name ?? '');
-            if ($name === 'AC' || $name === 'DC') {
-                return $name;
+            $resolved = self::resolveConnectorToAcDc($this->charger->typeCharger->name);
+            if ($resolved !== null) {
+                return $resolved;
             }
         }
 
-        $dcTokens = ['DC', 'FAST', 'ULTRA', 'CCS', 'CHADEMO', 'SUPERCHARGER',
-                     '50KW', '60KW', '100KW', '120KW', '150KW', '200KW'];
-        $resolveFromTypeCharge = function (?string $t): ?string {
-            $key = strtolower(trim((string) $t));
-            return match (true) {
-                in_array($key, ['medium', 'standard', 'mediumcharging', 'slowcharging', 'slow', 'ac'], true) => 'AC',
-                in_array($key, ['fast', 'ultra_fast', 'ultrafast', 'fastcharging', 'ultrafastcharging'], true) => 'DC',
-                default => null,
-            };
-        };
-
         // (2) Canonical station.
-        $fromStation = $resolveFromTypeCharge($this->chargingStation?->type_charge);
+        $fromStation = self::resolveCanonicalTypeCharge($this->chargingStation?->type_charge);
         if ($fromStation !== null) {
             return $fromStation;
         }
         foreach ($this->chargingStation?->chargers ?? [] as $charger) {
-            $fromCharger = $resolveFromTypeCharge($charger->type_charge ?? null);
+            $fromCharger = self::resolveCanonicalTypeCharge($charger->type_charge ?? null);
             if ($fromCharger !== null) {
                 return $fromCharger;
             }
@@ -121,6 +110,8 @@ class Charge extends Model
         if ($haystack === '') {
             return null;
         }
+        $dcTokens = ['DC', 'FAST', 'ULTRA', 'CCS', 'CHADEMO', 'SUPERCHARGER',
+                     '50KW', '60KW', '100KW', '120KW', '150KW', '200KW'];
         foreach ($dcTokens as $token) {
             if (str_contains($haystack, $token)) {
                 return 'DC';
@@ -128,6 +119,43 @@ class Charge extends Model
         }
         return 'AC';
     }
+
+    /**
+     * Petakan nama konektor TypeCharger → AC/DC.
+     * Data produksi memakai nama konektor (bukan enum AC/DC):
+     *  AC: "Type 2", "AC GBT", dst.
+     *  DC: "CCS2", "Chademo", "DC GBT", dst.
+     * Heuristic: mengandung "DC" / nama DC populer → DC; sisanya → AC.
+     */
+    public static function resolveConnectorToAcDc(?string $connectorName): ?string
+    {
+        $name = strtoupper(trim((string) $connectorName));
+        if ($name === '') {
+            return null;
+        }
+        // DC: eksplisit ber-prefix "DC" atau nama konektor DC dikenal.
+        if (str_starts_with($name, 'DC') || in_array($name, ['CCS2', 'CCS', 'CHADEMO', 'SUPERCHARGER'], true)) {
+            return 'DC';
+        }
+        // AC: eksplisit ber-prefix "AC" atau konektor AC dikenal (Type 2).
+        if (str_starts_with($name, 'AC') || in_array($name, ['TYPE 2', 'TYPE2', 'J1772', 'GB/T AC'], true)) {
+            return 'AC';
+        }
+        // Tidak dikenali (mis. nama baru) → null (caller fallback ke sumber lain).
+        return null;
+    }
+
+    /** Petakan type_charge canonical station → AC/DC. */
+    public static function resolveCanonicalTypeCharge(?string $typeCharge): ?string
+    {
+        $key = strtolower(trim((string) $typeCharge));
+        return match (true) {
+            in_array($key, ['medium', 'standard', 'mediumcharging', 'slowcharging', 'slow', 'ac'], true) => 'AC',
+            in_array($key, ['fast', 'ultra_fast', 'ultrafast', 'fastcharging', 'ultrafastcharging'], true) => 'DC',
+            default => null,
+        };
+    }
+
 
     public function currentCharger()
     {

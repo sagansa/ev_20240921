@@ -273,18 +273,18 @@ class ChargingSessionTest extends ApiTestCase
 
     public function test_filter_by_charging_type_via_charger_type_charger_enum(): void
     {
-        // Skenario REAL ala input Filament admin: user memilih Charger spesifik
-        // (charger_id) saat mencatat sesi. Charger tersebut ber-relasi ke
-        // TypeCharger dgn name enum 'AC'/'DC' — ini sumber kebenaran definitif.
-        // Nama station snapshot bisa apa saja (tidak relevan).
-        $dcType = TypeCharger::factory()->create(['name' => 'DC']);
-        $acType = TypeCharger::factory()->create(['name' => 'AC']);
+        // Skenario REAL: user memilih Charger spesifik (charger_id) saat catat
+        // sesi (presisi input Filament admin). TypeCharger.name di produksi
+        // menyimpan NAMA KONEKTOR (bukan enum AC/DC): CCS2/Chademo/DC GBT = DC,
+        // Type 2/AC GBT = AC. Nama station snapshot tidak relevan.
+        $dcType = TypeCharger::factory()->create(['name' => 'CCS2']);
+        $acType = TypeCharger::factory()->create(['name' => 'Type 2']);
         $dcCharger = Charger::factory()->create(['type_charger_id' => $dcType->id]);
         $acCharger = Charger::factory()->create(['type_charger_id' => $acType->id]);
 
         Charge::create([
             'user_id' => $this->authUser->id, 'charger_id' => $dcCharger->id,
-            'station_name_snapshot' => 'SPKLU Pertamina',  // nama generik, bukti heuristic substring salah
+            'station_name_snapshot' => 'SPKLU Pertamina',
             'date' => now()->toDateString(), 'kWh' => 40,
         ]);
         Charge::create([
@@ -293,12 +293,12 @@ class ChargingSessionTest extends ApiTestCase
             'date' => now()->toDateString(), 'kWh' => 6,
         ]);
 
-        // Filter DC → hanya sesi dgn charger type DC.
+        // Filter DC → hanya sesi dgn connector DC (CCS2).
         $this->getJson('/api/v1/charging-sessions?charging_type=DC')
             ->assertOk()->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.station_name', 'SPKLU Pertamina');
 
-        // Filter AC → hanya sesi dgn charger type AC.
+        // Filter AC → hanya sesi dgn connector AC (Type 2).
         $this->getJson('/api/v1/charging-sessions?charging_type=AC')
             ->assertOk()->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.station_name', 'SPKLU Mall');
@@ -308,7 +308,7 @@ class ChargingSessionTest extends ApiTestCase
     {
         // Resource mengekspos charging_type deterministik (AC/DC) — turunan
         // cascade yang sama dgn filter. UI pakai ini utk badge tanpa heuristic.
-        $dcType = TypeCharger::factory()->create(['name' => 'DC']);
+        $dcType = TypeCharger::factory()->create(['name' => 'Chademo']);
         $dcCharger = Charger::factory()->create(['type_charger_id' => $dcType->id]);
 
         Charge::create([

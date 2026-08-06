@@ -346,13 +346,26 @@ class ChargingSessionController extends Controller
         $dcStationTypes = ['fast', 'ultra_fast', 'ultrafast', 'fastcharging', 'ultrafastcharging'];
         $acStationTypes = ['medium', 'standard', 'mediumcharging', 'slowcharging', 'slow', 'ac'];
 
-        // Sesi dgn sumber definitif (charger_id ada) → kunci hanya ke TypeCharger.
-        // Sesi dgn charging_station_id (mobile) → kunci ke type_charge station.
-        // Sisanya → fallback snapshot nama.
+        // TypeCharger.name di produksi = NAMA KONEKTOR (bukan enum AC/DC):
+        //   DC: "CCS2", "Chademo", "DC GBT", dst. (prefix "DC" atau nama DC dikenal)
+        //   AC: "Type 2", "AC GBT", dst. (prefix "AC" atau nama AC dikenal)
+        $dcConnectors = function ($tc) {
+            $tc->where(function ($w) {
+                $w->where('name', 'LIKE', 'DC%')
+                  ->orWhereIn('name', ['CCS2', 'CCS', 'Chademo', 'CHAdeMO', 'Supercharger']);
+            });
+        };
+        $acConnectors = function ($tc) {
+            $tc->where(function ($w) {
+                $w->where('name', 'LIKE', 'AC%')
+                  ->orWhereIn('name', ['Type 2', 'Type2', 'J1772', 'GB/T AC']);
+            });
+        };
+
         if ($cType === 'DC') {
-            $query->where(function ($q) use ($dcTokens, $dcStationTypes) {
-                // (1) Charger → TypeCharger DC.
-                $q->whereHas('charger.typeCharger', fn ($tc) => $tc->where('name', 'DC'))
+            $query->where(function ($q) use ($dcConnectors, $dcTokens, $dcStationTypes) {
+                // (1) Charger → TypeCharger (connector name) DC.
+                $q->whereHas('charger.typeCharger', $dcConnectors)
                 // (2) Tanpa charger_id, tapi dgn station canonical DC.
                   ->orWhere(function ($s) use ($dcStationTypes) {
                       $s->whereNull('charger_id')
@@ -374,9 +387,9 @@ class ChargingSessionController extends Controller
                   });
             });
         } elseif ($cType === 'AC') {
-            $query->where(function ($q) use ($dcTokens, $acStationTypes) {
-                // (1) Charger → TypeCharger AC.
-                $q->whereHas('charger.typeCharger', fn ($tc) => $tc->where('name', 'AC'))
+            $query->where(function ($q) use ($acConnectors, $dcTokens, $acStationTypes) {
+                // (1) Charger → TypeCharger (connector name) AC.
+                $q->whereHas('charger.typeCharger', $acConnectors)
                 // (2) Tanpa charger_id, tapi dgn station canonical AC.
                   ->orWhere(function ($s) use ($acStationTypes) {
                       $s->whereNull('charger_id')
