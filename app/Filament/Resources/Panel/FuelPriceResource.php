@@ -54,28 +54,34 @@ class FuelPriceResource extends Resource
     {
         return $schema->schema([
             Section::make('Informasi Harga BBM')
-                ->description('Atur tanggal berlaku, jenis BBM, dan harga per liter.')
+                ->description('Masukkan rincian harga BBM untuk kalkulasi penghematan biaya.')
+                ->icon('heroicon-o-banknotes')
                 ->schema([
                     Grid::make([
                         'default' => 1,
-                        'sm' => 3,
+                        'md' => 2,
                     ])->schema([
+                        TextInput::make('fuel_name')
+                            ->label('Jenis BBM')
+                            ->default('Pertamax')
+                            ->placeholder('Contoh: Pertamax')
+                            ->helperText('Nama atau jenis bahan bakar minyak')
+                            ->required(),
+
                         TodayDatePicker::make('effective_date')
                             ->label('Tanggal Berlaku')
                             ->native(false)
                             ->displayFormat('d/m/Y')
-                            ->required(),
-
-                        TextInput::make('fuel_name')
-                            ->label('Jenis BBM')
-                            ->default('Pertamax')
-                            ->placeholder('contoh: Pertamax')
+                            ->helperText('Tanggal mulai berlakunya harga ini')
                             ->required(),
 
                         CurrencyTextInput::make('price_per_liter')
                             ->label('Harga per Liter')
                             ->prefix('Rp')
-                            ->required(),
+                            ->placeholder('12.500')
+                            ->helperText('Harga per liter dalam Rupiah')
+                            ->required()
+                            ->columnSpanFull(),
                     ]),
                 ]),
         ]);
