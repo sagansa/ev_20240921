@@ -43,12 +43,20 @@ class SpkluLocationController extends Controller
             $query->where('watt', $request->watt);
         }
 
-        if ($request->filled('kategori_tol')) {
-            $query->where('kategori_tol', trim($request->kategori_tol));
+        if ($request->filled('toll_category') || $request->filled('kategori_tol')) {
+            $val = trim((string) ($request->toll_category ?? $request->kategori_tol));
+            $query->where(function ($q) use ($val) {
+                $q->where('toll_category', $val)
+                  ->orWhere('kategori_tol', $val);
+            });
         }
 
-        if ($request->filled('kategori_lokasi')) {
-            $query->where('kategori_lokasi', trim($request->kategori_lokasi));
+        if ($request->filled('location_category') || $request->filled('kategori_lokasi')) {
+            $val = trim((string) ($request->location_category ?? $request->kategori_lokasi));
+            $query->where(function ($q) use ($val) {
+                $q->where('location_category', $val)
+                  ->orWhere('kategori_lokasi', $val);
+            });
         }
 
         $lat = $request->filled('lat') ? (float) $request->lat : null;

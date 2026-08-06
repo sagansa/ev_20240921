@@ -323,64 +323,71 @@ class ChargingSessionController extends Controller
     }
 
     /**
-     * Filter AC/DC berdasarkan snapshot identitas station yang tersimpan di
-     * tabel charges (station_name_snapshot / station_provider_snapshot), BUKAN
-     * station_name / station_provider — kolom itu tidak ada di tabel charges
-     * (lihat migrasi adapt_charges_for_mobile_spklu), sehingga query lama
-     * error/no-op. Token DC dipakai untuk klasifikasi; sisanya dianggap AC.
+     * Filter AC/DC. Sumber kebenaran: type_charge CANONICAL pada charging_station
+     * (kolom station.type_charge atau station.chargers.type_charge), BUKAN
+     * heuristic substring nama station yang rapuh & salah saat nama generik
+     * (mis. "SPKLU PLN Senayan").
      *
-     * Pakai LIKE per-token (bukan REGEXP) agar portabel di SQLite (testing)
-     * dan MySQL (produksi). orWhereHas chargingStation.chargers melengkapi
-     * fallback via charging_stations canonical bila snapshot kosong.
+     * type_charge canonical: "medium"/"standard"/"slow"/"medium charging" = AC;
+     * "fast"/"ultra fast"/"ultra_fast" = DC. (Normalisasi sama dgn client
+     * SpkluFilterConfig.normalizeSpeedId.)
+     *
+     * Cascade sumber (per sesi):
+     *  1. charging_station_id terisi → cek type_charge station & charger-nya.
+     *  2. Snapshot nama (station_name_snapshot) mengandung token DC sebagai
+     *     fallback bila sesi tanpa station link.
+     *
+     * Seluruh kondisi dikelompokkan dalam satu where() agar OR antar-sumber
+     * tidak bocor ke filter user/model/date lain.
      */
     private function applyChargingTypeScope($query, string $cType): void
     {
+        // Token DC utk fallback heuristic nama station.
         $dcTokens = ['DC', 'FAST', 'ULTRA', 'CCS', 'CHADEMO', 'SUPERCHARGER',
                      '50KW', '60KW', '100KW', '120KW', '150KW', '200KW'];
 
-        // Ekspresi SQL gabungan snapshot (portable SQLite || dan MySQL CONCAT).
-        // Pakai || — SQLite mendukung native; MySQL perlu mode PIPES_AS_CONCAT.
-        // Untuk kompatibilitas penuh, bangun per-kolom LIKE saja.
-        $snapshotContains = function ($builder, array $tokens) {
-            foreach ($tokens as $i => $token) {
-                $clause = $i === 0 ? 'where' : 'orWhere';
-                $builder->$clause('station_name_snapshot', 'LIKE', "%{$token}%")
-                        ->$clause('station_provider_snapshot', 'LIKE', "%{$token}%");
-            }
-        };
-
         if ($cType === 'DC') {
-            // DC = snapshot mengandung token DC, ATAU station canonical punya charger DC.
             $query->where(function ($q) use ($dcTokens) {
-                foreach ($dcTokens as $token) {
-                    $q->orWhere('station_name_snapshot', 'LIKE', "%{$token}%")
-                      ->orWhere('station_provider_snapshot', 'LIKE', "%{$token}%");
-                }
-            })->orWhereHas('chargingStation.chargers', function ($cq) {
-                $cq->where('type_charge', 'LIKE', '%DC%');
-            });
-        } elseif ($cType === 'AC') {
-            // AC = snapshot TIDAK mengandung token DC manapun, ATAU station
-            // canonical punya charger AC. Seluruh grup dibungkus satu where()
-            // agar OR antar-kondisi tidak bocor ke filter user/model/date lain.
-            //
-            // Penting: pakai "(col IS NULL OR col NOT LIKE ...)" per kolom,
-            // BUKAN sekadar "col NOT LIKE". Pada SQLite & MySQL, NULL NOT LIKE
-            // mengembalikan NULL (falsy) sehingga sesi yg kolom snapshot-nya
-            // NULL akan terbuang meski sebenarnya AC.
-            $query->where(function ($q) use ($dcTokens) {
+                // (a) Fallback heuristic: snapshot nama mengandung token DC.
                 $q->where(function ($snap) use ($dcTokens) {
                     foreach ($dcTokens as $token) {
-                        $snap->where(function ($c) use ($token) {
-                            $c->whereNull('station_name_snapshot')
-                              ->orWhere('station_name_snapshot', 'NOT LIKE', "%{$token}%");
-                        })->where(function ($c) use ($token) {
-                            $c->whereNull('station_provider_snapshot')
-                              ->orWhere('station_provider_snapshot', 'NOT LIKE', "%{$token}%");
-                        });
+                        $snap->orWhere('station_name_snapshot', 'LIKE', "%{$token}%")
+                             ->orWhere('station_provider_snapshot', 'LIKE', "%{$token}%");
                     }
-                })->orWhereHas('chargingStation.chargers', function ($cq) {
-                    $cq->where('type_charge', 'LIKE', '%AC%');
+                })
+                // (b) Canonical: station-level type_charge DC (fast/ultra).
+                ->orWhereHas('chargingStation', function ($sq) {
+                    $sq->whereIn('type_charge', ['fast', 'ultra_fast', 'ultrafast', 'fastcharging', 'ultrafastcharging']);
+                })
+                // (c) Canonical: charger-level type_charge DC.
+                ->orWhereHas('chargingStation.chargers', function ($cq) {
+                    $cq->whereIn('type_charge', ['fast', 'ultra_fast', 'ultrafast', 'fastcharging', 'ultrafastcharging']);
+                });
+            });
+        } elseif ($cType === 'AC') {
+            $query->where(function ($q) use ($dcTokens) {
+                // (a) Canonical: station atau charger type_charge AC (medium/standard).
+                $q->whereHas('chargingStation', function ($sq) {
+                    $sq->whereIn('type_charge', ['medium', 'standard', 'mediumcharging', 'slowcharging', 'slow', 'ac']);
+                })
+                ->orWhereHas('chargingStation.chargers', function ($cq) {
+                    $cq->whereIn('type_charge', ['medium', 'standard', 'mediumcharging', 'slowcharging', 'slow', 'ac']);
+                })
+                // (b) Fallback: sesi TANPA station link & snapshot bersih dari token DC.
+                //     NULL-safe: (col IS NULL OR col NOT LIKE token) per kolom/token.
+                ->orWhere(function ($snap) use ($dcTokens) {
+                    $snap->whereNull('charging_station_id')
+                         ->where(function ($c) use ($dcTokens) {
+                             foreach ($dcTokens as $token) {
+                                 $c->where(function ($cc) use ($token) {
+                                     $cc->whereNull('station_name_snapshot')
+                                        ->orWhere('station_name_snapshot', 'NOT LIKE', "%{$token}%");
+                                 })->where(function ($cc) use ($token) {
+                                     $cc->whereNull('station_provider_snapshot')
+                                        ->orWhere('station_provider_snapshot', 'NOT LIKE', "%{$token}%");
+                                 });
+                             }
+                         });
                 });
             });
         }

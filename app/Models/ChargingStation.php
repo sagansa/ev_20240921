@@ -34,6 +34,8 @@ class ChargingStation extends Model
         'kabupaten_kota',
         'kategori_tol',
         'kategori_lokasi',
+        'toll_category',
+        'location_category',
         'type_charge',
         'watt',
         'total_charger',

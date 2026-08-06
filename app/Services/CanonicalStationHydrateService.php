@@ -436,8 +436,10 @@ class CanonicalStationHydrateService
             'kode_provinsi' => $station->kode_provinsi,
             'provinsi' => self::PROVINCE_BY_BPS_CODE[(string) $station->kode_provinsi] ?? null,
             'kabupaten_kota' => null, // ESDM hanya menyediakan kode_kota, bukan nama
-            'kategori_tol' => $raw['kategori_tol'] ?? (str_contains(strtoupper($namaLokasi . ' ' . ($station->alamat_spklu ?? '')), 'REST AREA') || str_contains(strtoupper($namaLokasi . ' ' . ($station->alamat_spklu ?? '')), ' TOL') ? 'TOL' : 'NON TOL'),
-            'kategori_lokasi' => $raw['location_category'] ?? $raw['kategori_lokasi'] ?? (str_contains(strtoupper($namaLokasi), 'REST AREA') ? 'REST AREA' : (str_contains(strtoupper($namaLokasi), 'MALL') ? 'MALL / PUSAT PERBELANJAAN' : (str_contains(strtoupper($namaLokasi), 'HOTEL') ? 'HOTEL' : (str_contains(strtoupper($namaLokasi), 'PLN') ? 'KANTOR PLN' : null)))),
+            'kategori_tol' => $raw['kategori_tol'] ?? ($this->resolveTollCategory($raw['kategori_tol'] ?? null, $namaLokasi, $station->alamat_spklu) === 'TOLL' ? 'TOL' : 'NON TOL'),
+            'kategori_lokasi' => $raw['location_category'] ?? $raw['kategori_lokasi'] ?? null,
+            'toll_category' => $this->resolveTollCategory($raw['kategori_tol'] ?? null, $namaLokasi, $station->alamat_spklu),
+            'location_category' => $this->resolveLocationCategory($raw['location_category'] ?? $raw['kategori_lokasi'] ?? null, $namaLokasi, $station->alamat_spklu),
             'type_charge' => $primaryType,
             'watt' => $primaryType !== null ? (self::TYPE_CHARGE_WATT[$primaryType] ?? null) : null,
             'total_charger' => $installations->count(),
@@ -538,6 +540,8 @@ class CanonicalStationHydrateService
             'kabupaten_kota' => null, // PLN tidak menyediakan kabupaten/kota
             'kategori_tol' => $location->kategori_tol,
             'kategori_lokasi' => $location->locationCategory?->name,
+            'toll_category' => $this->resolveTollCategory($location->kategori_tol, $namaLokasi, $location->address),
+            'location_category' => $this->resolveLocationCategory($location->locationCategory?->name, $namaLokasi, $location->address),
             'type_charge' => $primaryType,
             'watt' => $primaryType !== null ? (self::TYPE_CHARGE_WATT[$primaryType] ?? null) : null,
             'total_charger' => $details->count(),
@@ -702,5 +706,45 @@ class CanonicalStationHydrateService
         }
 
         return implode(' / ', $clean);
+    }
+
+    private function resolveTollCategory(?string $rawToll, string $namaLokasi = '', ?string $alamat = null): ?string
+    {
+        if ($rawToll !== null && trim($rawToll) !== '') {
+            $upper = strtoupper(trim($rawToll));
+            if ($upper === 'TOL' || str_contains($upper, 'TOL')) {
+                return 'TOLL';
+            }
+            if ($upper === 'NON TOL' || str_contains($upper, 'NON')) {
+                return 'NON_TOLL';
+            }
+        }
+        $combined = strtoupper($namaLokasi . ' ' . ($alamat ?? ''));
+        if (str_contains($combined, 'REST AREA') || str_contains($combined, ' TOL')) {
+            return 'TOLL';
+        }
+        return 'NON_TOLL';
+    }
+
+    private function resolveLocationCategory(?string $rawCategory, string $namaLokasi = '', ?string $alamat = null): ?string
+    {
+        $raw = strtoupper(trim((string) $rawCategory));
+        if (str_contains($raw, 'REST AREA')) return 'REST_AREA';
+        if (str_contains($raw, 'MALL') || str_contains($raw, 'SUPERMARKET') || str_contains($raw, 'PASAR')) return 'SHOPPING_MALL';
+        if (str_contains($raw, 'HOTEL')) return 'HOTEL';
+        if (str_contains($raw, 'PLN')) return 'PLN_OFFICE';
+        if (str_contains($raw, 'SPBU') || str_contains($raw, 'PERTAMINA')) return 'GAS_STATION';
+        if (str_contains($raw, 'BISNIS') || str_contains($raw, 'RUKO') || str_contains($raw, 'SWASTA') || str_contains($raw, 'SHOWROOM')) return 'COMMERCIAL';
+        if (str_contains($raw, 'PEMERINTAH') || str_contains($raw, 'BANDARA') || str_contains($raw, 'STASIUN') || str_contains($raw, 'PELABUHAN') || str_contains($raw, 'TERMINAL') || str_contains($raw, 'HOSPITAL') || str_contains($raw, 'RUMAH SAKIT')) return 'PUBLIC_FACILITY';
+        if (str_contains($raw, 'APARTEMEN') || str_contains($raw, 'PERUMAHAN')) return 'RESIDENTIAL';
+
+        $combined = strtoupper($namaLokasi . ' ' . ($alamat ?? ''));
+        if (str_contains($combined, 'REST AREA')) return 'REST_AREA';
+        if (str_contains($combined, 'MALL') || str_contains($combined, 'PLAZA') || str_contains($combined, 'CITY')) return 'SHOPPING_MALL';
+        if (str_contains($combined, 'HOTEL') || str_contains($combined, 'RESORT')) return 'HOTEL';
+        if (str_contains($combined, 'PLN')) return 'PLN_OFFICE';
+        if (str_contains($combined, 'SPBU') || str_contains($combined, 'PERTAMINA') || str_contains($combined, 'SHELL')) return 'GAS_STATION';
+
+        return null;
     }
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\Charge;
 use App\Models\ChargingStation;
+use App\Models\ChargingStationCharger;
 use App\Models\ModelVehicle;
 use App\Models\TypeVehicle;
 use App\Models\User;
@@ -221,6 +222,51 @@ class ChargingSessionTest extends ApiTestCase
         $response->assertOk()->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.vehicle.model_vehicle.name', 'Air Ev')
             ->assertJsonPath('data.0.station_name', 'SPKLU DC');
+    }
+
+    public function test_filter_by_charging_type_dc_via_canonical_station_type_charge(): void
+    {
+        // Skenario REAL: sesi terhubung ke charging_station canonical yang punya
+        // type_charge eksplisit. Nama station TIDAK mengandung token "DC/FAST/CCS"
+        // (mis. "SPKLU PLN Senayan") — heuristic substring akan salah klasifikasi,
+        // tapi type_charge canonical harus tetap jadi sumber kebenaran.
+        $dcStation = ChargingStation::create([
+            'source' => 'esdm', 'nama_lokasi' => 'SPKLU PLN Senayan',
+            'latitude' => -6.2, 'longitude' => 106.8, 'type_charge' => 'ultra_fast',
+        ]);
+        ChargingStationCharger::create([
+            'station_id' => $dcStation->id, 'type_charge' => 'ultra_fast',
+            'nama' => 'ABB Terra 184', 'jumlah_charger' => 1, 'jumlah_konektor' => 2,
+        ]);
+        $acStation = ChargingStation::create([
+            'source' => 'esdm', 'nama_lokasi' => 'SPKLU Hotel',
+            'latitude' => -6.2, 'longitude' => 106.8, 'type_charge' => 'medium',
+        ]);
+        ChargingStationCharger::create([
+            'station_id' => $acStation->id, 'type_charge' => 'medium',
+            'nama' => 'Wallbox Pulsar', 'jumlah_charger' => 1, 'jumlah_konektor' => 1,
+        ]);
+
+        Charge::create([
+            'user_id' => $this->authUser->id, 'charging_station_id' => $dcStation->id,
+            'station_name_snapshot' => 'SPKLU PLN Senayan',
+            'date' => now()->toDateString(), 'kWh' => 30,
+        ]);
+        Charge::create([
+            'user_id' => $this->authUser->id, 'charging_station_id' => $acStation->id,
+            'station_name_snapshot' => 'SPKLU Hotel',
+            'date' => now()->toDateString(), 'kWh' => 7,
+        ]);
+
+        // Filter DC → hanya sesi di station DC canonical.
+        $dc = $this->getJson('/api/v1/charging-sessions?charging_type=DC');
+        $dc->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.station_name', 'SPKLU PLN Senayan');
+
+        // Filter AC → hanya sesi di station AC canonical.
+        $ac = $this->getJson('/api/v1/charging-sessions?charging_type=AC');
+        $ac->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.station_name', 'SPKLU Hotel');
     }
 
     public function test_charging_session_resource_includes_model_vehicle(): void
