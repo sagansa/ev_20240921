@@ -19,6 +19,8 @@ class SpkluLocationResource extends JsonResource
             'longitude' => (float) $this->longitude,
             'keterangan' => $this->keterangan,
             'status' => (int) ($this->status ?? 1),
+            'kategori_tol' => $this->kategori_tol,
+            'kategori_lokasi' => $this->kategori_lokasi,
             'type_charge' => $this->type_charge,
             'watt' => $this->watt,
             'total_charger' => (int) $this->total_charger,

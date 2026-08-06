@@ -32,6 +32,8 @@ class ChargingStation extends Model
         'kode_provinsi',
         'provinsi',
         'kabupaten_kota',
+        'kategori_tol',
+        'kategori_lokasi',
         'type_charge',
         'watt',
         'total_charger',

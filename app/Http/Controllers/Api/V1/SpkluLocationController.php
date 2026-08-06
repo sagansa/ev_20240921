@@ -43,6 +43,14 @@ class SpkluLocationController extends Controller
             $query->where('watt', $request->watt);
         }
 
+        if ($request->filled('kategori_tol')) {
+            $query->where('kategori_tol', trim($request->kategori_tol));
+        }
+
+        if ($request->filled('kategori_lokasi')) {
+            $query->where('kategori_lokasi', trim($request->kategori_lokasi));
+        }
+
         $lat = $request->filled('lat') ? (float) $request->lat : null;
         $lng = $request->filled('lng') ? (float) $request->lng : null;
         $radius = $request->filled('radius') ? (float) $request->radius : null;
@@ -108,11 +116,27 @@ class SpkluLocationController extends Controller
             ->orderBy('type_charge')
             ->pluck('type_charge');
 
+        $kategoriTol = ChargingStation::select('kategori_tol')
+            ->where('source', config('spklu.serving_source'))
+            ->whereNotNull('kategori_tol')
+            ->distinct()
+            ->orderBy('kategori_tol')
+            ->pluck('kategori_tol');
+
+        $kategoriLokasi = ChargingStation::select('kategori_lokasi')
+            ->where('source', config('spklu.serving_source'))
+            ->whereNotNull('kategori_lokasi')
+            ->distinct()
+            ->orderBy('kategori_lokasi')
+            ->pluck('kategori_lokasi');
+
         return response()->json([
             'status' => 'success',
             'data' => [
                 'provinces' => $provinces,
                 'charge_types' => $chargeTypes->values(),
+                'kategori_tol' => $kategoriTol->values(),
+                'kategori_lokasi' => $kategoriLokasi->values(),
             ],
         ]);
     }

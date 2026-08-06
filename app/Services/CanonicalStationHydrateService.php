@@ -436,6 +436,8 @@ class CanonicalStationHydrateService
             'kode_provinsi' => $station->kode_provinsi,
             'provinsi' => self::PROVINCE_BY_BPS_CODE[(string) $station->kode_provinsi] ?? null,
             'kabupaten_kota' => null, // ESDM hanya menyediakan kode_kota, bukan nama
+            'kategori_tol' => $raw['kategori_tol'] ?? (str_contains(strtoupper($namaLokasi . ' ' . ($station->alamat_spklu ?? '')), 'REST AREA') || str_contains(strtoupper($namaLokasi . ' ' . ($station->alamat_spklu ?? '')), ' TOL') ? 'TOL' : 'NON TOL'),
+            'kategori_lokasi' => $raw['location_category'] ?? $raw['kategori_lokasi'] ?? (str_contains(strtoupper($namaLokasi), 'REST AREA') ? 'REST AREA' : (str_contains(strtoupper($namaLokasi), 'MALL') ? 'MALL / PUSAT PERBELANJAAN' : (str_contains(strtoupper($namaLokasi), 'HOTEL') ? 'HOTEL' : (str_contains(strtoupper($namaLokasi), 'PLN') ? 'KANTOR PLN' : null)))),
             'type_charge' => $primaryType,
             'watt' => $primaryType !== null ? (self::TYPE_CHARGE_WATT[$primaryType] ?? null) : null,
             'total_charger' => $installations->count(),
@@ -534,6 +536,8 @@ class CanonicalStationHydrateService
             'kode_provinsi' => null, // PLN memakai FK province_id, bukan kode BPS
             'provinsi' => $location->province?->name,
             'kabupaten_kota' => null, // PLN tidak menyediakan kabupaten/kota
+            'kategori_tol' => $location->kategori_tol,
+            'kategori_lokasi' => $location->locationCategory?->name,
             'type_charge' => $primaryType,
             'watt' => $primaryType !== null ? (self::TYPE_CHARGE_WATT[$primaryType] ?? null) : null,
             'total_charger' => $details->count(),
