@@ -3,9 +3,11 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Charge;
+use App\Models\Charger;
 use App\Models\ChargingStation;
 use App\Models\ChargingStationCharger;
 use App\Models\ModelVehicle;
+use App\Models\TypeCharger;
 use App\Models\TypeVehicle;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -267,6 +269,57 @@ class ChargingSessionTest extends ApiTestCase
         $ac = $this->getJson('/api/v1/charging-sessions?charging_type=AC');
         $ac->assertOk()->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.station_name', 'SPKLU Hotel');
+    }
+
+    public function test_filter_by_charging_type_via_charger_type_charger_enum(): void
+    {
+        // Skenario REAL ala input Filament admin: user memilih Charger spesifik
+        // (charger_id) saat mencatat sesi. Charger tersebut ber-relasi ke
+        // TypeCharger dgn name enum 'AC'/'DC' — ini sumber kebenaran definitif.
+        // Nama station snapshot bisa apa saja (tidak relevan).
+        $dcType = TypeCharger::factory()->create(['name' => 'DC']);
+        $acType = TypeCharger::factory()->create(['name' => 'AC']);
+        $dcCharger = Charger::factory()->create(['type_charger_id' => $dcType->id]);
+        $acCharger = Charger::factory()->create(['type_charger_id' => $acType->id]);
+
+        Charge::create([
+            'user_id' => $this->authUser->id, 'charger_id' => $dcCharger->id,
+            'station_name_snapshot' => 'SPKLU Pertamina',  // nama generik, bukti heuristic substring salah
+            'date' => now()->toDateString(), 'kWh' => 40,
+        ]);
+        Charge::create([
+            'user_id' => $this->authUser->id, 'charger_id' => $acCharger->id,
+            'station_name_snapshot' => 'SPKLU Mall',
+            'date' => now()->toDateString(), 'kWh' => 6,
+        ]);
+
+        // Filter DC → hanya sesi dgn charger type DC.
+        $this->getJson('/api/v1/charging-sessions?charging_type=DC')
+            ->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.station_name', 'SPKLU Pertamina');
+
+        // Filter AC → hanya sesi dgn charger type AC.
+        $this->getJson('/api/v1/charging-sessions?charging_type=AC')
+            ->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.station_name', 'SPKLU Mall');
+    }
+
+    public function test_resource_exposes_charging_type_derived_from_type_charger(): void
+    {
+        // Resource mengekspos charging_type deterministik (AC/DC) — turunan
+        // cascade yang sama dgn filter. UI pakai ini utk badge tanpa heuristic.
+        $dcType = TypeCharger::factory()->create(['name' => 'DC']);
+        $dcCharger = Charger::factory()->create(['type_charger_id' => $dcType->id]);
+
+        Charge::create([
+            'user_id' => $this->authUser->id, 'charger_id' => $dcCharger->id,
+            'station_name_snapshot' => 'SPKLU Pertamina',
+            'date' => now()->toDateString(), 'kWh' => 40,
+        ]);
+
+        $this->getJson('/api/v1/charging-sessions')
+            ->assertOk()
+            ->assertJsonPath('data.0.charging_type', 'DC');
     }
 
     public function test_charging_session_resource_includes_model_vehicle(): void

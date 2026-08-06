@@ -75,6 +75,60 @@ class Charge extends Model
         return $this->belongsTo(Charger::class, 'charger_id');
     }
 
+    /**
+     * Tipe arus charging (AC/DC) — sumber kebenaran deterministik utk badge UI.
+     * Cascade sama dgn ChargingSessionController::applyChargingTypeScope:
+     *  1. charger.typeCharger.name (enum) — definitif saat input via admin.
+     *  2. chargingStation.type_charge canonical (medium=AC, fast/ultra=DC).
+     *  3. Heuristic nama snapshot — fallback terakhir.
+     * Return null bila tidak dapat ditentukan.
+     */
+    public function getChargingTypeAttribute(): ?string
+    {
+        // (1) Charger spesifik → TypeCharger enum.
+        if ($this->charger && $this->charger->typeCharger) {
+            $name = strtoupper($this->charger->typeCharger->name ?? '');
+            if ($name === 'AC' || $name === 'DC') {
+                return $name;
+            }
+        }
+
+        $dcTokens = ['DC', 'FAST', 'ULTRA', 'CCS', 'CHADEMO', 'SUPERCHARGER',
+                     '50KW', '60KW', '100KW', '120KW', '150KW', '200KW'];
+        $resolveFromTypeCharge = function (?string $t): ?string {
+            $key = strtolower(trim((string) $t));
+            return match (true) {
+                in_array($key, ['medium', 'standard', 'mediumcharging', 'slowcharging', 'slow', 'ac'], true) => 'AC',
+                in_array($key, ['fast', 'ultra_fast', 'ultrafast', 'fastcharging', 'ultrafastcharging'], true) => 'DC',
+                default => null,
+            };
+        };
+
+        // (2) Canonical station.
+        $fromStation = $resolveFromTypeCharge($this->chargingStation?->type_charge);
+        if ($fromStation !== null) {
+            return $fromStation;
+        }
+        foreach ($this->chargingStation?->chargers ?? [] as $charger) {
+            $fromCharger = $resolveFromTypeCharge($charger->type_charge ?? null);
+            if ($fromCharger !== null) {
+                return $fromCharger;
+            }
+        }
+
+        // (3) Fallback heuristic snapshot nama.
+        $haystack = strtoupper(trim(($this->station_name_snapshot ?? '').' '.($this->station_provider_snapshot ?? '')));
+        if ($haystack === '') {
+            return null;
+        }
+        foreach ($dcTokens as $token) {
+            if (str_contains($haystack, $token)) {
+                return 'DC';
+            }
+        }
+        return 'AC';
+    }
+
     public function currentCharger()
     {
         return $this->charger->currentCharger();
