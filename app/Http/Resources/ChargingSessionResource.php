@@ -44,6 +44,15 @@ class ChargingSessionResource extends JsonResource
                 return [
                     'id' => $this->vehicle?->id,
                     'license_plate' => $this->vehicle?->license_plate,
+                    // model_vehicle wajib di-serve: client (VehicleDto.modelVehicle)
+                    // memerlukan field ini utk filter by model + badge nama model
+                    // di list riwayat. Sebelumnya absent → filter modelVehicleId
+                    // mobile selalu null (tidak pernah match).
+                    'model_vehicle' => $this->vehicle?->modelVehicle ? [
+                        'id' => $this->vehicle->modelVehicle->id,
+                        'name' => $this->vehicle->modelVehicle->name,
+                        'brand_vehicle_id' => $this->vehicle->modelVehicle->brand_vehicle_id,
+                    ] : null,
                     // type_vehicle + battery_capacity dibutuhkan client utk
                     // hitung losses (%) & efisiensi (km/kWh). Preseden LossesChart.
                     // Di-serve langsung (bukan whenLoaded nested) karena sudah

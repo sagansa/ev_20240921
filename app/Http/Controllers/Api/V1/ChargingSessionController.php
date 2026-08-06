@@ -24,7 +24,7 @@ class ChargingSessionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Charge::where('charges.user_id', Auth::id())
-            ->with(['vehicle.typeVehicle', 'chargingStation', 'chargerLocation', 'chargerLocation.provider']);
+            ->with(['vehicle.typeVehicle', 'vehicle.modelVehicle', 'chargingStation', 'chargerLocation', 'chargerLocation.provider']);
 
         if ($request->filled('charging_station_id')) {
             $query->where('charging_station_id', $request->charging_station_id);
@@ -51,22 +51,7 @@ class ChargingSessionController extends Controller
             });
         }
         if ($request->filled('charging_type')) {
-            $cType = strtoupper($request->charging_type);
-            if ($cType === 'DC') {
-                $query->where(function ($q) {
-                    $q->whereRaw("UPPER(CONCAT(COALESCE(station_name, ''), ' ', COALESCE(station_provider, ''))) REGEXP 'DC|FAST|ULTRA|CCS|CHADEMO|SUPERCHARGER|50KW|60KW|100KW|120KW|150KW|200KW'")
-                      ->orWhereHas('chargingStation.chargers', function ($cq) {
-                          $cq->whereRaw("UPPER(type_charge) LIKE '%DC%'");
-                      });
-                });
-            } else if ($cType === 'AC') {
-                $query->where(function ($q) {
-                    $q->whereRaw("UPPER(CONCAT(COALESCE(station_name, ''), ' ', COALESCE(station_provider, ''))) NOT REGEXP 'DC|FAST|ULTRA|CCS|CHADEMO|SUPERCHARGER|50KW|60KW|100KW|120KW|150KW|200KW'")
-                      ->orWhereHas('chargingStation.chargers', function ($cq) {
-                          $cq->whereRaw("UPPER(type_charge) LIKE '%AC%'");
-                      });
-                });
-            }
+            $this->applyChargingTypeScope($query, strtoupper($request->charging_type));
         }
         if ($request->filled('date_from')) {
             $query->where('date', '>=', $request->date_from);
@@ -263,22 +248,7 @@ class ChargingSessionController extends Controller
             });
         }
         if ($request->filled('charging_type')) {
-            $cType = strtoupper($request->charging_type);
-            if ($cType === 'DC') {
-                $query->where(function ($q) {
-                    $q->whereRaw("UPPER(CONCAT(COALESCE(station_name, ''), ' ', COALESCE(station_provider, ''))) REGEXP 'DC|FAST|ULTRA|CCS|CHADEMO|SUPERCHARGER|50KW|60KW|100KW|120KW|150KW|200KW'")
-                      ->orWhereHas('chargingStation.chargers', function ($cq) {
-                          $cq->whereRaw("UPPER(type_charge) LIKE '%DC%'");
-                      });
-                });
-            } else if ($cType === 'AC') {
-                $query->where(function ($q) {
-                    $q->whereRaw("UPPER(CONCAT(COALESCE(station_name, ''), ' ', COALESCE(station_provider, ''))) NOT REGEXP 'DC|FAST|ULTRA|CCS|CHADEMO|SUPERCHARGER|50KW|60KW|100KW|120KW|150KW|200KW'")
-                      ->orWhereHas('chargingStation.chargers', function ($cq) {
-                          $cq->whereRaw("UPPER(type_charge) LIKE '%AC%'");
-                      });
-                });
-            }
+            $this->applyChargingTypeScope($query, strtoupper($request->charging_type));
         }
         if ($request->filled('date_from')) {
             $query->where('date', '>=', $request->date_from);
@@ -350,6 +320,70 @@ class ChargingSessionController extends Controller
             'success' => false,
             'message' => 'Unauthorized access to charging session',
         ], 403);
+    }
+
+    /**
+     * Filter AC/DC berdasarkan snapshot identitas station yang tersimpan di
+     * tabel charges (station_name_snapshot / station_provider_snapshot), BUKAN
+     * station_name / station_provider — kolom itu tidak ada di tabel charges
+     * (lihat migrasi adapt_charges_for_mobile_spklu), sehingga query lama
+     * error/no-op. Token DC dipakai untuk klasifikasi; sisanya dianggap AC.
+     *
+     * Pakai LIKE per-token (bukan REGEXP) agar portabel di SQLite (testing)
+     * dan MySQL (produksi). orWhereHas chargingStation.chargers melengkapi
+     * fallback via charging_stations canonical bila snapshot kosong.
+     */
+    private function applyChargingTypeScope($query, string $cType): void
+    {
+        $dcTokens = ['DC', 'FAST', 'ULTRA', 'CCS', 'CHADEMO', 'SUPERCHARGER',
+                     '50KW', '60KW', '100KW', '120KW', '150KW', '200KW'];
+
+        // Ekspresi SQL gabungan snapshot (portable SQLite || dan MySQL CONCAT).
+        // Pakai || — SQLite mendukung native; MySQL perlu mode PIPES_AS_CONCAT.
+        // Untuk kompatibilitas penuh, bangun per-kolom LIKE saja.
+        $snapshotContains = function ($builder, array $tokens) {
+            foreach ($tokens as $i => $token) {
+                $clause = $i === 0 ? 'where' : 'orWhere';
+                $builder->$clause('station_name_snapshot', 'LIKE', "%{$token}%")
+                        ->$clause('station_provider_snapshot', 'LIKE', "%{$token}%");
+            }
+        };
+
+        if ($cType === 'DC') {
+            // DC = snapshot mengandung token DC, ATAU station canonical punya charger DC.
+            $query->where(function ($q) use ($dcTokens) {
+                foreach ($dcTokens as $token) {
+                    $q->orWhere('station_name_snapshot', 'LIKE', "%{$token}%")
+                      ->orWhere('station_provider_snapshot', 'LIKE', "%{$token}%");
+                }
+            })->orWhereHas('chargingStation.chargers', function ($cq) {
+                $cq->where('type_charge', 'LIKE', '%DC%');
+            });
+        } elseif ($cType === 'AC') {
+            // AC = snapshot TIDAK mengandung token DC manapun, ATAU station
+            // canonical punya charger AC. Seluruh grup dibungkus satu where()
+            // agar OR antar-kondisi tidak bocor ke filter user/model/date lain.
+            //
+            // Penting: pakai "(col IS NULL OR col NOT LIKE ...)" per kolom,
+            // BUKAN sekadar "col NOT LIKE". Pada SQLite & MySQL, NULL NOT LIKE
+            // mengembalikan NULL (falsy) sehingga sesi yg kolom snapshot-nya
+            // NULL akan terbuang meski sebenarnya AC.
+            $query->where(function ($q) use ($dcTokens) {
+                $q->where(function ($snap) use ($dcTokens) {
+                    foreach ($dcTokens as $token) {
+                        $snap->where(function ($c) use ($token) {
+                            $c->whereNull('station_name_snapshot')
+                              ->orWhere('station_name_snapshot', 'NOT LIKE', "%{$token}%");
+                        })->where(function ($c) use ($token) {
+                            $c->whereNull('station_provider_snapshot')
+                              ->orWhere('station_provider_snapshot', 'NOT LIKE', "%{$token}%");
+                        });
+                    }
+                })->orWhereHas('chargingStation.chargers', function ($cq) {
+                    $cq->where('type_charge', 'LIKE', '%AC%');
+                });
+            });
+        }
     }
 
     /**

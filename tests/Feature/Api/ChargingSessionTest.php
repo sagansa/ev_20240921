@@ -4,6 +4,8 @@ namespace Tests\Feature\Api;
 
 use App\Models\Charge;
 use App\Models\ChargingStation;
+use App\Models\ModelVehicle;
+use App\Models\TypeVehicle;
 use App\Models\User;
 use App\Models\Vehicle;
 
@@ -122,5 +124,126 @@ class ChargingSessionTest extends ApiTestCase
 
         $response->assertOk()->assertJson(['success' => true]);
         $this->assertSoftDeleted('charges', ['id' => $session->id]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Filter kombinasi model + AC/DC — repro bug "tidak terjadi apapun".
+    // ─────────────────────────────────────────────────────────────────────
+
+    public function test_filter_by_model_vehicle_id_returns_only_matching_sessions(): void
+    {
+        [$matchingModel, $otherModel] = ModelVehicle::factory()->count(2)->create();
+
+        $vehicleA = Vehicle::factory()->for($this->authUser)->create([
+            'model_vehicle_id' => $matchingModel->id,
+        ]);
+        $vehicleB = Vehicle::factory()->for($this->authUser)->create([
+            'model_vehicle_id' => $otherModel->id,
+        ]);
+
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicleA->id,
+            'date' => now()->toDateString(),
+            'kWh' => 10,
+        ]);
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicleB->id,
+            'date' => now()->toDateString(),
+            'kWh' => 20,
+        ]);
+
+        $response = $this->getJson("/api/v1/charging-sessions?model_vehicle_id={$matchingModel->id}");
+
+        $response->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.vehicle_id', $vehicleA->id);
+    }
+
+    public function test_filter_by_charging_type_dc_uses_snapshot_columns(): void
+    {
+        // Sesi DC — nama station snapshot mengandung token DC.
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'station_name_snapshot' => 'SPKLU PLN DC Fast',
+            'date' => now()->toDateString(),
+            'kWh' => 10,
+        ]);
+        // Sesi AC — nama station snapshot generik (tidak mengandung token DC).
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'station_name_snapshot' => 'SPKLU Rumah',
+            'date' => now()->toDateString(),
+            'kWh' => 5,
+        ]);
+
+        $response = $this->getJson('/api/v1/charging-sessions?charging_type=DC');
+
+        $response->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.station_name', 'SPKLU PLN DC Fast');
+    }
+
+    public function test_filter_by_charging_type_ac_excludes_dc_sessions(): void
+    {
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'station_name_snapshot' => 'SPKLU PLN DC Fast',
+            'date' => now()->toDateString(),
+            'kWh' => 10,
+        ]);
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'station_name_snapshot' => 'SPKLU Rumah',
+            'date' => now()->toDateString(),
+            'kWh' => 5,
+        ]);
+
+        $response = $this->getJson('/api/v1/charging-sessions?charging_type=AC');
+
+        $response->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.station_name', 'SPKLU Rumah');
+    }
+
+    public function test_filter_combination_model_and_charging_type(): void
+    {
+        // Skenario user: "DC + Wuling Air Ev" → hanya sesi yang cocok keduanya.
+        $airEv = ModelVehicle::factory()->create(['name' => 'Air Ev']);
+        $tesla = ModelVehicle::factory()->create(['name' => 'Model 3']);
+        $vehicleA = Vehicle::factory()->for($this->authUser)->create(['model_vehicle_id' => $airEv->id]);
+        $vehicleB = Vehicle::factory()->for($this->authUser)->create(['model_vehicle_id' => $tesla->id]);
+
+        Charge::create(['user_id' => $this->authUser->id, 'vehicle_id' => $vehicleA->id, 'station_name_snapshot' => 'SPKLU DC', 'date' => now()->toDateString(), 'kWh' => 10]);
+        Charge::create(['user_id' => $this->authUser->id, 'vehicle_id' => $vehicleA->id, 'station_name_snapshot' => 'SPKLU AC Rumah', 'date' => now()->toDateString(), 'kWh' => 5]);
+        Charge::create(['user_id' => $this->authUser->id, 'vehicle_id' => $vehicleB->id, 'station_name_snapshot' => 'SPKLU DC', 'date' => now()->toDateString(), 'kWh' => 20]);
+
+        $response = $this->getJson("/api/v1/charging-sessions?model_vehicle_id={$airEv->id}&charging_type=DC");
+
+        $response->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.vehicle.model_vehicle.name', 'Air Ev')
+            ->assertJsonPath('data.0.station_name', 'SPKLU DC');
+    }
+
+    public function test_charging_session_resource_includes_model_vehicle(): void
+    {
+        $model = ModelVehicle::factory()->create(['name' => 'Air Ev']);
+        $type = TypeVehicle::factory()->create(['model_vehicle_id' => $model->id]);
+        $vehicle = Vehicle::factory()->for($this->authUser)->create([
+            'model_vehicle_id' => $model->id,
+            'type_vehicle_id' => $type->id,
+        ]);
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle->id,
+            'date' => now()->toDateString(),
+            'kWh' => 10,
+        ]);
+
+        $response = $this->getJson('/api/v1/charging-sessions');
+
+        $response->assertOk();
+        // Client (VehicleDto.modelVehicle) memerlukan field ini — tanpa ini,
+        // filter modelVehicleId di mobile tidak pernah match (selalu null).
+        $response->assertJsonPath('data.0.vehicle.model_vehicle.id', $model->id);
+        $response->assertJsonPath('data.0.vehicle.model_vehicle.name', 'Air Ev');
     }
 }
