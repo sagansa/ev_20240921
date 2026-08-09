@@ -21,6 +21,7 @@ class Vehicle extends Model
         'user_id',
         'image',
         'license_plate',
+        'battery_capacity_kwh',
         'brand_vehicle_id',
         'model_vehicle_id',
         'type_vehicle_id',
@@ -77,5 +78,18 @@ class Vehicle extends Model
     public function getMaxKmNowAttribute()
     {
         return $this->charges->max('km_now');
+    }
+
+    /**
+     * Kapasitas baterai efektif (kWh) — kolom per-kendaraan menang, fallback ke
+     * kapasitas level trim (typeVehicle.battery_capacity). Nullable: bila kedua
+     * sumber kosong, estimasi kWh tidak bisa dihitung (mobile menampilkan hint).
+     * Serialisasi API otomatis memakai camelCase `batteryCapacityKwh`.
+     */
+    public function getBatteryCapacityKwhAttribute(): ?float
+    {
+        $raw = $this->attributes['battery_capacity_kwh'] ?? $this->typeVehicle?->battery_capacity;
+
+        return $raw === null ? null : (float) $raw;
     }
 }

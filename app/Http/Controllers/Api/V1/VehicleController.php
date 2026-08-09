@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\Controller;
 use App\Models\BrandVehicle;
+use App\Models\Charge;
 use App\Models\ModelVehicle;
 use App\Models\TypeVehicle;
 use App\Models\Vehicle;
@@ -13,6 +14,13 @@ use Illuminate\Support\Facades\Auth;
 
 class VehicleController extends Controller
 {
+    /**
+     * Faktor loss charging (%) konsisten dgn `ChargingCostCalculator` mobile
+     * (estimateKwhFromBattery: lossFactor = 1.1). HARUS cocok dgn mobile —
+     * bila diubah di salah satu sisi, hasil estimasi tidak sinkron lagi.
+     */
+    protected const LOSS_FACTOR = 1.1;
+
     /**
      * Display a listing of the user's vehicles.
      */
@@ -68,6 +76,7 @@ class VehicleController extends Controller
             'type_vehicle_id' => 'nullable|exists:type_vehicles,id',
             'type_id' => 'nullable|exists:type_vehicles,id',
             'license_plate' => 'required|string|max:20',
+            'battery_capacity_kwh' => 'nullable|numeric|min:0|max:300',
             'ownership' => 'nullable|date',
             'status' => 'nullable|integer',
             'image' => 'nullable|string',
@@ -91,6 +100,7 @@ class VehicleController extends Controller
             'model_vehicle_id' => $modelId,
             'type_vehicle_id' => $typeId,
             'license_plate' => $validated['license_plate'],
+            'battery_capacity_kwh' => $validated['battery_capacity_kwh'] ?? null,
             'ownership' => $validated['ownership'] ?? null,
             'status' => $validated['status'] ?? 1,
             'image' => $validated['image'] ?? null,
@@ -158,6 +168,7 @@ class VehicleController extends Controller
             'type_vehicle_id' => 'nullable|exists:type_vehicles,id',
             'type_id' => 'nullable|exists:type_vehicles,id',
             'license_plate' => 'nullable|string|max:20',
+            'battery_capacity_kwh' => 'nullable|numeric|min:0|max:300',
             'ownership' => 'nullable|date',
             'status' => 'nullable|integer',
             'image' => 'nullable|string',
@@ -173,8 +184,11 @@ class VehicleController extends Controller
         if (array_key_exists('type_vehicle_id', $validated) || array_key_exists('type_id', $validated)) {
             $data['type_vehicle_id'] = $validated['type_vehicle_id'] ?? $validated['type_id'];
         }
-        if (isset($validated['license_plate'])) {
+        if (array_key_exists('license_plate', $validated)) {
             $data['license_plate'] = $validated['license_plate'];
+        }
+        if (array_key_exists('battery_capacity_kwh', $validated)) {
+            $data['battery_capacity_kwh'] = $validated['battery_capacity_kwh'];
         }
         if (array_key_exists('ownership', $validated)) {
             $data['ownership'] = $validated['ownership'];
@@ -186,7 +200,22 @@ class VehicleController extends Controller
             $data['image'] = $validated['image'];
         }
 
+        $oldRawCapacity = $vehicle->getRawOriginal('battery_capacity_kwh');
+
         $vehicle->update($data);
+
+        // Kapasitas berubah → hitung ulang semua sesi estimasi (is_kwh_measured
+        // = false) milik kendaraan ini. Sesi terukur & sesi publik (dari struk)
+        // tidak disentuh.
+        $recalculatedSessions = 0;
+        $capacityChanged = array_key_exists('battery_capacity_kwh', $validated)
+            && (float) ($validated['battery_capacity_kwh'] ?? 0) !== (float) ($oldRawCapacity ?? 0);
+        if ($capacityChanged) {
+            $newCapacity = $data['battery_capacity_kwh'] ?? $vehicle->typeVehicle?->battery_capacity;
+            if ($newCapacity !== null) {
+                $recalculatedSessions = $this->recalcEstimateSessions($vehicle, (float) $newCapacity);
+            }
+        }
 
         $vehicle->load([
             'brandVehicle',
@@ -198,7 +227,52 @@ class VehicleController extends Controller
             'success' => true,
             'message' => 'Vehicle updated successfully',
             'data' => $vehicle,
+            'recalculated_sessions' => $recalculatedSessions,
         ]);
+    }
+
+    /**
+     * Hitung ulang kWh + total_cost sesi ESTIMASI (is_kwh_measured = false)
+     * milik kendaraan saat battery capacity dikoreksi.
+     *
+     * Rumus kWh konsisten dgn mobile: (finish − start) / 100 × capacity × LOSS_FACTOR.
+     * Cost:
+     *  - Sesi HOME (charging_station_id null): total_cost di-scale proporsional
+     *    (tarif PLN lama tidak tersimpan per sesi; rincian pajak tidak bisa
+     *    direkonstruksi — trade-off eksplisit yang disepakati).
+     *  - Sesi PUBLIK (charging_station_id terisi, dari struk): cost TIDAK disentuh.
+     *
+     * @return int Jumlah sesi yang diperbarui.
+     */
+    public function recalcEstimateSessions(Vehicle $vehicle, float $newCapacity): int
+    {
+        $charges = Charge::query()
+            ->where('vehicle_id', $vehicle->id)
+            ->where('is_kwh_measured', false)
+            ->whereNotNull('start_charging_now')
+            ->whereNotNull('finish_charging_now')
+            ->get();
+
+        $count = 0;
+        foreach ($charges as $charge) {
+            $oldKwh = (float) ($charge->kWh ?? 0);
+            $start = (float) $charge->start_charging_now;
+            $finish = (float) $charge->finish_charging_now;
+            $newKwh = max(0.0, ($finish - $start) / 100.0 * $newCapacity * self::LOSS_FACTOR);
+
+            $charge->kWh = $newKwh;
+
+            // Home scaling: hanya sesi tanpa SPKLU publik & punya cost lama.
+            if ($charge->charging_station_id === null && $oldKwh > 0 && (float) ($charge->total_cost ?? 0) > 0) {
+                $oldCost = (float) $charge->total_cost;
+                $charge->total_cost = (int) round($oldCost * $newKwh / $oldKwh);
+            }
+
+            $charge->save();
+            $count++;
+        }
+
+        return $count;
     }
 
     /**
