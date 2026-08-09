@@ -34,6 +34,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Columns\ToggleColumn;
 use App\Filament\Widgets\ChargeResource\ChargeStats;
 use Filament\Schemas\Components\Group;
+use Filament\Forms\Components\Select;
+use Illuminate\Support\Collection;
 
 class ChargeResource extends Resource
 {
@@ -453,6 +455,42 @@ class ChargeResource extends Resource
             ->toolbarActions([
                 Actions\BulkActionGroup::make([
                     Actions\DeleteBulkAction::make(),
+
+                    Actions\BulkAction::make('changeVehicle')
+                        ->label('Ganti Kendaraan')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('warning')
+                        ->form([
+                            Select::make('vehicle_id')
+                                ->label('Kendaraan Tujuan')
+                                ->options(function () {
+                                    $query = Vehicle::query();
+                                    if (! Auth::user()->hasRole('super_admin')) {
+                                        $query->where('user_id', Auth::id());
+                                    }
+                                    return $query->orderBy('license_plate')
+                                        ->get()
+                                        ->mapWithKeys(function ($v) {
+                                            $plate = $v->license_plate ?: 'Tanpa plat';
+                                            $brand = $v->brandVehicle?->name;
+                                            $model = $v->modelVehicle?->name;
+                                            $desc = trim(implode(' ', array_filter([$brand, $model])));
+                                            return [$v->id => $desc !== '' ? "$desc ($plate)" : $plate];
+                                        });
+                                })
+                                ->searchable()
+                                ->required()
+                                ->preload(),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $records->each(function ($record) use ($data) {
+                                $record->update(['vehicle_id' => $data['vehicle_id']]);
+                            });
+                        })
+                        ->requiresConfirmation()
+                        ->modals()->modalHeading('Ganti Kendaraan pada Sesi Terpilih')
+                        ->modalSubmitActionLabel('Ganti Kendaraan')
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
