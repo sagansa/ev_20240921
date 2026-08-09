@@ -1065,4 +1065,50 @@ return [
             ],
         ],
     ],
+    'batteries' => [
+        'itemTitle' => 'Battery',
+        'collectionTitle' => 'Batteries',
+        'inputs' => [
+            'vehicle_id' => [
+                'label' => 'Vehicle',
+                'placeholder' => 'Vehicle',
+            ],
+            'label' => [
+                'label' => 'Label',
+                'placeholder' => 'Label',
+            ],
+            'serial_number' => [
+                'label' => 'Serial Number',
+                'placeholder' => 'Serial Number',
+            ],
+            'capacity_kwh' => [
+                'label' => 'Kapasitas (kWh)',
+                'placeholder' => 'Kapasitas (kWh)',
+            ],
+            'installed_at' => [
+                'label' => 'Tanggal Pasang',
+                'placeholder' => 'Tanggal Pasang',
+            ],
+            'installed_km' => [
+                'label' => 'km Pasang',
+                'placeholder' => 'km Pasang',
+            ],
+            'removed_at' => [
+                'label' => 'Tanggal Pensiun',
+                'placeholder' => 'Tanggal Pensiun',
+            ],
+            'removed_km' => [
+                'label' => 'km Pensiun',
+                'placeholder' => 'km Pensiun',
+            ],
+            'status' => [
+                'label' => 'Aktif',
+                'placeholder' => 'Aktif',
+            ],
+            'note' => [
+                'label' => 'Catatan',
+                'placeholder' => 'Catatan',
+            ],
+        ],
+    ],
 ];

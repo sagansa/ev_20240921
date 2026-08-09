@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\Charge;
 use App\Models\Charger;
+use App\Models\ChargerLocation;
 use App\Models\ChargingStation;
 use App\Models\ChargingStationCharger;
 use App\Models\ModelVehicle;
@@ -515,5 +516,63 @@ class ChargingSessionTest extends ApiTestCase
             ->assertOk()
             ->assertJsonPath('data.total_locations', 1)
             ->assertJsonPath('data.locations.0.name', 'SPKLU Rumah');
+    }
+
+    public function test_journey_exposes_raw_ids_for_pln_and_custom_locations(): void
+    {
+        // Lokasi PLN (charging_station_id) + lokasi custom/home milik user
+        // (charger_location_id) — picker create-session mobile perlu raw ID ini
+        // utk dedup & reuse lokasi di sesi berikutnya.
+        $station = ChargingStation::create([
+            'source' => 'esdm',
+            'nama_lokasi' => 'SPKLU PLN Senayan',
+            'alamat' => 'Jl. Asia Afrika',
+            'latitude' => -6.22,
+            'longitude' => 106.80,
+            'provider_name' => 'PLN',
+        ]);
+        $home = ChargerLocation::factory()->create([
+            'user_id' => $this->authUser->id,
+            'name' => 'Home Wallbox',
+            'address' => 'Jl. Rumah 1',
+            'latitude' => -6.20,
+            'longitude' => 106.82,
+            'data_source' => 'user_custom',
+            'location_on' => 2,
+            'status' => 1,
+        ]);
+
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'charging_station_id' => $station->id,
+            'station_name_snapshot' => 'SPKLU PLN Senayan',
+            'date' => '2026-07-01',
+            'kWh' => 20,
+        ]);
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'charger_location_id' => $home->id,
+            'station_name_snapshot' => 'Home Wallbox',
+            'date' => '2026-07-02',
+            'kWh' => 8,
+        ]);
+
+        $response = $this->getJson('/api/v1/charging-sessions/journey');
+
+        $response->assertOk();
+        $byName = collect($response->json('data.locations'))->keyBy('name');
+        $this->assertCount(2, $byName);
+
+        // Lokasi PLN: charging_station_id terisi, charger_location_id null,
+        // is_home_charging false.
+        $this->assertSame($station->id, $byName['SPKLU PLN Senayan']['charging_station_id']);
+        $this->assertNull($byName['SPKLU PLN Senayan']['charger_location_id']);
+        $this->assertFalse($byName['SPKLU PLN Senayan']['is_home_charging']);
+
+        // Lokasi custom/home: charger_location_id terisi (uuid), charging_station_id
+        // null, is_home_charging true (location_on = 2).
+        $this->assertSame($home->id, $byName['Home Wallbox']['charger_location_id']);
+        $this->assertNull($byName['Home Wallbox']['charging_station_id']);
+        $this->assertTrue($byName['Home Wallbox']['is_home_charging']);
     }
 }

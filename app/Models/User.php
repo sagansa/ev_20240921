@@ -108,6 +108,16 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * Get all of the batteries.
+     *
+     * @return HasMany
+     */
+    public function batteries()
+    {
+        return $this->hasMany(Battery::class);
+    }
+
+    /**
      * Get all of the charges.
      *
      * @return HasMany

@@ -3,27 +3,27 @@
 namespace App\Models;
 
 use App\Models\Concerns\UsesDefaultConnectionWhenTesting;
-
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Charge extends Model
 {
+    use HasFactory;
+    use HasUuids;
+    use SoftDeletes;
     use UsesDefaultConnectionWhenTesting;
 
-    use HasUuids;
-    use HasFactory;
-    use SoftDeletes;
-
     protected $connection = 'ev'; // Use the ev database connection
+
     protected $table = 'charges';
 
     protected $fillable = [
         'image_start',
         'image_finish',
         'vehicle_id',
+        'battery_id',
         'date',
         'charger_location_id',
         'charger_id',
@@ -52,9 +52,23 @@ class Charge extends Model
         'is_kwh_measured',
     ];
 
+    /**
+     * Sesi baru default "sedang berlangsung" (is_finish_charging = false) bila
+     * client tidak mengirim field. Mobile saat ini selalu mengirim boolean eksplisit,
+     * tapi default DB yg benar penting utk API consumer lain / partial update.
+     */
+    protected $attributes = [
+        'is_finish_charging' => false,
+    ];
+
     public function vehicle()
     {
         return $this->belongsTo(Vehicle::class);
+    }
+
+    public function battery()
+    {
+        return $this->belongsTo(Battery::class);
     }
 
     public function chargerLocation()
@@ -123,12 +137,13 @@ class Charge extends Model
             return null;
         }
         $dcTokens = ['DC', 'FAST', 'ULTRA', 'CCS', 'CHADEMO', 'SUPERCHARGER',
-                     '50KW', '60KW', '100KW', '120KW', '150KW', '200KW'];
+            '50KW', '60KW', '100KW', '120KW', '150KW', '200KW'];
         foreach ($dcTokens as $token) {
             if (str_contains($haystack, $token)) {
                 return 'DC';
             }
         }
+
         return 'AC';
     }
 
@@ -153,6 +168,7 @@ class Charge extends Model
         if (str_starts_with($name, 'AC') || in_array($name, ['TYPE 2', 'TYPE2', 'J1772', 'GB/T AC'], true)) {
             return 'AC';
         }
+
         // Tidak dikenali (mis. nama baru) → null (caller fallback ke sumber lain).
         return null;
     }
@@ -161,13 +177,13 @@ class Charge extends Model
     public static function resolveCanonicalTypeCharge(?string $typeCharge): ?string
     {
         $key = strtolower(trim((string) $typeCharge));
+
         return match (true) {
             in_array($key, ['medium', 'standard', 'mediumcharging', 'slowcharging', 'slow', 'ac'], true) => 'AC',
             in_array($key, ['fast', 'ultra_fast', 'ultrafast', 'fastcharging', 'ultrafastcharging'], true) => 'DC',
             default => null,
         };
     }
-
 
     public function currentCharger()
     {

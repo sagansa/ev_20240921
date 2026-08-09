@@ -3,19 +3,17 @@
 namespace App\Models;
 
 use App\Models\Concerns\UsesDefaultConnectionWhenTesting;
-
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Vehicle extends Model
 {
-    use UsesDefaultConnectionWhenTesting;
-
-    use HasUuids;
     use HasFactory;
+    use HasUuids;
     use SoftDeletes;
+    use UsesDefaultConnectionWhenTesting;
 
     protected $connection = 'ev'; // Use the sagansa database connection
 
@@ -53,6 +51,22 @@ class Vehicle extends Model
     public function stateOfHealths()
     {
         return $this->hasMany(StateOfHealth::class);
+    }
+
+    public function batteries()
+    {
+        return $this->hasMany(Battery::class);
+    }
+
+    /**
+     * Baterai aktif terbaru (terpasang, belum pensiun) — dipakai utk
+     * auto-assign battery_id saat sesi charging / SoH dibuat tanpa eksplisit.
+     */
+    public function activeBattery()
+    {
+        return $this->hasOne(Battery::class)
+            ->active()
+            ->orderByDesc('installed_at');
     }
 
     public function user()

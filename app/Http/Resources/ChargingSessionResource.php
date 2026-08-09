@@ -60,6 +60,10 @@ class ChargingSessionResource extends JsonResource
 
             // Kendaraan (opsional — sesi mobile tanpa vehicle).
             'vehicle_id' => $this->vehicle_id,
+            'battery_id' => $this->battery_id,
+            'battery' => $this->whenLoaded('battery', function () {
+                return new BatteryResource($this->battery);
+            }),
             'vehicle' => $this->whenLoaded('vehicle', function () {
                 return [
                     'id' => $this->vehicle?->id,

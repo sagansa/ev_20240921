@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AdvertisementController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\BatteryController;
 use App\Http\Controllers\Api\V1\ChargerLocationController;
 use App\Http\Controllers\Api\V1\ChargingSessionController;
 use App\Http\Controllers\Api\V1\ContributorController;
@@ -75,6 +76,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/fuel-prices', [FuelPriceController::class, 'index']);
         Route::apiResource('state-of-health', StateOfHealthController::class);
         Route::get('/state-of-health/{vehicleId}/trend-analysis', [StateOfHealthController::class, 'trendAnalysis']);
+        Route::apiResource('batteries', BatteryController::class);
+        Route::post('/vehicles/{vehicle}/swap-battery', [BatteryController::class, 'swap']);
         Route::apiResource('home-charging-discounts', HomeChargingDiscountController::class);
         Route::post('/home-charging-discounts/apply', [HomeChargingDiscountController::class, 'apply']);
 

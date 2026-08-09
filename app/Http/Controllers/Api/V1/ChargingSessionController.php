@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Http\Controllers\Api\V1\Controller;
 use App\Http\Resources\ChargingSessionResource;
+use App\Models\Battery;
 use App\Models\Charge;
+use App\Models\ChargerLocation;
 use App\Models\ChargingStation;
+use App\Models\FuelPrice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,7 +26,7 @@ class ChargingSessionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Charge::where('charges.user_id', Auth::id())
-            ->with(['vehicle.typeVehicle', 'vehicle.modelVehicle', 'chargingStation', 'chargerLocation', 'chargerLocation.provider', 'charger.typeCharger']);
+            ->with(['vehicle.typeVehicle', 'vehicle.modelVehicle', 'battery', 'chargingStation', 'chargerLocation', 'chargerLocation.provider', 'charger.typeCharger']);
 
         if ($request->filled('charging_station_id')) {
             $query->where('charging_station_id', $request->charging_station_id);
@@ -110,8 +112,15 @@ class ChargingSessionController extends Controller
             $validated['finish_charging_before'] = $previous?->finish_charging_now;
         }
 
+        // Auto-assign baterai aktif kendaraan bila user tidak memilih baterai —
+        // sesi charging menempel ke baterai yg sedang terpasang. Baterai baru
+        // hasil swap otomatis dipakai utk sesi berikutnya tanpa interaksi user.
+        if (! empty($validated['vehicle_id']) && empty($validated['battery_id'])) {
+            $validated['battery_id'] = $this->activeBatteryForVehicle($validated['vehicle_id'])?->id;
+        }
+
         if (empty($validated['charging_station_id']) && ! empty($request->input('station_name'))) {
-            $customLoc = \App\Models\ChargerLocation::firstOrCreate(
+            $customLoc = ChargerLocation::firstOrCreate(
                 [
                     'user_id' => Auth::id(),
                     'name' => $request->input('station_name'),
@@ -132,7 +141,7 @@ class ChargingSessionController extends Controller
             $this->stationSnapshot($request),
         ));
 
-        $charge->load(['vehicle', 'chargingStation', 'chargerLocation']);
+        $charge->load(['vehicle', 'battery', 'chargingStation', 'chargerLocation']);
 
         return response()->json([
             'success' => true,
@@ -146,7 +155,7 @@ class ChargingSessionController extends Controller
         if (! $this->owns($chargingSession)) {
             return $this->forbidden();
         }
-        $chargingSession->load(['vehicle', 'chargingStation', 'chargerLocation']);
+        $chargingSession->load(['vehicle', 'battery', 'chargingStation', 'chargerLocation']);
 
         return response()->json([
             'success' => true,
@@ -168,7 +177,7 @@ class ChargingSessionController extends Controller
             $data = array_merge($data, $this->stationSnapshot($request));
         }
         $chargingSession->update($data);
-        $chargingSession->load(['vehicle', 'chargingStation', 'chargerLocation']);
+        $chargingSession->load(['vehicle', 'battery', 'chargingStation', 'chargerLocation']);
 
         return response()->json([
             'success' => true,
@@ -199,7 +208,7 @@ class ChargingSessionController extends Controller
     {
         $request->validate(['vehicle_id' => 'required']);
 
-        $session = $this->latestForVehicle($request->vehicle_id)?->load(['vehicle', 'chargingStation', 'chargerLocation']);
+        $session = $this->latestForVehicle($request->vehicle_id)?->load(['vehicle', 'battery', 'chargingStation', 'chargerLocation']);
 
         return response()->json([
             'success' => true,
@@ -220,6 +229,15 @@ class ChargingSessionController extends Controller
             ->latest('date')
             ->latest('created_at')
             ->first();
+    }
+
+    /**
+     * Baterai aktif terbaru milik kendaraan user (auto-assign battery_id).
+     * Caller wajib sudah memastikan vehicle milik user.
+     */
+    private function activeBatteryForVehicle(string $vehicleId): ?Battery
+    {
+        return Battery::activeForVehicle($vehicleId);
     }
 
     /**
@@ -270,7 +288,7 @@ class ChargingSessionController extends Controller
 
         // Resolve nama/koordinat/provider via resource supaya persis dgn list —
         // satu sumber kebenaran utk nilai yang sama di dua visualisasi.
-        $dtos = \App\Http\Resources\ChargingSessionResource::collection($sessions)->resolve();
+        $dtos = ChargingSessionResource::collection($sessions)->resolve();
 
         $locations = [];
         $journeySessions = [];
@@ -296,6 +314,13 @@ class ChargingSessionController extends Controller
 
             $loc = $locations[$key] ?? [
                 'key' => $key,
+                // Raw ID utk dedup/dedup-ulang di picker create-session mobile:
+                // charging_station_id (link live ke PLN) atau charger_location_id
+                // (lokasi custom/home milik user). is_home_charging utk badge
+                // sumber lokasi (Custom vs Home).
+                'charging_station_id' => $dto['charging_station_id'],
+                'charger_location_id' => $dto['charger_location_id'],
+                'is_home_charging' => (bool) $dto['is_home_charging'],
                 'name' => $dto['station_name'],
                 'address' => $dto['station_address'],
                 'latitude' => $dto['station_latitude'],
@@ -448,7 +473,7 @@ class ChargingSessionController extends Controller
             ->where('km_now', '>', 0)
             ->get(['id', 'date', 'km_before', 'km_now']);
 
-        $schedule = \App\Models\FuelPrice::orderBy('effective_date')
+        $schedule = FuelPrice::orderBy('effective_date')
             ->get(['effective_date', 'price_per_liter'])
             ->map(fn ($p) => [
                 'effective_date' => $p->effective_date?->toDateString(),
@@ -540,7 +565,7 @@ class ChargingSessionController extends Controller
     private function applyChargingTypeScope($query, string $cType): void
     {
         $dcTokens = ['DC', 'FAST', 'ULTRA', 'CCS', 'CHADEMO', 'SUPERCHARGER',
-                     '50KW', '60KW', '100KW', '120KW', '150KW', '200KW'];
+            '50KW', '60KW', '100KW', '120KW', '150KW', '200KW'];
         $dcStationTypes = ['fast', 'ultra_fast', 'ultrafast', 'fastcharging', 'ultrafastcharging'];
         $acStationTypes = ['medium', 'standard', 'mediumcharging', 'slowcharging', 'slow', 'ac'];
 
@@ -550,13 +575,13 @@ class ChargingSessionController extends Controller
         $dcConnectors = function ($tc) {
             $tc->where(function ($w) {
                 $w->where('name', 'LIKE', 'DC%')
-                  ->orWhereIn('name', ['CCS2', 'CCS', 'Chademo', 'CHAdeMO', 'Supercharger']);
+                    ->orWhereIn('name', ['CCS2', 'CCS', 'Chademo', 'CHAdeMO', 'Supercharger']);
             });
         };
         $acConnectors = function ($tc) {
             $tc->where(function ($w) {
                 $w->where('name', 'LIKE', 'AC%')
-                  ->orWhereIn('name', ['Type 2', 'Type2', 'J1772', 'GB/T AC']);
+                    ->orWhereIn('name', ['Type 2', 'Type2', 'J1772', 'GB/T AC']);
             });
         };
 
@@ -564,74 +589,74 @@ class ChargingSessionController extends Controller
             $query->where(function ($q) use ($dcConnectors, $dcTokens, $dcStationTypes) {
                 // (0) Charger box spesifik terpilih user — paling akurat.
                 $q->whereNotNull('station_chargerbox_type_snapshot')
-                  ->whereIn('station_chargerbox_type_snapshot', $dcStationTypes)
+                    ->whereIn('station_chargerbox_type_snapshot', $dcStationTypes)
                 // (1)-(3) Fallback cascade — HANYA bila tanpa chargerbox snapshot
                 //         (sumber (0) lebih definitif, tidak boleh di-override).
-                  ->orWhere(function ($w) use ($dcConnectors, $dcTokens, $dcStationTypes) {
-                      $w->whereNull('station_chargerbox_type_snapshot')
-                        ->where(function ($q) use ($dcConnectors, $dcTokens, $dcStationTypes) {
-                            // (1) Charger → TypeCharger (connector name) DC.
-                            $q->whereHas('charger.typeCharger', $dcConnectors)
-                            // (2) Tanpa charger_id, tapi dgn station canonical DC.
-                              ->orWhere(function ($s) use ($dcStationTypes) {
-                                  $s->whereNull('charger_id')
-                                    ->where(function ($ss) use ($dcStationTypes) {
-                                        $ss->whereHas('chargingStation', fn ($st) => $st->whereIn('type_charge', $dcStationTypes))
-                                           ->orWhereHas('chargingStation.chargers', fn ($cq) => $cq->whereIn('type_charge', $dcStationTypes));
+                    ->orWhere(function ($w) use ($dcConnectors, $dcTokens, $dcStationTypes) {
+                        $w->whereNull('station_chargerbox_type_snapshot')
+                            ->where(function ($q) use ($dcConnectors, $dcTokens, $dcStationTypes) {
+                                // (1) Charger → TypeCharger (connector name) DC.
+                                $q->whereHas('charger.typeCharger', $dcConnectors)
+                                // (2) Tanpa charger_id, tapi dgn station canonical DC.
+                                    ->orWhere(function ($s) use ($dcStationTypes) {
+                                        $s->whereNull('charger_id')
+                                            ->where(function ($ss) use ($dcStationTypes) {
+                                                $ss->whereHas('chargingStation', fn ($st) => $st->whereIn('type_charge', $dcStationTypes))
+                                                    ->orWhereHas('chargingStation.chargers', fn ($cq) => $cq->whereIn('type_charge', $dcStationTypes));
+                                            });
+                                    })
+                                // (3) Tanpa charger_id & charging_station_id → snapshot mengandung token DC.
+                                    ->orWhere(function ($s) use ($dcTokens) {
+                                        $s->whereNull('charger_id')
+                                            ->whereNull('charging_station_id')
+                                            ->where(function ($snap) use ($dcTokens) {
+                                                foreach ($dcTokens as $token) {
+                                                    $snap->orWhere('station_name_snapshot', 'LIKE', "%{$token}%")
+                                                        ->orWhere('station_provider_snapshot', 'LIKE', "%{$token}%");
+                                                }
+                                            });
                                     });
-                              })
-                            // (3) Tanpa charger_id & charging_station_id → snapshot mengandung token DC.
-                              ->orWhere(function ($s) use ($dcTokens) {
-                                  $s->whereNull('charger_id')
-                                    ->whereNull('charging_station_id')
-                                    ->where(function ($snap) use ($dcTokens) {
-                                        foreach ($dcTokens as $token) {
-                                            $snap->orWhere('station_name_snapshot', 'LIKE', "%{$token}%")
-                                                 ->orWhere('station_provider_snapshot', 'LIKE', "%{$token}%");
-                                        }
-                                    });
-                              });
-                        });
-                  });
+                            });
+                    });
             });
         } elseif ($cType === 'AC') {
             $query->where(function ($q) use ($acConnectors, $dcTokens, $acStationTypes) {
                 // (0) Charger box spesifik terpilih user — paling akurat.
                 $q->whereNotNull('station_chargerbox_type_snapshot')
-                  ->whereIn('station_chargerbox_type_snapshot', $acStationTypes)
+                    ->whereIn('station_chargerbox_type_snapshot', $acStationTypes)
                 // (1)-(3) Fallback cascade — HANYA bila tanpa chargerbox snapshot.
-                  ->orWhere(function ($w) use ($acConnectors, $dcTokens, $acStationTypes) {
-                      $w->whereNull('station_chargerbox_type_snapshot')
-                        ->where(function ($q) use ($acConnectors, $dcTokens, $acStationTypes) {
-                            // (1) Charger → TypeCharger (connector name) AC.
-                            $q->whereHas('charger.typeCharger', $acConnectors)
-                            // (2) Tanpa charger_id, tapi dgn station canonical AC.
-                              ->orWhere(function ($s) use ($acStationTypes) {
-                                  $s->whereNull('charger_id')
-                                    ->where(function ($ss) use ($acStationTypes) {
-                                        $ss->whereHas('chargingStation', fn ($st) => $st->whereIn('type_charge', $acStationTypes))
-                                           ->orWhereHas('chargingStation.chargers', fn ($cq) => $cq->whereIn('type_charge', $acStationTypes));
-                                    });
-                              })
-                            // (3) Tanpa charger_id & charging_station_id → snapshot bersih token DC.
-                            //     NULL-safe: (col IS NULL OR col NOT LIKE token) per kolom/token.
-                              ->orWhere(function ($s) use ($dcTokens) {
-                                  $s->whereNull('charger_id')
-                                    ->whereNull('charging_station_id')
-                                    ->where(function ($c) use ($dcTokens) {
-                                        foreach ($dcTokens as $token) {
-                                            $c->where(function ($cc) use ($token) {
-                                                $cc->whereNull('station_name_snapshot')
-                                                   ->orWhere('station_name_snapshot', 'NOT LIKE', "%{$token}%");
-                                            })->where(function ($cc) use ($token) {
-                                                $cc->whereNull('station_provider_snapshot')
-                                                   ->orWhere('station_provider_snapshot', 'NOT LIKE', "%{$token}%");
+                    ->orWhere(function ($w) use ($acConnectors, $dcTokens, $acStationTypes) {
+                        $w->whereNull('station_chargerbox_type_snapshot')
+                            ->where(function ($q) use ($acConnectors, $dcTokens, $acStationTypes) {
+                                // (1) Charger → TypeCharger (connector name) AC.
+                                $q->whereHas('charger.typeCharger', $acConnectors)
+                                // (2) Tanpa charger_id, tapi dgn station canonical AC.
+                                    ->orWhere(function ($s) use ($acStationTypes) {
+                                        $s->whereNull('charger_id')
+                                            ->where(function ($ss) use ($acStationTypes) {
+                                                $ss->whereHas('chargingStation', fn ($st) => $st->whereIn('type_charge', $acStationTypes))
+                                                    ->orWhereHas('chargingStation.chargers', fn ($cq) => $cq->whereIn('type_charge', $acStationTypes));
                                             });
-                                        }
+                                    })
+                                // (3) Tanpa charger_id & charging_station_id → snapshot bersih token DC.
+                                //     NULL-safe: (col IS NULL OR col NOT LIKE token) per kolom/token.
+                                    ->orWhere(function ($s) use ($dcTokens) {
+                                        $s->whereNull('charger_id')
+                                            ->whereNull('charging_station_id')
+                                            ->where(function ($c) use ($dcTokens) {
+                                                foreach ($dcTokens as $token) {
+                                                    $c->where(function ($cc) use ($token) {
+                                                        $cc->whereNull('station_name_snapshot')
+                                                            ->orWhere('station_name_snapshot', 'NOT LIKE', "%{$token}%");
+                                                    })->where(function ($cc) use ($token) {
+                                                        $cc->whereNull('station_provider_snapshot')
+                                                            ->orWhere('station_provider_snapshot', 'NOT LIKE', "%{$token}%");
+                                                    });
+                                                }
+                                            });
                                     });
-                              });
-                        });
-                  });
+                            });
+                    });
             });
         }
     }
@@ -650,6 +675,14 @@ class ChargingSessionController extends Controller
                     $owns = Auth::user()->vehicles()->where('vehicles.id', $value)->exists();
                     if (! $owns) {
                         $fail('Unauthorized access to vehicle.');
+                    }
+                }
+            }],
+            'battery_id' => [$sometimes.'nullable', function ($attr, $value, $fail) use ($requireOwnership) {
+                if ($requireOwnership && filled($value)) {
+                    $battery = Battery::where('user_id', Auth::id())->find($value);
+                    if (! $battery) {
+                        $fail('Unauthorized access to battery.');
                     }
                 }
             }],
