@@ -411,17 +411,39 @@ class ChargeResource extends Resource
             ->filters(
                 [
                     SelectFilter::make('vehicle')
-                        ->relationship('vehicle', 'license_plate'),
+                        ->relationship('vehicle', 'license_plate', function (Builder $query) {
+                            if (! Auth::user()->hasRole('super_admin')) {
+                                $query->where('user_id', Auth::id());
+                            }
+                        }),
                     SelectFilter::make('current_charger')
-                        ->relationship('charger.currentCharger', 'name')
+                        ->relationship('charger.currentCharger', 'name', function (Builder $query) {
+                            if (! Auth::user()->hasRole('super_admin')) {
+                                $query->whereHas('chargers', function ($q) {
+                                    $q->whereHas('chargerLocation', function ($q2) {
+                                        $q2->where('user_id', Auth::id());
+                                    });
+                                });
+                            }
+                        })
                         ->label('Current'),
                     SelectFilter::make('provider')
-                        ->relationship('chargerLocation.provider', 'name')
+                        ->relationship('chargerLocation.provider', 'name', function (Builder $query) {
+                            if (! Auth::user()->hasRole('super_admin')) {
+                                $query->whereHas('chargerLocations', function ($q) {
+                                    $q->where('user_id', Auth::id());
+                                });
+                            }
+                        })
                         ->label('Provider'),
                     SelectFilter::make('charger_location_id')
                         ->searchable()
                         ->label('Location')
-                        ->relationship('chargerLocation', 'name'),
+                        ->relationship('chargerLocation', 'name', function (Builder $query) {
+                            if (! Auth::user()->hasRole('super_admin')) {
+                                $query->where('user_id', Auth::id());
+                            }
+                        }),
                     SelectFilter::make('is_kwh_measured')
                         ->label('kWh Measured')
                         ->options([
@@ -488,7 +510,7 @@ class ChargeResource extends Resource
                             });
                         })
                         ->requiresConfirmation()
-                        ->modals()->modalHeading('Ganti Kendaraan pada Sesi Terpilih')
+                        ->modalHeading('Ganti Kendaraan pada Sesi Terpilih')
                         ->modalSubmitActionLabel('Ganti Kendaraan')
                         ->deselectRecordsAfterCompletion(),
                 ]),
