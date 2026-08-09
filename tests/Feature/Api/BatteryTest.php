@@ -92,6 +92,54 @@ class BatteryTest extends ApiTestCase
         $this->assertDatabaseCount('batteries', 0);
     }
 
+    public function test_it_rejects_creating_second_active_battery_for_same_vehicle(): void
+    {
+        $type = TypeVehicle::factory()->create(['battery_capacity' => 30.5]);
+        $vehicle = Vehicle::factory()->for($this->authUser)->create(['type_vehicle_id' => $type->id]);
+        // Vehicle sudah punya 1 baterai aktif.
+        Battery::factory()->create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle->id,
+            'status' => 1,
+            'removed_at' => null,
+        ]);
+
+        $this->postJson('/api/v1/batteries', [
+            'vehicle_id' => $vehicle->id,
+            'label' => 'Battery B',
+            'installed_at' => '2026-08-05',
+        ])->assertStatus(422)
+            ->assertJson(['success' => false]);
+
+        // Baterai lama tetap satu-satunya yg aktif.
+        $this->assertDatabaseCount('batteries', 1);
+    }
+
+    public function test_update_rejects_reactivating_when_other_active_exists(): void
+    {
+        $type = TypeVehicle::factory()->create(['battery_capacity' => 30.5]);
+        $vehicle = Vehicle::factory()->for($this->authUser)->create(['type_vehicle_id' => $type->id]);
+
+        // Baterai lama (retired) + baterai aktif baru (via swap-style state).
+        $retired = Battery::factory()->retired()->create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle->id,
+        ]);
+        Battery::factory()->create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle->id,
+            'status' => 1,
+            'removed_at' => null,
+        ]);
+
+        // Mencoba mengaktifkan kembali baterai retired → ditolak (invariant).
+        $this->putJson("/api/v1/batteries/{$retired->id}", [
+            'status' => 1,
+            'removed_at' => null,
+        ])->assertStatus(422)
+            ->assertJson(['success' => false]);
+    }
+
     public function test_it_swaps_battery_atomically(): void
     {
         $type = TypeVehicle::factory()->create(['battery_capacity' => 30.5]);

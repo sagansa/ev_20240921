@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\ScrapeIngestController;
 use App\Http\Controllers\Api\V1\SocialAuthController;
 use App\Http\Controllers\Api\V1\SpkluLocationController;
 use App\Http\Controllers\Api\V1\StateOfHealthController;
+use App\Http\Controllers\Api\V1\UserChargerLocationController;
 use App\Http\Controllers\Api\V1\VehicleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +49,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/apple', [SocialAuthController::class, 'appleLogin']);
 
     Route::get('/providers', [ProviderController::class, 'index']);
+    Route::get('/providers/all', [ProviderController::class, 'all']);
 
     // Public advertisement routes (for displaying ads to users and tracking metrics)
     Route::get('/ads/mobile', [AdvertisementController::class, 'mobile']);
@@ -69,6 +71,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/vehicles/options', [VehicleController::class, 'options']);
         Route::apiResource('vehicles', VehicleController::class);
         Route::apiResource('charging-locations', ChargerLocationController::class)->except(['index', 'show']);
+        Route::apiResource('my/charging-locations', UserChargerLocationController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::get('/charging-sessions/analytics', [ChargingSessionController::class, 'analytics']);
         Route::get('/charging-sessions/latest', [ChargingSessionController::class, 'latest']);
         Route::get('/charging-sessions/journey', [ChargingSessionController::class, 'journey']);

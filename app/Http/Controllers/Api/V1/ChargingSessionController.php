@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Resources\ChargingSessionResource;
 use App\Models\Battery;
 use App\Models\Charge;
-use App\Models\ChargerLocation;
 use App\Models\ChargingStation;
 use App\Models\FuelPrice;
 use Illuminate\Http\JsonResponse;
@@ -119,22 +118,9 @@ class ChargingSessionController extends Controller
             $validated['battery_id'] = $this->activeBatteryForVehicle($validated['vehicle_id'])?->id;
         }
 
-        if (empty($validated['charging_station_id']) && ! empty($request->input('station_name'))) {
-            $customLoc = ChargerLocation::firstOrCreate(
-                [
-                    'user_id' => Auth::id(),
-                    'name' => $request->input('station_name'),
-                ],
-                [
-                    'address' => $request->input('station_address'),
-                    'data_source' => 'user_custom',
-                    'status' => 1,
-                    'location_on' => 1,
-                ]
-            );
-            $validated['charger_location_id'] = $customLoc->id;
-        }
-
+        // Lokasi custom/home TIDAK di-create inline lagi. Alur 2-langkah:
+        // mobile POST /my/charging-locations dulu → dapat charger_location_id →
+        // kirim di sini. Session tanpa lokasi tetap valid (riwayat vehicle-only).
         $charge = Charge::create(array_merge(
             ['user_id' => Auth::id()],
             $validated,

@@ -38,6 +38,11 @@ class ChargingSessionResource extends JsonResource
                 : ($this->chargerLocation?->longitude !== null ? (float) $this->chargerLocation->longitude : null),
             'station_provider' => $this->station_provider_snapshot ?? $this->whenLoaded('chargerLocation', fn () => $this->chargerLocation?->provider?->name),
 
+            // Region denormalized utk lokasi custom/home (bila reverse-geocode
+            // berhasil). Dipakai mobile utk display "Kota, Provinsi" di riwayat.
+            'province_name' => $this->whenLoaded('chargerLocation', fn () => $this->chargerLocation?->province_name),
+            'city_name' => $this->whenLoaded('chargerLocation', fn () => $this->chargerLocation?->city_name),
+
             // Home vs public. Charging_station sessions (public SPKLU) are
             // always public; charger_location sessions are "home" when
             // location_on = 2 (private). Used by the dashboard for the

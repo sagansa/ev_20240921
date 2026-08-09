@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class GeocodingService
@@ -72,5 +73,59 @@ class GeocodingService
         }
 
         return null;
+    }
+
+    /**
+     * Reverse geocode → hanya butuh nama provinsi & kota/kabupaten untuk mengisi
+     * charger_locations (province_id/city_id FK + province_name/city_name).
+     *
+     * Nominatim (OpenStreetMap) gratis tanpa API key. Honor usage policy:
+     *  - User-Agent yang mengidentifikasi aplikasi.
+     *  - Cache per (lat,lng) rounded 4 desimal selama 30 hari → hindari hit
+     *    berulang (rate limit 1 req/detik).
+     *
+     * @param float $lat
+     * @param float $lng
+     * @return array{province: string|null, city: string|null, formatted_address: string|null}
+     */
+    public function resolveRegion(float $lat, float $lng): array
+    {
+        $roundedLat = round($lat, 4);
+        $roundedLng = round($lng, 4);
+        $cacheKey = 'geocoding.region.'.(string) $roundedLat.','.(string) $roundedLng;
+
+        return Cache::remember($cacheKey, now()->addDays(30), function () use ($lat, $lng) {
+            $response = Http::withHeaders([
+                'User-Agent' => 'Sagansa EV/1.0 (contact@sagansaev.com)',
+                'Accept-Language' => 'id',
+            ])->get('https://nominatim.openstreetmap.org/reverse', [
+                'lat' => $lat,
+                'lon' => $lng,
+                'format' => 'json',
+                'addressdetails' => 1,
+            ]);
+
+            if (! $response->successful()) {
+                return ['province' => null, 'city' => null, 'formatted_address' => null];
+            }
+
+            $data = $response->json();
+            $address = $data['address'] ?? [];
+
+            // Province: address.state; fallback ke region.
+            $province = $address['state'] ?? $address['region'] ?? null;
+            // City/kabupaten: prioritas city → county → town → municipality.
+            $city = $address['city']
+                ?? $address['county']
+                ?? $address['town']
+                ?? $address['municipality']
+                ?? null;
+
+            return [
+                'province' => is_string($province) ? trim($province) ?: null : null,
+                'city' => is_string($city) ? trim($city) ?: null : null,
+                'formatted_address' => isset($data['display_name']) ? $data['display_name'] : null,
+            ];
+        });
     }
 }

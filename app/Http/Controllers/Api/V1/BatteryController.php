@@ -84,6 +84,16 @@ class BatteryController extends Controller
             ], 403);
         }
 
+        // Invariant: 1 kendaraan hanya boleh punya 1 baterai aktif. Bila sudah
+        // ada, tolak — user wajib memakai endpoint swap (menutup yg lama +
+        // membuka yg baru secara atomik), bukan create manual.
+        if (Battery::activeForVehicle($validated['vehicle_id'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kendaraan sudah memiliki baterai aktif. Gunakan fitur ganti baterai (swap) untuk mengganti.',
+            ], 422);
+        }
+
         if (empty($validated['capacity_kwh']) && $vehicle->typeVehicle) {
             $validated['capacity_kwh'] = $vehicle->typeVehicle->battery_capacity;
         }
@@ -153,7 +163,7 @@ class BatteryController extends Controller
             'note' => 'nullable|string',
         ]);
 
-        $battery->update($request->only([
+        $data = $request->only([
             'label',
             'serial_number',
             'capacity_kwh',
@@ -163,7 +173,30 @@ class BatteryController extends Controller
             'removed_km',
             'status',
             'note',
-        ]));
+        ]);
+
+        // Invariant: 1 kendaraan hanya boleh 1 baterai aktif. Cek hanya bila
+        // update ini berpotensi mengaktifkan battery (status=1 atau
+        // removed_at dikosongkan), dan battery ini sendiri sedang tidak aktif.
+        $willBeActive = (isset($data['status']) ? (int) $data['status'] === 1 : true)
+            && (array_key_exists('removed_at', $data) ? $data['removed_at'] === null : true);
+        $currentlyInactive = $battery->status !== 1 || $battery->removed_at !== null;
+
+        if ($willBeActive && $currentlyInactive) {
+            $otherActive = Battery::query()
+                ->where('vehicle_id', $battery->vehicle_id)
+                ->where('id', '!=', $battery->id)
+                ->active()
+                ->exists();
+            if ($otherActive) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Kendaraan sudah memiliki baterai aktif lain. Tidak boleh ada dua baterai aktif sekaligus.',
+                ], 422);
+            }
+        }
+
+        $battery->update($data);
 
         $battery->load(['vehicle']);
 

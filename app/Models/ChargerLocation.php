@@ -35,6 +35,8 @@ class ChargerLocation extends Model
         'address',
         'province_id',
         'city_id',
+        'province_name',
+        'city_name',
         'district_id',
         'subdistrict_id',
         'postal_code_id',
