@@ -107,6 +107,8 @@ class ChargingSessionResource extends JsonResource
             // Energi & biaya.
             'kwh' => isset($this->kWh) ? (float) $this->kWh : null,
             'is_kwh_measured' => (bool) $this->is_kwh_measured,
+            'meter_before' => isset($this->meter_before) ? (float) $this->meter_before : null,
+            'tariff_id' => $this->tariff_id,
             'parking_cost' => isset($this->parking) ? (float) $this->parking : null,
             'street_lighting_tax' => isset($this->street_lighting_tax) ? (float) $this->street_lighting_tax : null,
             'value_added_tax' => isset($this->value_added_tax) ? (float) $this->value_added_tax : null,

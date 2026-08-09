@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Battery;
 use App\Models\Charge;
 use App\Models\Charger;
 use App\Models\ChargerLocation;
@@ -12,6 +13,7 @@ use App\Models\TypeCharger;
 use App\Models\TypeVehicle;
 use App\Models\User;
 use App\Models\Vehicle;
+use Illuminate\Validation\ValidationException;
 
 class ChargingSessionTest extends ApiTestCase
 {
@@ -114,6 +116,83 @@ class ChargingSessionTest extends ApiTestCase
                     'total_distance_km' => 350.0,
                 ],
             ]);
+    }
+
+    public function test_it_updates_session_with_owned_vehicle_and_battery(): void
+    {
+        // Regression Bug #1: array-form rule yg berisi elemen "sometimes|nullable"
+        // tidak di-split oleh Laravel → "validateSometimes|nullable does not exist"
+        // pada PUT (partial=true). Vehicle/battery milik user harus valid.
+        $vehicle = Vehicle::factory()->for($this->authUser)->create();
+        $battery = Battery::factory()->create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle->id,
+        ]);
+        $session = Charge::create([
+            'user_id' => $this->authUser->id,
+            'date' => now()->toDateString(),
+            'kWh' => 10,
+        ]);
+
+        $response = $this->putJson("/api/v1/charging-sessions/{$session->id}", [
+            'vehicle_id' => $vehicle->id,
+            'battery_id' => $battery->id,
+            'is_finish_charging' => true,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.vehicle_id', $vehicle->id)
+            ->assertJsonPath('data.battery_id', $battery->id);
+        $this->assertDatabaseHas('charges', [
+            'id' => $session->id,
+            'vehicle_id' => $vehicle->id,
+            'battery_id' => $battery->id,
+        ]);
+    }
+
+    public function test_it_updates_session_rejects_foreign_vehicle(): void
+    {
+        // Ownership closure tetap jalan setelah fix: vehicle user lain ditolak.
+        $otherUser = User::factory()->create();
+        $foreignVehicle = Vehicle::factory()->for($otherUser)->create();
+        $session = Charge::create([
+            'user_id' => $this->authUser->id,
+            'date' => now()->toDateString(),
+            'kWh' => 10,
+        ]);
+
+        try {
+            $this->putJson("/api/v1/charging-sessions/{$session->id}", [
+                'vehicle_id' => $foreignVehicle->id,
+            ]);
+            $this->fail('Expected ValidationException for foreign vehicle.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('vehicle_id', $e->errors());
+            $this->assertStringContainsString('Unauthorized access to vehicle.', $e->errors()['vehicle_id'][0]);
+        }
+    }
+
+    public function test_it_persists_and_serves_meter_before_and_tariff_id(): void
+    {
+        // Bug #1b: client mengirim meter_before + tariff_id utk resume sesi
+        // belum-selesai — sebelumnya di-drop diam-diam (tidak di fillable).
+        $session = Charge::create([
+            'user_id' => $this->authUser->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => false,
+        ]);
+
+        $this->putJson("/api/v1/charging-sessions/{$session->id}", [
+            'meter_before' => 1245.5,
+            'tariff_id' => 'r1-1300-2200',
+        ])->assertOk()
+            ->assertJsonPath('data.meter_before', 1245.5)
+            ->assertJsonPath('data.tariff_id', 'r1-1300-2200');
+
+        $this->getJson('/api/v1/charging-sessions')
+            ->assertOk()
+            ->assertJsonPath('data.0.meter_before', 1245.5)
+            ->assertJsonPath('data.0.tariff_id', 'r1-1300-2200');
     }
 
     public function test_it_deletes_charging_session(): void

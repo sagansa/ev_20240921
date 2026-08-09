@@ -656,7 +656,7 @@ class ChargingSessionController extends Controller
     {
         $sometimes = $partial ? 'sometimes|' : '';
         $rules = [
-            'vehicle_id' => [$sometimes.'nullable', function ($attr, $value, $fail) use ($requireOwnership) {
+            'vehicle_id' => [$partial ? 'sometimes' : null, 'nullable', function ($attr, $value, $fail) use ($requireOwnership) {
                 if ($requireOwnership && filled($value)) {
                     $owns = Auth::user()->vehicles()->where('vehicles.id', $value)->exists();
                     if (! $owns) {
@@ -664,7 +664,7 @@ class ChargingSessionController extends Controller
                     }
                 }
             }],
-            'battery_id' => [$sometimes.'nullable', function ($attr, $value, $fail) use ($requireOwnership) {
+            'battery_id' => [$partial ? 'sometimes' : null, 'nullable', function ($attr, $value, $fail) use ($requireOwnership) {
                 if ($requireOwnership && filled($value)) {
                     $battery = Battery::where('user_id', Auth::id())->find($value);
                     if (! $battery) {
@@ -690,6 +690,8 @@ class ChargingSessionController extends Controller
             'is_finish_charging' => $sometimes.'boolean',
             'kwh' => $sometimes.'nullable|numeric|min:0',
             'is_kwh_measured' => $sometimes.'boolean',
+            'meter_before' => $sometimes.'nullable|numeric|min:0',
+            'tariff_id' => $sometimes.'nullable|string|max:100',
             'parking' => $sometimes.'nullable|numeric|min:0',
             'street_lighting_tax' => $sometimes.'nullable|numeric|min:0',
             'value_added_tax' => $sometimes.'nullable|numeric|min:0',

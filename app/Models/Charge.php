@@ -50,6 +50,8 @@ class Charge extends Model
         'km_before',
         'finish_charging_before',
         'is_kwh_measured',
+        'meter_before',
+        'tariff_id',
     ];
 
     /**
