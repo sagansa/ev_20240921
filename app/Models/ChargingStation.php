@@ -102,4 +102,16 @@ class ChargingStation extends Model
     {
         return $this->hasMany(StationReview::class, 'charging_station_id');
     }
+
+    /** Foto lokasi (Fase 2) — galeri per lokasi, terpisah dari review. */
+    public function photos()
+    {
+        return $this->hasMany(StationPhoto::class, 'charging_station_id');
+    }
+
+    /** Bookmark oleh user (Fase 3 — Peta User). */
+    public function savedStations()
+    {
+        return $this->hasMany(SavedStation::class, 'charging_station_id');
+    }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Api\V1\Concerns\RequiresCompletedSession;
 use App\Http\Resources\StationReviewResource;
-use App\Models\Charge;
 use App\Models\ChargingStation;
 use App\Models\StationReview;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +25,8 @@ use Illuminate\Support\Facades\Auth;
  */
 class StationReviewController extends Controller
 {
+    use RequiresCompletedSession;
+
     public const MESSAGE_NOT_PLN = 'Ulasan hanya bisa dibuat untuk SPKLU PLN.';
     public const MESSAGE_NOT_COMPLETED = 'Kamu belum pernah menyelesaikan sesi charging di lokasi ini.';
 
@@ -147,17 +149,11 @@ class StationReviewController extends Controller
      */
     private function evaluateEligibility(ChargingStation $station): array
     {
-        if ($station->source !== 'pln') {
+        if (! $this->isPlnStation($station)) {
             return [false, self::MESSAGE_NOT_PLN];
         }
 
-        $completed = Charge::query()
-            ->where('user_id', Auth::id())
-            ->where('charging_station_id', $station->id)
-            ->where('is_finish_charging', true)
-            ->exists();
-
-        if (! $completed) {
+        if (! $this->hasCompletedSession($station)) {
             return [false, self::MESSAGE_NOT_COMPLETED];
         }
 

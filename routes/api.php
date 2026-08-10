@@ -18,7 +18,9 @@ use App\Http\Controllers\Api\V1\ScrapeIngestController;
 use App\Http\Controllers\Api\V1\SocialAuthController;
 use App\Http\Controllers\Api\V1\SpkluLocationController;
 use App\Http\Controllers\Api\V1\StateOfHealthController;
+use App\Http\Controllers\Api\V1\StationPhotoController;
 use App\Http\Controllers\Api\V1\StationReviewController;
+use App\Http\Controllers\Api\V1\SavedStationController;
 use App\Http\Controllers\Api\V1\UserChargerLocationController;
 use App\Http\Controllers\Api\V1\VehicleController;
 use Illuminate\Http\Request;
@@ -47,6 +49,9 @@ Route::prefix('v1')->group(function () {
     // Station reviews (Fase 1) — list & summary publik; eligibility/store/delete auth
     Route::get('/stations/{station}/reviews', [StationReviewController::class, 'index']);
     Route::get('/stations/{station}/reviews/summary', [StationReviewController::class, 'summary']);
+
+    // Station photos (Fase 2) — list publik; upload/delete auth
+    Route::get('/stations/{station}/photos', [StationPhotoController::class, 'index']);
 
     // Providers
     // Social auth (no middleware — public endpoints)
@@ -132,6 +137,15 @@ Route::prefix('v1')->group(function () {
         Route::get('/stations/{station}/reviews/eligibility', [StationReviewController::class, 'eligibility']);
         Route::post('/stations/{station}/reviews', [StationReviewController::class, 'store'])->middleware('throttle:10,1');
         Route::delete('/stations/{station}/reviews/{review}', [StationReviewController::class, 'destroy'])->scopeBindings();
+
+        // Station photos (Fase 2) — auth upload (multipart, gate completed-session) + admin delete
+        Route::post('/stations/{station}/photos', [StationPhotoController::class, 'store'])->middleware('throttle:10,1');
+        Route::delete('/stations/{station}/photos/{photo}', [StationPhotoController::class, 'destroy'])->scopeBindings();
+
+        // Saved stations / bookmark (Fase 3 — Peta User) — toggle/check/index.
+        Route::post('/stations/{station}/save', [SavedStationController::class, 'toggle']);
+        Route::get('/stations/{station}/save', [SavedStationController::class, 'check']);
+        Route::get('/me/saved-stations', [SavedStationController::class, 'index']);
     });
 });
 
