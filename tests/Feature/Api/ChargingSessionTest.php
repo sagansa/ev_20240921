@@ -118,6 +118,54 @@ class ChargingSessionTest extends ApiTestCase
             ]);
     }
 
+    public function test_analytics_attributes_energy_for_efficiency_metrics(): void
+    {
+        // Sesi A: finish == finish_charging_before → rasio 1 (seluruh kWh dipakai jarak).
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'date' => '2026-08-01',
+            'kWh' => 25.0,
+            'total_cost' => 70000,
+            'km_before' => 1000,
+            'km_now' => 1150,
+            'start_charging_now' => 20,
+            'finish_charging_now' => 100,
+            'finish_charging_before' => 100,
+        ]);
+
+        // Sesi B: finish 100 > finish_charging_before 80 → rasio (80−20)/(100−20) = 0.75.
+        // Atribusi kWh = 35 × 0.75 = 26.25; atribusi cost = 95000 × 0.75 = 71250.
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'date' => '2026-08-02',
+            'kWh' => 35.0,
+            'total_cost' => 95000,
+            'km_before' => 1150,
+            'km_now' => 1350,
+            'start_charging_now' => 20,
+            'finish_charging_now' => 100,
+            'finish_charging_before' => 80,
+        ]);
+
+        $response = $this->getJson('/api/v1/charging-sessions/analytics');
+
+        // Total display tetap mentah (60 kWh / 165.000), tapi metrik efisiensi
+        // pakai atribusi: total 51.25 kWh & 141.250 cost utk jarak 350 km.
+        $response->assertOk()
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'total_energy_kwh' => 60.0,
+                    'total_cost' => 165000,
+                    'total_distance_km' => 350.0,
+                    'km_per_kwh' => 6.83,
+                    'cost_per_km' => 404,
+                    'cost_per_kwh' => 2756,
+                    'kwh_per_100km' => 14.64,
+                ],
+            ]);
+    }
+
     public function test_it_updates_session_with_owned_vehicle_and_battery(): void
     {
         // Regression Bug #1: array-form rule yg berisi elemen "sometimes|nullable"

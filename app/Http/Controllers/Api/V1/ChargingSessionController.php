@@ -391,33 +391,52 @@ class ChargingSessionController extends Controller
             $query->where('date', '<=', $request->date_to);
         }
 
-        $totalSessions = (clone $query)->count();
-        $totalKwh = (float) ((clone $query)->sum('kWh') ?? 0);
-        $totalCost = (float) ((clone $query)->sum('total_cost') ?? 0);
+        $sessions = (clone $query)->get([
+            'id', 'date', 'kWh', 'total_cost', 'km_before', 'km_now',
+            'start_charging_now', 'finish_charging_now', 'finish_charging_before',
+        ]);
 
-        // Total Km computed exactly like the Filament ChargeStats widget ($kmNow - $kmBefore)
-        $kmNowSum = (float) ((clone $query)->sum('km_now') ?? 0);
-        $kmBeforeSum = (float) ((clone $query)->sum('km_before') ?? 0);
+        $totalSessions = $sessions->count();
+
+        // Total kWh/cost tetap mentah (ditampilkan sbg nilai absolut), sementara
+        // metrik efisiensi pakai energi/biaya yang diatribusikan ke jarak sesi.
+        $totalKwh = 0.0;
+        $totalCost = 0.0;
+        $attributedKwh = 0.0;
+        $attributedCost = 0.0;
+        $kmNowSum = 0.0;
+        $kmBeforeSum = 0.0;
+        foreach ($sessions as $session) {
+            $totalKwh += (float) ($session->kWh ?? 0);
+            $totalCost += (float) ($session->total_cost ?? 0);
+            $attr = $this->attributedEnergy($session);
+            $attributedKwh += $attr['kwh'];
+            $attributedCost += $attr['cost'];
+            $kmNowSum += (float) ($session->km_now ?? 0);
+            $kmBeforeSum += (float) ($session->km_before ?? 0);
+        }
         $totalKm = max($kmNowSum - $kmBeforeSum, 0);
 
         // Per-session fallback when km_before is 0 or not filled
         if ($totalKm <= 0) {
-            $sessions = (clone $query)->whereNotNull('km_now')->where('km_now', '>', 0)->get();
-            if ($sessions->count() >= 2) {
-                $minKm = $sessions->min('km_now');
-                $maxKm = $sessions->max('km_now');
+            $kmSessions = $sessions->filter(fn ($s) => ($s->km_now ?? 0) > 0);
+            if ($kmSessions->count() >= 2) {
+                $minKm = $kmSessions->min('km_now');
+                $maxKm = $kmSessions->max('km_now');
                 $totalKm = (float) max($maxKm - $minKm, 0);
-            } elseif ($sessions->count() == 1) {
-                $first = $sessions->first();
+            } elseif ($kmSessions->count() == 1) {
+                $first = $kmSessions->first();
                 $totalKm = (float) max(($first->km_now - ($first->km_before ?? 0)), 0);
             }
         }
 
-        // Efficiency & cost
-        $kwhPer100km = $totalKm > 0 ? ($totalKwh / $totalKm) * 100 : 0;
-        $kmPerKwh = $totalKwh > 0 ? $totalKm / $totalKwh : 0;
-        $costPerKm = $totalKm > 0 ? $totalCost / $totalKm : 0;
-        $costPerKwh = $totalKwh > 0 ? $totalCost / $totalKwh : 0;
+        // Efficiency & cost — metrik pakai energi/biaya yang diatribusikan ke
+        // jarak sesi (atribusi), bukan kWh mentah, agar akurat saat sesi
+        // finish != batas pengisian sesi sebelumnya (rasio = 1 saat sama).
+        $kwhPer100km = $totalKm > 0 ? ($attributedKwh / $totalKm) * 100 : 0;
+        $kmPerKwh = $attributedKwh > 0 ? $totalKm / $attributedKwh : 0;
+        $costPerKm = $totalKm > 0 ? $attributedCost / $totalKm : 0;
+        $costPerKwh = $attributedKwh > 0 ? $attributedCost / $attributedKwh : 0;
 
         // BBM estimate based on historical prices per session date.
         $kmPerLiter = max((float) ($request->input('bbm_km_per_liter', 12)), 0.1);
@@ -443,6 +462,36 @@ class ChargingSessionController extends Controller
                 'bbm_km_used' => round($bbm['km'], 1),
             ],
         ]);
+    }
+
+    /**
+     * Energi & biaya yang diatribusikan ke jarak sesi ini (port helper KMP
+     * `ChargingSessionFilterHelper.attributedEnergy`).
+     *
+     * Sesi mengisi baterai dari `start_charging_now` → `finish_charging_now` (%).
+     * Perjalanan sesi ini menghabiskan baterai dari `finish_charging_before`
+     * (batas akhir sesi sebelumnya) → `start_charging_now`. Maka energi yang
+     * dipakai utk jarak = kWh × (finish_charging_before − start_charging_now)
+     * ÷ (finish_charging_now − start_charging_now). Saat finish ==
+     * finish_charging_before → rasio 1 (perilaku lama). Fallback ke kWh mentah /
+     * biaya penuh bila battery% kosong atau denominator ≤ 0.
+     */
+    private function attributedEnergy($session): array
+    {
+        $kwh = (float) ($session->kWh ?? 0);
+        $cost = (float) ($session->total_cost ?? 0);
+        $start = $session->start_charging_now;
+        $finish = $session->finish_charging_now;
+        $finishBefore = $session->finish_charging_before;
+        if ($start === null || $finish === null || $finishBefore === null) {
+            return ['kwh' => $kwh, 'cost' => $cost];
+        }
+        $denominator = (float) $finish - (float) $start;
+        if ($denominator <= 0) {
+            return ['kwh' => $kwh, 'cost' => $cost];
+        }
+        $ratio = max(0.0, ((float) $finishBefore - (float) $start) / $denominator);
+        return ['kwh' => $kwh * $ratio, 'cost' => $cost * $ratio];
     }
 
     /**
