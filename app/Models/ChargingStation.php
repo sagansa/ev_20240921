@@ -96,4 +96,10 @@ class ChargingStation extends Model
     {
         return $this->hasMany(PlnEsdmStationMatch::class, 'pln_station_id');
     }
+
+    /** Review lokasi (Fase 1) — multiple review/user/lokasi diizinkan. */
+    public function reviews()
+    {
+        return $this->hasMany(StationReview::class, 'charging_station_id');
+    }
 }

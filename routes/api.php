@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\ScrapeIngestController;
 use App\Http\Controllers\Api\V1\SocialAuthController;
 use App\Http\Controllers\Api\V1\SpkluLocationController;
 use App\Http\Controllers\Api\V1\StateOfHealthController;
+use App\Http\Controllers\Api\V1\StationReviewController;
 use App\Http\Controllers\Api\V1\UserChargerLocationController;
 use App\Http\Controllers\Api\V1\VehicleController;
 use Illuminate\Http\Request;
@@ -42,6 +43,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/spklu', [SpkluLocationController::class, 'index']);
     Route::get('/spklu/{id}', [SpkluLocationController::class, 'show']);
     Route::get('/meta/filters', [SpkluLocationController::class, 'metaFilters']);
+
+    // Station reviews (Fase 1) — list & summary publik; eligibility/store/delete auth
+    Route::get('/stations/{station}/reviews', [StationReviewController::class, 'index']);
+    Route::get('/stations/{station}/reviews/summary', [StationReviewController::class, 'summary']);
 
     // Providers
     // Social auth (no middleware — public endpoints)
@@ -122,6 +127,11 @@ Route::prefix('v1')->group(function () {
 
         // Advertisement management (admin routes)
         Route::apiResource('advertisements', AdvertisementController::class);
+
+        // Station reviews — auth (eligibility/store) + admin (delete)
+        Route::get('/stations/{station}/reviews/eligibility', [StationReviewController::class, 'eligibility']);
+        Route::post('/stations/{station}/reviews', [StationReviewController::class, 'store'])->middleware('throttle:10,1');
+        Route::delete('/stations/{station}/reviews/{review}', [StationReviewController::class, 'destroy'])->scopeBindings();
     });
 });
 
