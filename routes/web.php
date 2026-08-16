@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\EmailLinkVerificationController;
 use App\Http\Controllers\EvController;
 use App\Http\Controllers\PlnChargerLocationController;
 use App\Http\Controllers\SitemapController;
@@ -28,6 +29,13 @@ Route::middleware([
 Route::get('/admin/testers/export', [TesterExportController::class, 'csv'])
     ->middleware('auth:sanctum')
     ->name('admin.testers.export');
+
+// Verifikasi email via link sekali-tap (konvensi Laravel: {id}/{hash sha1 email}
+// + URL bertanda tangan). Publik — signature URL yang mengotentikasi, tanpa
+// session web, karena penerima adalah user aplikasi mobile yang belum login.
+Route::get('/email/verify-link/{id}/{hash}', [EmailLinkVerificationController::class, 'verify'])
+    ->middleware(['signed', 'throttle:10,1'])
+    ->name('email.verify-link');
 
 Route::get('/', [EvController::class, 'plnMap'])->name('home');
 

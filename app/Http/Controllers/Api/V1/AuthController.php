@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role;
 
@@ -321,10 +322,20 @@ class AuthController extends Controller
         Cache::put("verify:{$user->email}", $otp, now()->addMinutes(self::OTP_EXPIRES_MINUTES));
         Cache::put($rateLimitKey, true, now()->addSeconds(self::OTP_RESEND_SECONDS));
 
+        // Link verifikasi sekali-tap (konvensi Laravel: hash sha1 email, URL
+        // bertanda tangan bawaan) — dipakai tanpa session web karena signature
+        // URL-nya sendiri yang mengotentikasi (lihat EmailLinkVerificationController).
+        $verificationUrl = URL::temporarySignedRoute(
+            'email.verify-link',
+            now()->addMinutes(60),
+            ['id' => $user->getKey(), 'hash' => sha1($user->getEmailForVerification())]
+        );
+
         Mail::to($user->email)->send(new EmailVerificationOtpMail(
             name: $user->name,
             otp: $otp,
             expiresInMinutes: self::OTP_EXPIRES_MINUTES,
+            verificationUrl: $verificationUrl,
         ));
 
         return response()->json([

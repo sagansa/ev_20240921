@@ -16,11 +16,15 @@ class EmailVerificationOtpMail extends Mailable
      * @param  string  $name  Nama penerima untuk personalisasi email.
      * @param  string  $otp  Kode 6 digit.
      * @param  int  $expiresInMinutes  Masa berlaku kode.
+     * @param  string|null  $verificationUrl  Link verifikasi sekali-tap (URL
+     *   bertanda tangan Laravel, gaya email/verify/{id}/{hash}). Null = tampil
+     *   kode OTP saja.
      */
     public function __construct(
         public string $name,
         public string $otp,
         public int $expiresInMinutes = 10,
+        public ?string $verificationUrl = null,
     ) {}
 
     public function envelope(): Envelope
