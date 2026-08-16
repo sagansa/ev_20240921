@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\SpkluLocationController;
 use App\Http\Controllers\Api\V1\StateOfHealthController;
 use App\Http\Controllers\Api\V1\StationPhotoController;
 use App\Http\Controllers\Api\V1\StationReviewController;
+use App\Http\Controllers\Api\V1\TesterController;
 use App\Http\Controllers\Api\V1\SavedStationController;
 use App\Http\Controllers\Api\V1\UserChargerLocationController;
 use App\Http\Controllers\Api\V1\VehicleController;
@@ -66,6 +67,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/ads/web', [AdvertisementController::class, 'web']);
     Route::post('/advertisements/{advertisement}/impression', [AdvertisementController::class, 'recordImpression']);
     Route::post('/advertisements/{advertisement}/click', [AdvertisementController::class, 'recordClick']);
+
+    // Testing funnel — app config & ping build PUBLIK (install fresh belum login)
+    Route::get('/app/config', [TesterController::class, 'appConfig'])->middleware('throttle:30,1');
+    Route::post('/testers/ping', [TesterController::class, 'ping'])->middleware('throttle:30,1');
 
     // Protected routes
     Route::middleware(['auth:sanctum'])->group(function () {
@@ -146,6 +151,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/stations/{station}/save', [SavedStationController::class, 'toggle']);
         Route::get('/stations/{station}/save', [SavedStationController::class, 'check']);
         Route::get('/me/saved-stations', [SavedStationController::class, 'index']);
+
+        // Testing funnel — register tester (auth)
+        Route::post('/testers/register', [TesterController::class, 'register'])->middleware('throttle:10,1');
     });
 });
 

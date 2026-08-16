@@ -100,4 +100,31 @@ class VehicleTest extends ApiTestCase
         $response->assertOk()->assertJson(['success' => true]);
         $this->assertSoftDeleted('vehicles', ['id' => $vehicle->id]);
     }
+
+    public function test_it_persists_ac_charging_power_when_vehicle_is_updated(): void
+    {
+        $brand = BrandVehicle::factory()->create();
+        $model = ModelVehicle::factory()->create(['brand_vehicle_id' => $brand->id]);
+        $vehicle = Vehicle::create([
+            'user_id' => $this->authUser->id,
+            'brand_vehicle_id' => $brand->id,
+            'model_vehicle_id' => $model->id,
+            'license_plate' => 'B 1111 EV',
+            'status' => 1,
+        ]);
+
+        $response = $this->putJson("/api/v1/vehicles/{$vehicle->id}", [
+            'brand_vehicle_id' => $brand->id,
+            'model_vehicle_id' => $model->id,
+            'license_plate' => 'B 1111 EV',
+            'ac_charging_power_kw' => 11,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.ac_charging_power_kw', 11);
+        $this->assertDatabaseHas('vehicles', [
+            'id' => $vehicle->id,
+            'ac_charging_power_kw' => 11,
+        ]);
+    }
 }

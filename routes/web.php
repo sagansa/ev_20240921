@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EvController;
 use App\Http\Controllers\PlnChargerLocationController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\TesterExportController;
 use App\Http\Controllers\YouTubeCollectionController;
 use Filament\Http\Controllers\Auth\LoginController;
 use Filament\Http\Controllers\Auth\RegisterController;
@@ -22,6 +23,11 @@ Route::middleware([
         return view('dashboard');
     })->name('dashboard');
 });
+
+// Export CSV tester (Closed Testing) — role admin dicek di controller.
+Route::get('/admin/testers/export', [TesterExportController::class, 'csv'])
+    ->middleware('auth:sanctum')
+    ->name('admin.testers.export');
 
 Route::get('/', [EvController::class, 'plnMap'])->name('home');
 

@@ -22,6 +22,7 @@ class Vehicle extends Model
         'image',
         'license_plate',
         'battery_capacity_kwh',
+        'ac_charging_power_kw',
         'brand_vehicle_id',
         'model_vehicle_id',
         'type_vehicle_id',

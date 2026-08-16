@@ -22,6 +22,7 @@ class UserChargerLocationResource extends JsonResource
             'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
             'provider_id' => $this->provider_id,
             'provider_name' => $this->whenLoaded('provider', fn () => $this->provider?->name),
+            'provider_logo' => $this->whenLoaded('provider', fn () => $this->provider?->logo),
             'province_id' => $this->province_id,
             'city_id' => $this->city_id,
             'province_name' => $this->province_name,

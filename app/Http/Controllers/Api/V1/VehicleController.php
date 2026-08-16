@@ -77,6 +77,7 @@ class VehicleController extends Controller
             'type_id' => 'nullable|exists:type_vehicles,id',
             'license_plate' => 'required|string|max:20',
             'battery_capacity_kwh' => 'nullable|numeric|min:0|max:300',
+            'ac_charging_power_kw' => 'nullable|numeric|min:0|max:500',
             'ownership' => 'nullable|date',
             'status' => 'nullable|integer',
             'image' => 'nullable|string',
@@ -169,6 +170,7 @@ class VehicleController extends Controller
             'type_id' => 'nullable|exists:type_vehicles,id',
             'license_plate' => 'nullable|string|max:20',
             'battery_capacity_kwh' => 'nullable|numeric|min:0|max:300',
+            'ac_charging_power_kw' => 'nullable|numeric|min:0|max:500',
             'ownership' => 'nullable|date',
             'status' => 'nullable|integer',
             'image' => 'nullable|string',
@@ -189,6 +191,9 @@ class VehicleController extends Controller
         }
         if (array_key_exists('battery_capacity_kwh', $validated)) {
             $data['battery_capacity_kwh'] = $validated['battery_capacity_kwh'];
+        }
+        if (array_key_exists('ac_charging_power_kw', $validated)) {
+            $data['ac_charging_power_kw'] = $validated['ac_charging_power_kw'];
         }
         if (array_key_exists('ownership', $validated)) {
             $data['ownership'] = $validated['ownership'];
