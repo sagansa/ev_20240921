@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AdvertisementController;
+use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BatteryController;
@@ -84,6 +85,9 @@ Route::prefix('v1')->group(function () {
         // Social auth status & logout
         Route::get('/auth/status', [SocialAuthController::class, 'status']);
         Route::post('/auth/social-logout', [SocialAuthController::class, 'logout']);
+
+        // Akun (soft-delete + anonimisasi PII, lihat AccountController::destroy)
+        Route::delete('/account', [AccountController::class, 'destroy']);
 
         // User-specific routes
         Route::get('/vehicles/options', [VehicleController::class, 'options']);
