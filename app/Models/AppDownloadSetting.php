@@ -33,6 +33,8 @@ class AppDownloadSetting extends Model
         'ios_notes',
         'qr_code_enabled',
         'auto_popup_delay_ms',
+        'whatsapp_number',
+        'whatsapp_text',
     ];
 
     protected $casts = [
@@ -72,6 +74,8 @@ class AppDownloadSetting extends Model
                 'ios_notes' => null,
                 'qr_code_enabled' => true,
                 'auto_popup_delay_ms' => 300,
+                'whatsapp_number' => '08111923572',
+                'whatsapp_text' => 'Halo Admin EV Charge ID, saya ingin bertanya mengenai kerjasama / bantuan aplikasi.',
             ]);
         }
 

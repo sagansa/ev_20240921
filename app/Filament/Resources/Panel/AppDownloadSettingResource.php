@@ -134,6 +134,19 @@ class AppDownloadSettingResource extends Resource
                             ->default('Dalam tahap review App Store')
                             ->placeholder('Contoh: Dalam tahap review App Store'),
                     ])->columns(2),
+
+                Section::make('Kontak WhatsApp (Bantuan & Kerjasama)')
+                    ->description('Nomor kontak WhatsApp yang ditampilkan pada popup aplikasi')
+                    ->schema([
+                        TextInput::make('whatsapp_number')
+                            ->label('Nomor WhatsApp')
+                            ->default('08111923572')
+                            ->placeholder('Contoh: 08111923572'),
+                        TextInput::make('whatsapp_text')
+                            ->label('Pesan Awal WhatsApp (Pre-filled Text)')
+                            ->default('Halo Admin EV Charge ID, saya ingin bertanya mengenai kerjasama / bantuan aplikasi.')
+                            ->columnSpanFull(),
+                    ])->columns(2),
             ]);
     }
 
