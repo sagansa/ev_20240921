@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Password as PasswordBroker;
 use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
@@ -182,8 +183,12 @@ class AuthController extends Controller
     }
 
     /**
-     * Kirim kode OTP reset password. Selalu return 200 generic agar tidak
-     * membocorkan email mana yang terdaftar (anti user-enumeration).
+     * Kirim link reset password (Laravel/Fortify bawaan, bukan OTP). Selalu
+     * return 200 generic agar tidak membocorkan email mana yang terdaftar
+     * (anti user-enumeration).
+     *
+     * Link mengarah ke halaman web Fortify `/reset-password/{token}` — user
+     * set password baru di browser, lalu kembali login di app.
      */
     public function forgotPassword(Request $request): JsonResponse
     {
@@ -191,41 +196,22 @@ class AuthController extends Controller
             'email' => 'required|email',
         ]);
 
-        $user = User::where('email', $request->email)->first();
-
-        if (! $user) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Jika email terdaftar, kode reset telah dikirim.',
-            ]);
-        }
-
-        $rateLimitKey = "reset:sent:{$request->email}";
-        if (Cache::has($rateLimitKey)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Mohon tunggu 1 menit sebelum mengirim ulang kode.',
-            ], 429);
-        }
-
-        $otp = $this->generateOtp();
-        Cache::put("reset:{$request->email}", $otp, now()->addMinutes(self::OTP_EXPIRES_MINUTES));
-        Cache::put($rateLimitKey, true, now()->addSeconds(self::OTP_RESEND_SECONDS));
-
-        Mail::to($user->email)->send(new PasswordResetOtpMail(
-            name: $user->name,
-            otp: $otp,
-            expiresInMinutes: self::OTP_EXPIRES_MINUTES,
-        ));
+        $status = PasswordBroker::sendResetLink(['email' => $request->email]);
 
         return response()->json([
-            'success' => true,
-            'message' => 'Jika email terdaftar, kode reset telah dikirim.',
+            'success' => in_array($status, [
+                PasswordBroker::RESET_LINK_SENT,
+                PasswordBroker::INVALID_USER,
+            ], true),
+            'message' => 'Jika email terdaftar, link reset password telah dikirim.',
         ]);
     }
 
     /**
-     * Validasi kode OTP reset + set password baru.
+     * @deprecated OTP reset digantikan link reset web (forgotPassword →
+     * Password::sendResetLink). Endpoint dipertahankan sementara utk kompat
+     * versi app lama; password baru TIDAK akan berubah karena tidak ada OTP
+     * yang tersimpan lagi.
      */
     public function resetPassword(Request $request): JsonResponse
     {

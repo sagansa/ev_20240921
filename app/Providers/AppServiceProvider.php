@@ -11,6 +11,8 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
+use App\Models\AppDownloadSetting;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
 
@@ -54,5 +56,15 @@ class AppServiceProvider extends ServiceProvider
         // Register model observers
         ChargerLocation::observe(ChargerLocationObserver::class);
         LocationReport::observe(LocationReportObserver::class);
+
+        // Share App Download Setting with views
+        View::composer(['layouts.main', 'layouts.ev.*'], function ($view) {
+            try {
+                $setting = AppDownloadSetting::current();
+                $view->with('appDownloadSetting', $setting);
+            } catch (\Throwable $e) {
+                $view->with('appDownloadSetting', null);
+            }
+        });
     }
 }

@@ -30,11 +30,7 @@
     <!-- Favicon -->
     <link rel="icon" href="{{ asset('images/logo-files/favicon-32x32.png') }}" type="image/png">
 
-    @if(config('services.admob.enabled', true))
-        <!-- Google AdSense / AdMob Web Script -->
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ config('services.admob.client_id', 'ca-pub-3940256099942544') }}"
-                crossorigin="anonymous"></script>
-    @endif
+
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @yield('additional_head')
@@ -186,6 +182,19 @@
                 </ul>
 
                 <ul class="items-center hidden space-x-4 lg:flex">
+                    <li>
+                        <button type="button" 
+                                onclick="window.openEvAppModal ? window.openEvAppModal() : null" 
+                                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-700 hover:border-emerald-400 text-white font-bold text-xs shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/25 transition-all duration-200">
+                            <svg viewBox="0 0 512 512" class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg">
+                                <path fill="#00D3FF" d="M32.5 17.5c-4.2 4.4-6.5 11.2-6.5 20.3v436.4c0 9.1 2.3 15.9 6.5 20.3l1.2 1.1 244.7-244.7v-5.8L33.7 16.4l-1.2 1.1z"/>
+                                <path fill="#00F076" d="M359.8 322.2l-81.4-81.4v-5.8l81.4-81.4 1.8 1 96.5 54.8c27.5 15.6 27.5 41.2 0 56.9l-96.5 54.9-1.8 1z"/>
+                                <path fill="#FF3A44" d="M361.6 321.2L278.4 238 32.5 483.9c9.1 9.6 24 10.7 41.1 1.1l288-163.8z"/>
+                                <path fill="#FFC400" d="M361.6 190.8L73.6 27c-17.1-9.6-32-8.5-41.1 1.1L278.4 274l83.2-83.2z"/>
+                            </svg>
+                            <span>Download App</span>
+                        </button>
+                    </li>
                     @auth
                         <li><a href="{{ route('filament.admin.auth.login') }}"
                                 class="transition duration-300 text-ev-white hover:text-ev-green-400 {{ request()->routeIs('filament.admin.auth.login') ? 'font-bold text-ev-green-400' : '' }}">Apps</a>
@@ -268,6 +277,23 @@
                 <li><a href="{{ route('contact') }}"
                         class="block px-4 py-2 text-ev-white hover:bg-ev-blue-700 {{ request()->routeIs('contact') ? 'font-bold bg-ev-blue-700 text-ev-green-400' : '' }}">Contact
                         Us</a>
+                </li>
+
+                <li>
+                    <button type="button" 
+                            onclick="window.openEvAppModal ? window.openEvAppModal() : null" 
+                            class="flex items-center justify-between w-full px-4 py-2.5 font-bold text-emerald-400 bg-slate-900 hover:bg-slate-800 border-y border-slate-700">
+                        <span class="flex items-center gap-2">
+                            <svg viewBox="0 0 512 512" class="w-4 h-4" xmlns="http://www.w3.org/2000/svg">
+                                <path fill="#00D3FF" d="M32.5 17.5c-4.2 4.4-6.5 11.2-6.5 20.3v436.4c0 9.1 2.3 15.9 6.5 20.3l1.2 1.1 244.7-244.7v-5.8L33.7 16.4l-1.2 1.1z"/>
+                                <path fill="#00F076" d="M359.8 322.2l-81.4-81.4v-5.8l81.4-81.4 1.8 1 96.5 54.8c27.5 15.6 27.5 41.2 0 56.9l-96.5 54.9-1.8 1z"/>
+                                <path fill="#FF3A44" d="M361.6 321.2L278.4 238 32.5 483.9c9.1 9.6 24 10.7 41.1 1.1l288-163.8z"/>
+                                <path fill="#FFC400" d="M361.6 190.8L73.6 27c-17.1-9.6-32-8.5-41.1 1.1L278.4 274l83.2-83.2z"/>
+                            </svg>
+                            Download Mobile App
+                        </span>
+                        <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">Baru</span>
+                    </button>
                 </li>
 
                 <!-- Garis pemisah -->
@@ -371,6 +397,7 @@
             }
         });
     </script>
+    <x-app-download-modal />
 </body>
 
 </html>

@@ -30,7 +30,10 @@ class EmailVerificationOtpMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Kode Verifikasi Email Anda',
+            // Link-based: OTP tidak lagi ditampilkan di email (UI mobile
+            // sudah tidak menerima OTP), tapi tetap digenerate utk endpoint
+            // deprecated /auth/verify-otp.
+            subject: 'Verifikasi Email Anda',
         );
     }
 

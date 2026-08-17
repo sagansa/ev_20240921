@@ -454,23 +454,6 @@
                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
             </button>
-
-            @if(config('services.admob.enabled', true))
-                <!-- AdMob / AdSense Floating Bottom Banner -->
-                <div id="mapAdContainer" class="map-ad-bottom-container">
-                    <button type="button" class="map-ad-close-btn" onclick="document.getElementById('mapAdContainer').style.display='none';" title="Tutup Iklan">&times;</button>
-                    <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1 font-semibold">Iklan</div>
-                    <ins class="adsbygoogle"
-                         style="display:block"
-                         data-ad-client="{{ config('services.admob.client_id', 'ca-pub-3940256099942544') }}"
-                         data-ad-slot="{{ config('services.admob.banner_slot', '6300978111') }}"
-                         data-ad-format="horizontal"
-                         data-full-width-responsive="true"></ins>
-                    <script>
-                         (adsbygoogle = window.adsbygoogle || []).push({});
-                    </script>
-                </div>
-            @endif
         </div>
     </div>
 

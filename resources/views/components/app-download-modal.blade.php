@@ -1,0 +1,355 @@
+@php
+    $setting = $appDownloadSetting ?? \App\Models\AppDownloadSetting::current();
+@endphp
+
+@if($setting && $setting->is_active)
+<!-- Scoped Styles for EV App Download Modal -->
+<style>
+    #evAppDownloadModal {
+        position: fixed !important;
+        inset: 0 !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        z-index: 2147483647 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: rgba(15, 23, 42, 0.45) !important;
+        backdrop-filter: blur(2px) !important;
+        -webkit-backdrop-filter: blur(2px) !important;
+        padding: 16px !important;
+        box-sizing: border-box !important;
+        overflow-y: auto !important;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease-in-out !important;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    }
+
+    #evAppDownloadModal.ev-modal-visible {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+
+    #evAppModalBox {
+        position: relative !important;
+        width: 100% !important;
+        max-width: 560px !important;
+        background: linear-gradient(180deg, #0f172a 0%, #0b1120 100%) !important;
+        border: 1px solid rgba(52, 211, 153, 0.35) !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(16, 185, 129, 0.15) !important;
+        border-radius: 24px !important;
+        padding: 28px 24px !important;
+        color: #ffffff !important;
+        box-sizing: border-box !important;
+        transform: scale(0.95);
+        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+    }
+
+    #evAppDownloadModal.ev-modal-visible #evAppModalBox {
+        transform: scale(1) !important;
+    }
+
+    .ev-badge-pill {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        padding: 6px 14px !important;
+        background: rgba(16, 185, 129, 0.15) !important;
+        border: 1px solid rgba(52, 211, 153, 0.4) !important;
+        border-radius: 9999px !important;
+        color: #6ee7b7 !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.05em !important;
+        text-transform: uppercase !important;
+        margin-bottom: 16px !important;
+    }
+
+    .ev-badge-pulse-dot {
+        width: 8px !important;
+        height: 8px !important;
+        border-radius: 50% !important;
+        background-color: #10b981 !important;
+        box-shadow: 0 0 8px #10b981 !important;
+    }
+
+    /* Direct 2 Store Buttons Side-by-Side */
+    .ev-buttons-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+        margin-top: 24px !important;
+        margin-bottom: 16px !important;
+    }
+
+    @media (min-width: 480px) {
+        .ev-buttons-grid {
+            grid-template-columns: 1fr 1fr !important;
+        }
+    }
+
+    .ev-store-btn {
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        width: 100% !important;
+        padding: 12px 16px !important;
+        background: #000000 !important;
+        border: 1px solid #334155 !important;
+        color: #ffffff !important;
+        border-radius: 14px !important;
+        text-decoration: none !important;
+        box-sizing: border-box !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    .ev-store-btn:hover {
+        border-color: #34d399 !important;
+        background: #090d16 !important;
+        box-shadow: 0 8px 22px rgba(16, 185, 129, 0.25) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    .ev-store-btn-disabled {
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        width: 100% !important;
+        padding: 12px 16px !important;
+        background: #1e293b !important;
+        border: 1px solid #334155 !important;
+        color: #94a3b8 !important;
+        border-radius: 14px !important;
+        box-sizing: border-box !important;
+        cursor: not-allowed !important;
+    }
+
+    .ev-store-btn-icon {
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .ev-store-btn-text {
+        display: flex !important;
+        flex-direction: column !important;
+        text-align: left !important;
+        line-height: 1.15 !important;
+    }
+
+    .ev-store-btn-sub {
+        font-size: 9px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.06em !important;
+        color: #94a3b8 !important;
+    }
+
+    .ev-store-btn-main {
+        font-size: 15px !important;
+        font-weight: 800 !important;
+        color: #ffffff !important;
+        letter-spacing: -0.01em !important;
+    }
+
+    .ev-qr-box {
+        display: none !important;
+        align-items: center !important;
+        gap: 16px !important;
+        background: rgba(15, 23, 42, 0.8) !important;
+        border: 1px solid rgba(51, 65, 85, 0.6) !important;
+        border-radius: 16px !important;
+        padding: 12px 16px !important;
+        margin-top: 16px !important;
+    }
+
+    @media (min-width: 520px) {
+        .ev-qr-box {
+            display: flex !important;
+        }
+    }
+</style>
+
+<!-- Modal Overlay -->
+<div id="evAppDownloadModal" 
+     data-closable="{{ $setting->is_closable ? 'true' : 'false' }}">
+    
+    <!-- Modal Card Box -->
+    <div id="evAppModalBox">
+
+        @if($setting->is_closable)
+        <!-- Close Button (Only active if is_closable=true) -->
+        <button type="button" 
+                onclick="window.closeEvAppModal()" 
+                style="position:absolute; top:16px; right:16px; background:#1e293b; border:none; color:#94a3b8; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px;">
+            &times;
+        </button>
+        @endif
+
+        <!-- Single Clean Header -->
+        <div style="text-align: center;">
+            <div class="ev-badge-pill">
+                <span class="ev-badge-pulse-dot"></span>
+                <span>{{ $setting->badge_text ?? 'Official Mobile App' }}</span>
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:8px;">
+                <img src="{{ asset('images/logo-files/logo.png') }}" 
+                     alt="EV Charge Logo" 
+                     style="width:42px; height:42px; border-radius:12px; background:#1e293b; padding:4px; border:1px solid rgba(52,211,153,0.4); object-fit:contain;"
+                     onerror="this.style.display='none';">
+                <h2 style="margin:0; font-size:22px; font-weight:800; color:#ffffff; line-height:1.2;">
+                    {{ $setting->title }}
+                </h2>
+            </div>
+
+            <p style="margin:8px 0 0 0; font-size:14px; color:#cbd5e1; line-height:1.5;">
+                {{ $setting->subtitle }}
+            </p>
+
+            @if($setting->description)
+            <p style="margin:8px 0 0 0; font-size:12px; color:#94a3b8; line-height:1.4;">
+                {{ $setting->description }}
+            </p>
+            @endif
+        </div>
+
+        <!-- Direct 2 Store Buttons Side-by-Side: Left = Google Play, Right = Apple Store -->
+        <div class="ev-buttons-grid">
+            
+            <!-- Left: Google Play Store -->
+            <a href="{{ $setting->android_url ?? 'https://play.google.com/store/apps/details?id=id.sagansa.ev' }}" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               class="ev-store-btn">
+                <div class="ev-store-btn-icon">
+                    <svg viewBox="0 0 512 512" style="width:28px; height:28px;" xmlns="http://www.w3.org/2000/svg">
+                        <path fill="#00D3FF" d="M32.5 17.5c-4.2 4.4-6.5 11.2-6.5 20.3v436.4c0 9.1 2.3 15.9 6.5 20.3l1.2 1.1 244.7-244.7v-5.8L33.7 16.4l-1.2 1.1z"/>
+                        <path fill="#00F076" d="M359.8 322.2l-81.4-81.4v-5.8l81.4-81.4 1.8 1 96.5 54.8c27.5 15.6 27.5 41.2 0 56.9l-96.5 54.9-1.8 1z"/>
+                        <path fill="#FF3A44" d="M361.6 321.2L278.4 238 32.5 483.9c9.1 9.6 24 10.7 41.1 1.1l288-163.8z"/>
+                        <path fill="#FFC400" d="M361.6 190.8L73.6 27c-17.1-9.6-32-8.5-41.1 1.1L278.4 274l83.2-83.2z"/>
+                    </svg>
+                </div>
+                <div class="ev-store-btn-text">
+                    <span class="ev-store-btn-sub">Temukan di</span>
+                    <strong class="ev-store-btn-main">Google Play</strong>
+                </div>
+            </a>
+
+            <!-- Right: Apple App Store -->
+            @if($setting->ios_status === 'app_store' && !empty($setting->ios_url))
+            <a href="{{ $setting->ios_url }}" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               class="ev-store-btn">
+                <div class="ev-store-btn-icon">
+                    <svg viewBox="0 0 170 170" style="width:26px; height:26px;" fill="#ffffff" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.7-7.83-12-14.37-6.08-9.13-10.74-19.46-13.98-30.98-3.24-11.53-4.86-22.37-4.86-32.53 0-14.89 3.8-27.18 11.41-36.87 7.6-9.69 17.27-14.65 28.99-14.89 5.33 0 11.09 1.41 17.27 4.23 6.18 2.83 10.12 4.3 11.83 4.41 1.71-.11 5.86-1.63 12.44-4.58 6.58-2.94 12.18-4.23 16.79-3.88 13.04.88 23.47 5.92 31.29 15.13-11.19 6.8-16.66 16.14-16.42 28.02.24 9.47 3.84 17.48 10.8 24.03 6.96 6.56 15.35 10.28 25.17 11.15-2.07 6.31-4.73 12.48-7.98 18.51zM119.22 33.74c0-7.39 2.67-14.35 8.01-20.88 5.34-6.53 11.96-10.72 19.86-12.57.87 7.61-1.46 14.77-6.99 21.48-5.54 6.7-12.5 10.78-20.88 12.23v-.26z"/>
+                    </svg>
+                </div>
+                <div class="ev-store-btn-text">
+                    <span class="ev-store-btn-sub">Download on the</span>
+                    <strong class="ev-store-btn-main">App Store</strong>
+                </div>
+            </a>
+            @else
+            <div class="ev-store-btn-disabled">
+                <div class="ev-store-btn-icon">
+                    <svg viewBox="0 0 170 170" style="width:26px; height:26px;" fill="#64748b" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.7-7.83-12-14.37-6.08-9.13-10.74-19.46-13.98-30.98-3.24-11.53-4.86-22.37-4.86-32.53 0-14.89 3.8-27.18 11.41-36.87 7.6-9.69 17.27-14.65 28.99-14.89 5.33 0 11.09 1.41 17.27 4.23 6.18 2.83 10.12 4.3 11.83 4.41 1.71-.11 5.86-1.63 12.44-4.58 6.58-2.94 12.18-4.23 16.79-3.88 13.04.88 23.47 5.92 31.29 15.13-11.19 6.8-16.66 16.14-16.42 28.02.24 9.47 3.84 17.48 10.8 24.03 6.96 6.56 15.35 10.28 25.17 11.15-2.07 6.31-4.73 12.48-7.98 18.51zM119.22 33.74c0-7.39 2.67-14.35 8.01-20.88 5.34-6.53 11.96-10.72 19.86-12.57.87 7.61-1.46 14.77-6.99 21.48-5.54 6.7-12.5 10.78-20.88 12.23v-.26z"/>
+                    </svg>
+                </div>
+                <div class="ev-store-btn-text">
+                    <span class="ev-store-btn-sub" style="color:#fbbf24;">Segera Hadir di</span>
+                    <strong class="ev-store-btn-main" style="color:#94a3b8;">App Store</strong>
+                </div>
+            </div>
+            @endif
+
+        </div>
+
+        <!-- Desktop QR Code -->
+        @if($setting->qr_code_enabled && $setting->android_url)
+        <div class="ev-qr-box">
+            <div style="background:#ffffff; padding:6px; border-radius:10px; display:flex; flex-shrink:0;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=2&data={{ urlencode($setting->android_url) }}" 
+                     alt="QR Code Play Store" 
+                     style="width:50px; height:50px; display:block;">
+            </div>
+            <div>
+                <strong style="font-size:12px; color:#ffffff; display:block;">
+                    ⚡ Scan QR Code dari Ponsel Anda
+                </strong>
+                <p style="margin:2px 0 0 0; font-size:11px; color:#94a3b8; line-height:1.3;">
+                    Buka kamera smartphone untuk langsung mengunduh aplikasi melalui Google Play Store.
+                </p>
+            </div>
+        </div>
+        @endif
+
+        @if(! $setting->is_closable)
+        <div style="text-align:center; margin-top:12px;">
+            <span style="font-size:11px; color:#64748b; letter-spacing:0.02em;">
+                🛡️ Akses peta interaktif & informasi lokasi SPKLU tersedia melalui aplikasi mobile.
+            </span>
+        </div>
+        @endif
+
+    </div>
+</div>
+
+<script>
+    (function () {
+        function activateEvAppModal() {
+            var modal = document.getElementById('evAppDownloadModal');
+            if (!modal) return;
+
+            var isClosable = modal.getAttribute('data-closable') === 'true';
+
+            window.openEvAppModal = function() {
+                modal.classList.add('ev-modal-visible');
+                document.body.style.overflow = 'hidden';
+            };
+
+            window.closeEvAppModal = function() {
+                if (!isClosable) return;
+                modal.classList.remove('ev-modal-visible');
+                document.body.style.overflow = '';
+            };
+
+            // Immediately show modal
+            window.openEvAppModal();
+
+            if (isClosable) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        window.closeEvAppModal();
+                    }
+                });
+
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        window.closeEvAppModal();
+                    }
+                });
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', activateEvAppModal);
+        } else {
+            activateEvAppModal();
+        }
+    })();
+</script>
+@endif
