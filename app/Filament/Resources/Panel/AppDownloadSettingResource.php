@@ -35,9 +35,34 @@ class AppDownloadSettingResource extends Resource
 
     protected static ?int $navigationSort = 4;
 
+    public static function canAccess(): bool
+    {
+        $user = Auth::user();
+        return $user && $user->hasRole('super_admin');
+    }
+
     public static function canViewAny(): bool
     {
-        return Auth::user()?->hasRole('super_admin') || Auth::user()?->hasRole('admin') ?? false;
+        $user = Auth::user();
+        return $user && $user->hasRole('super_admin');
+    }
+
+    public static function canCreate(): bool
+    {
+        $user = Auth::user();
+        return $user && $user->hasRole('super_admin');
+    }
+
+    public static function canEdit($record): bool
+    {
+        $user = Auth::user();
+        return $user && $user->hasRole('super_admin');
+    }
+
+    public static function canDelete($record): bool
+    {
+        $user = Auth::user();
+        return $user && $user->hasRole('super_admin');
     }
 
     public static function form(Schema $schema): Schema
