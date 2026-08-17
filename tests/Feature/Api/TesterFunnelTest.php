@@ -80,6 +80,85 @@ class TesterFunnelTest extends ApiTestCase
     }
 
     // ─────────────────────────────────────────────────────────────────────
+    // Register email (app Islam, publik tanpa login)
+    // ─────────────────────────────────────────────────────────────────────
+
+    public function test_register_email_is_public_and_creates_tester(): void
+    {
+        $this->app['auth']->forgetGuards();
+
+        $this->postJson('/api/v1/testers/register-email', [
+            'email' => 'tester@example.com',
+            'device_id' => 'dev-islam-1',
+            'platform' => 'android',
+        ])->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'email' => 'tester@example.com',
+                    'status' => 'registered',
+                ],
+            ]);
+
+        $this->assertDatabaseHas('testers', [
+            'email' => 'tester@example.com',
+            'device_id' => 'dev-islam-1',
+            'platform' => 'android',
+            'source' => 'islam_email_gate',
+            'user_id' => null,
+        ]);
+    }
+
+    public function test_register_email_is_idempotent_by_device_id(): void
+    {
+        $this->app['auth']->forgetGuards();
+
+        $this->postJson('/api/v1/testers/register-email', [
+            'email' => 'first@example.com',
+            'device_id' => 'dev-islam-2',
+        ])->assertStatus(201);
+        $this->postJson('/api/v1/testers/register-email', [
+            'email' => 'second@example.com',
+            'device_id' => 'dev-islam-2',
+        ])->assertStatus(201);
+
+        $this->assertSame(1, Tester::where('device_id', 'dev-islam-2')->count());
+        $this->assertDatabaseHas('testers', [
+            'device_id' => 'dev-islam-2',
+            'email' => 'second@example.com',
+        ]);
+    }
+
+    public function test_register_email_validates_invalid_email(): void
+    {
+        $this->app['auth']->forgetGuards();
+
+        try {
+            $this->postJson('/api/v1/testers/register-email', [
+                'email' => 'not-an-email',
+                'device_id' => 'dev-islam-3',
+            ]);
+            $this->fail('Expected ValidationException for invalid email.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('email', $e->errors());
+        }
+    }
+
+    public function test_register_email_requires_device_id(): void
+    {
+        $this->app['auth']->forgetGuards();
+
+        try {
+            $this->postJson('/api/v1/testers/register-email', [
+                'email' => 'tester@example.com',
+            ]);
+            $this->fail('Expected ValidationException for missing device_id.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('device_id', $e->errors());
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
     // Ping
     // ─────────────────────────────────────────────────────────────────────
 

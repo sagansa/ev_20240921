@@ -72,6 +72,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/app/config', [TesterController::class, 'appConfig'])->middleware('throttle:30,1');
     Route::post('/testers/ping', [TesterController::class, 'ping'])->middleware('throttle:30,1');
 
+    // Email gate tester (app Islam) — PUBLIK tanpa login, idempotent per device.
+    Route::post('/testers/register-email', [TesterController::class, 'registerEmail'])->middleware('throttle:10,1');
+
     // Protected routes
     Route::middleware(['auth:sanctum'])->group(function () {
         // Authentication

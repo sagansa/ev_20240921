@@ -58,6 +58,44 @@ class TesterController extends Controller
     }
 
     /**
+     * Daftarkan tester dari app Islam (email gate) — PUBLIK, tanpa login.
+     *
+     * Menerima email dari body (bukan akun), idempotent per `device_id`
+     * (updateOrCreate). `user_id` = null; source = `islam_email_gate`.
+     * Row ikut muncul di Filament + export CSV yang sudah ada.
+     */
+    public function registerEmail(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'device_id' => ['required', 'string', 'max:128'],
+            'platform' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        $tester = Tester::updateOrCreate(
+            ['device_id' => $validated['device_id']],
+            [
+                'email' => $validated['email'],
+                'platform' => $validated['platform'] ?? null,
+                'source' => 'islam_email_gate',
+                'user_id' => null,
+            ],
+        );
+
+        $tester->refresh();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tester registered successfully',
+            'data' => [
+                'id' => $tester->id,
+                'email' => $tester->email,
+                'status' => $tester->status,
+            ],
+        ], 201);
+    }
+
+    /**
      * Ping build usage — publik, Bearer opsional.
      */
     public function ping(Request $request): JsonResponse
