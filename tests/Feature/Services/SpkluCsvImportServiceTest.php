@@ -31,6 +31,8 @@ class SpkluCsvImportServiceTest extends TestCase
             10 => 'Kepulauan Riau',
             12 => 'Jawa Barat',
             16 => 'Banten',
+            18 => 'Nusa Tenggara Barat',
+            19 => 'Nusa Tenggara Timur',
         ];
         foreach ($names as $id => $name) {
             DB::table('provinces')->insert(['id' => $id, 'name' => $name]);
@@ -90,6 +92,20 @@ class SpkluCsvImportServiceTest extends TestCase
 
         $this->assertSame(9, PlnChargerLocation::where('pln_id', 11)->value('province_id'));
         $this->assertSame(10, PlnChargerLocation::where('pln_id', 12)->value('province_id'));
+    }
+
+    public function test_import_maps_province_aliases_ntb_and_ntt(): void
+    {
+        $service = new SpkluCsvImportService;
+
+        $path = $this->writeCsv([
+            $this->row(plnId: 21, name: 'SPKLU MATARAM', province: 'NTB'),
+            $this->row(plnId: 22, name: 'SPKLU KUPANG', province: 'NTT'),
+        ]);
+        $service->import($path, replaceExisting: false);
+
+        $this->assertSame(18, PlnChargerLocation::where('pln_id', 21)->value('province_id'));
+        $this->assertSame(19, PlnChargerLocation::where('pln_id', 22)->value('province_id'));
     }
 
     public function test_import_nullifies_coordinates_outside_indonesia_bounds(): void
