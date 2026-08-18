@@ -56,7 +56,7 @@ class ImportPlnSpklu extends Page implements HasForms
         return $schema
             ->schema([
                 Section::make('Upload file CSV PLN')
-                    ->description('Gunakan dua file CSV baru untuk lokasi dan detail charger. Import akan mengganti data pada pln_charger_locations dan pln_charger_location_details.')
+                    ->description('Gunakan dua file CSV baru untuk lokasi dan detail charger. Import memakai mode upsert by ID Spklu (id lokasi stabil), lalu menghapus lokasi yang sudah tidak ada di CSV (prune).')
                     ->schema([
                         FileUpload::make('locations_file')
                             ->label('File lokasi CSV')
@@ -136,8 +136,8 @@ class ImportPlnSpklu extends Page implements HasForms
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('danger')
                 ->requiresConfirmation()
-                ->modalHeading('Import ulang data PLN SPKLU?')
-                ->modalDescription('Data lama pada pln_charger_locations dan pln_charger_location_details akan dihapus, lalu diganti dengan isi CSV ini.')
+                ->modalHeading('Import data PLN SPKLU (merge/prune)?')
+                ->modalDescription('Data PLN SPKLU akan di-upsert by ID Spklu (id lokasi stabil, data lama dipertahankan bila tidak berubah), lalu lokasi yang sudah tidak ada di CSV periode ini akan dihapus.')
                 ->action('import'),
         ];
     }
@@ -213,18 +213,20 @@ class ImportPlnSpklu extends Page implements HasForms
                 $this->lastImportSummary = $importer->importFromFiles(
                     Storage::disk('public')->path($locationsFilePath),
                     Storage::disk('public')->path($detailsFilePath),
-                    replaceExisting: true,
+                    replaceExisting: false,
+                    prune: true,
                 );
             } else {
                 $this->lastImportSummary = $importer->import(
                     Storage::disk('public')->path($legacyFilePath),
-                    replaceExisting: true,
+                    replaceExisting: false,
+                    prune: true,
                 );
             }
 
             Notification::make()
                 ->title('Import PLN SPKLU selesai')
-                ->body("Lokasi: {$this->lastImportSummary['inserted_locations']}, detail charger: {$this->lastImportSummary['inserted_details']}.")
+                ->body("Lokasi: {$this->lastImportSummary['inserted_locations']}, detail charger: {$this->lastImportSummary['inserted_details']}, ter-prune: {$this->lastImportSummary['pruned_locations']}.")
                 ->success()
                 ->send();
         } catch (Throwable $exception) {

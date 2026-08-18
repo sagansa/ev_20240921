@@ -9,6 +9,7 @@ use App\Models\EsdmSinggatSpkluStation;
 use App\Models\EsdmSinggatStationStatus;
 use App\Models\PlnChargerLocation;
 use App\Models\PlnChargerLocationDetail;
+use App\Models\PlnEsdmStationMatch;
 use App\Models\Provider;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -192,10 +193,14 @@ class CanonicalStationHydrateService
      * melacak plug individual). Idempoten & re-runnable: upsert by (source,
      * source_station_id), child charger di-replace per stasiun.
      *
+     * Setelah upsert, stasiun canonical source='pln' yang lokasinya sudah tidak
+     * punya detail charger aktif (hilang dari CSV / semua non-aktif) di-prune
+     * bersama link pln_esdm_station_matches yang menunjuknya.
+     *
      * Data ESDM di tabel charging_stations TIDAK disentuh (source berbeda);
      * serving bisa dialihkan via config spklu.serving_source.
      *
-     * @return array{processed: int, created: int, updated: int, skipped: int, chargers: int}
+     * @return array{processed: int, created: int, updated: int, skipped: int, chargers: int, pruned: int}
      */
     public function hydrateFromPln(): array
     {
@@ -214,7 +219,7 @@ class CanonicalStationHydrateService
             })
             ->get();
 
-        $stats = ['processed' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0, 'chargers' => 0];
+        $stats = ['processed' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0, 'chargers' => 0, 'pruned' => 0];
 
         DB::connection('ev')->transaction(function () use ($locations, &$stats) {
             foreach ($locations as $location) {
@@ -235,9 +240,38 @@ class CanonicalStationHydrateService
 
                 $stats['chargers'] += $this->replacePlnChargers($canonical, $location);
             }
+
+            $stats['pruned'] = $this->pruneStalePlnStations($locations);
         });
 
         return $stats;
+    }
+
+    /**
+     * Hapus stasiun canonical source='pln' yang lokasinya sudah tidak punya
+     * detail charger aktif (hilang dari CSV / semua charger non-aktif), plus
+     * link pln_esdm_station_matches yang menunjuk stasiun ter-prune.
+     * Child chargers & connectors ikut terhapus via FK cascade.
+     */
+    private function pruneStalePlnStations($activeLocations): int
+    {
+        $activeLocationIds = $activeLocations->pluck('id')->all();
+
+        $staleIds = ChargingStation::query()
+            ->where('source', self::SOURCE_PLN)
+            ->whereNotIn('source_station_id', $activeLocationIds)
+            ->pluck('id')
+            ->all();
+
+        if ($staleIds === []) {
+            return 0;
+        }
+
+        PlnEsdmStationMatch::whereIn('pln_station_id', $staleIds)->delete();
+
+        return ChargingStation::query()
+            ->whereIn('id', $staleIds)
+            ->delete();
     }
 
     /**
@@ -584,15 +618,51 @@ class CanonicalStationHydrateService
         return $inserted;
     }
 
-    /** Map label charging_type PLN (uppercase) ke label type_charge canonical. */
+    /**
+     * Map label charging_type PLN (uppercase) ke label type_charge canonical.
+     * Daya chargebox (kw) diutamakan — kategori PLN tidak konsisten (7 kW bisa
+     * berlabel ULTRA FAST, 100 kW bisa berlabel MEDIUM/STANDARD). Fallback ke
+     * label hanya bila daya tidak tersedia/tidak valid.
+     */
     private function canonicalChargingType(PlnChargerLocationDetail $detail): ?string
     {
+        $fromPower = $this->deriveCanonicalTypeFromPower($detail->power);
+        if ($fromPower !== null) {
+            return $fromPower;
+        }
+
         $name = strtoupper(trim((string) $detail->chargingType?->name));
         if ($name === '') {
             return null;
         }
 
         return self::CHARGING_TYPE_TO_CANONICAL[$name] ?? null;
+    }
+
+    /**
+     * Derive tier kecepatan dari daya chargebox (kW):
+     * ≤11 kW → Slow, ≤22 → Medium, ≤50 → Fast, >50 → Ultra Fast.
+     * Nilai non-numerik / ≤0 dianggap tidak valid → null (fallback ke label).
+     */
+    private function deriveCanonicalTypeFromPower(mixed $power): ?string
+    {
+        $kw = is_numeric($power) ? (float) $power : null;
+
+        if ($kw === null || $kw <= 0) {
+            return null;
+        }
+
+        if ($kw <= 11) {
+            return 'Slow Charging';
+        }
+        if ($kw <= 22) {
+            return 'Medium Charging';
+        }
+        if ($kw <= 50) {
+            return 'Fast Charging';
+        }
+
+        return 'Ultra Fast Charging';
     }
 
     /** Snapshot raw data PLN (audit) — termasuk power numerik aktual per charger. */

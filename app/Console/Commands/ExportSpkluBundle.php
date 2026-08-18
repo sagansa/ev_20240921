@@ -86,7 +86,7 @@ class ExportSpkluBundle extends Command
         $withProvider = $stations->filter(fn ($s) => ! empty($s->provider?->name))->count();
 
         $this->newLine();
-        $this->info("Summary: $withLevel/$stations->count() punya availability_level; $withProvider/$stations->count() punya provider ter-resolve.");
+        $this->info("Summary: $withLevel/{$stations->count()} punya availability_level; $withProvider/{$stations->count()} punya provider ter-resolve.");
 
         return $written === 2 ? 0 : 1;
     }
@@ -160,7 +160,7 @@ class ExportSpkluBundle extends Command
     /** Lokasi asset di repo mobile (default bila dipanggil dari direktori backend). */
     private function defaultRepoPath(string $relative): string
     {
-        $backendDir = realpath(__DIR__.'/../..');
+        $backendDir = realpath(__DIR__.'/../../..');
         if ($backendDir && basename($backendDir) === 'backend') {
             return dirname($backendDir).'/'.$relative;
         }

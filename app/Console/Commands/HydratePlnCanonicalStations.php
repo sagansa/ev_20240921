@@ -33,6 +33,7 @@ class HydratePlnCanonicalStations extends Command
                 ['Diupdate', $stats['updated']],
                 ['Dilewati (tidak layak)', $stats['skipped']],
                 ['Child charger ditulis', $stats['chargers']],
+                ['Stasiun stale di-prune', $stats['pruned']],
             ]
         );
 

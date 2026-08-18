@@ -10,6 +10,24 @@ use InvalidArgumentException;
 
 class SpkluCsvImportService
 {
+    /**
+     * Koneksi DB yang dipakai untuk semua operasi tulis.
+     * Produksi selalu 'ev' (sagansa_ev). Saat testing, default connection
+     * (sqlite) dipakai supaya isolasi transaction RefreshDatabase bekerja —
+     * pola sama dgn UsesDefaultConnectionWhenTesting pada model.
+     */
+    private function db(): \Illuminate\Database\Connection
+    {
+        return app()->environment('testing') ? DB::connection() : DB::connection('ev');
+    }
+
+    private function schema(): \Illuminate\Database\Schema\Builder
+    {
+        return app()->environment('testing')
+            ? Schema::connection(config('database.default'))
+            : Schema::connection('ev');
+    }
+
     private array $provinceMap = [
         'ACEH' => 1,
         'SUMATERA UTARA' => 2,
@@ -21,7 +39,9 @@ class SpkluCsvImportService
         'LAMPUNG' => 8,
         'KEP. BANGKA BELITUNG' => 9,
         'KEPULAUAN BANGKA BELITUNG' => 9,
+        'BABEL' => 9,
         'KEPULAUAN RIAU' => 10,
+        'RIAU DAN KEPRI' => 10,
         'DKI JAKARTA' => 11,
         'JAKARTA' => 11,
         'JAWA BARAT' => 12,
@@ -162,7 +182,7 @@ class SpkluCsvImportService
         'Cluster Peruntukan',
     ];
 
-    public function import(string $filePath, bool $replaceExisting = true, bool $dryRun = false): array
+    public function import(string $filePath, bool $replaceExisting = true, bool $dryRun = false, bool $prune = false): array
     {
         if (! file_exists($filePath)) {
             throw new InvalidArgumentException("File tidak ditemukan: {$filePath}");
@@ -182,21 +202,22 @@ class SpkluCsvImportService
             'skipped_rows' => count($rows) - array_sum(array_map('count', $grouped)),
             'replace_existing' => $replaceExisting,
             'dry_run' => $dryRun,
+            'pruned_locations' => 0,
         ];
 
         if ($dryRun) {
             return $summary;
         }
 
-        return DB::connection('ev')->transaction(function () use ($grouped, $replaceExisting, $summary) {
+        return $this->db()->transaction(function () use ($grouped, $replaceExisting, $prune, $summary) {
             $this->ensureClusterIslands();
 
             if ($replaceExisting) {
-                $summary['deleted_details'] = DB::connection('ev')
+                $summary['deleted_details'] = $this->db()
                     ->table('pln_charger_location_details')
                     ->delete();
 
-                $summary['deleted_locations'] = DB::connection('ev')
+                $summary['deleted_locations'] = $this->db()
                     ->table('pln_charger_locations')
                     ->delete();
             }
@@ -206,7 +227,7 @@ class SpkluCsvImportService
                 $existingLocation = null;
 
                 if (! $replaceExisting) {
-                    $existingLocation = DB::connection('ev')
+                    $existingLocation = $this->db()
                         ->table('pln_charger_locations')
                         ->where('pln_id', $spkluId)
                         ->first();
@@ -216,33 +237,71 @@ class SpkluCsvImportService
                 $locationData = $this->buildLocation($spkluId, $firstRow);
 
                 if ($existingLocation) {
-                    DB::connection('ev')
+                    $this->db()
                         ->table('pln_charger_locations')
                         ->where('id', $locationId)
                         ->update($locationData);
 
-                    DB::connection('ev')
+                    $this->db()
                         ->table('pln_charger_location_details')
                         ->where('pln_charger_location_id', $locationId)
                         ->delete();
                 } else {
                     $locationData['created_at'] = now();
-                    $locationId = DB::connection('ev')
+                    $locationId = $this->db()
                         ->table('pln_charger_locations')
                         ->insertGetId($locationData);
                     $summary['inserted_locations']++;
                 }
 
                 foreach ($chargeboxes as $chargebox) {
-                    DB::connection('ev')
+                    $this->db()
                         ->table('pln_charger_location_details')
                         ->insert($this->buildDetail($locationId, $chargebox));
                     $summary['inserted_details']++;
                 }
             }
 
+            if ($prune) {
+                $summary['pruned_locations'] = $this->pruneLocations($grouped);
+            }
+
             return $summary;
         });
+    }
+
+    /**
+     * Hapus lokasi yang pln_id-nya tidak ada lagi di CSV (hanya baris ber-pln_id).
+     * Detail dihapus dulu (tabel detail tidak punya cascade), lalu lokasinya.
+     */
+    private function pruneLocations(array $grouped): int
+    {
+        $csvIds = array_keys($grouped);
+
+        if ($csvIds === []) {
+            return 0;
+        }
+
+        $staleIds = $this->db()
+            ->table('pln_charger_locations')
+            ->whereNotNull('pln_id')
+            ->whereNotIn('pln_id', $csvIds)
+            ->pluck('id')
+            ->all();
+
+        if ($staleIds === []) {
+            return 0;
+        }
+
+        $this->db()
+            ->table('pln_charger_location_details')
+            ->whereIn('pln_charger_location_id', $staleIds)
+            ->delete();
+
+        return $this->db()
+            ->table('pln_charger_locations')
+            ->whereIn('id', $staleIds)
+            ->delete();
     }
 
     public function preview(string $filePath): array
@@ -250,7 +309,7 @@ class SpkluCsvImportService
         return $this->import($filePath, true, true);
     }
 
-    public function importFromFiles(string $locationFilePath, string $detailFilePath, bool $replaceExisting = true, bool $dryRun = false): array
+    public function importFromFiles(string $locationFilePath, string $detailFilePath, bool $replaceExisting = true, bool $dryRun = false, bool $prune = false): array
     {
         if (! file_exists($locationFilePath)) {
             throw new InvalidArgumentException("File lokasi tidak ditemukan: {$locationFilePath}");
@@ -288,21 +347,22 @@ class SpkluCsvImportService
                 + $missingLocationDetailCount,
             'replace_existing' => $replaceExisting,
             'dry_run' => $dryRun,
+            'pruned_locations' => 0,
         ];
 
         if ($dryRun) {
             return $summary;
         }
 
-        return DB::connection('ev')->transaction(function () use ($locationsBySpkluId, $detailsBySpkluId, $replaceExisting, $summary) {
+        return $this->db()->transaction(function () use ($locationsBySpkluId, $detailsBySpkluId, $replaceExisting, $prune, $summary) {
             $this->ensureClusterIslands();
 
             if ($replaceExisting) {
-                $summary['deleted_details'] = DB::connection('ev')
+                $summary['deleted_details'] = $this->db()
                     ->table('pln_charger_location_details')
                     ->delete();
 
-                $summary['deleted_locations'] = DB::connection('ev')
+                $summary['deleted_locations'] = $this->db()
                     ->table('pln_charger_locations')
                     ->delete();
             }
@@ -311,7 +371,7 @@ class SpkluCsvImportService
                 $existingLocation = null;
 
                 if (! $replaceExisting) {
-                    $existingLocation = DB::connection('ev')
+                    $existingLocation = $this->db()
                         ->table('pln_charger_locations')
                         ->where('pln_id', $spkluId)
                         ->first();
@@ -321,29 +381,33 @@ class SpkluCsvImportService
                 $locationData = $this->buildLocation($spkluId, $locationRow);
 
                 if ($existingLocation) {
-                    DB::connection('ev')
+                    $this->db()
                         ->table('pln_charger_locations')
                         ->where('id', $locationId)
                         ->update($locationData);
 
-                    DB::connection('ev')
+                    $this->db()
                         ->table('pln_charger_location_details')
                         ->where('pln_charger_location_id', $locationId)
                         ->delete();
                 } else {
                     $locationData['created_at'] = now();
-                    $locationId = DB::connection('ev')
+                    $locationId = $this->db()
                         ->table('pln_charger_locations')
                         ->insertGetId($locationData);
                     $summary['inserted_locations']++;
                 }
 
                 foreach ($detailsBySpkluId[$spkluId] ?? [] as $detailRow) {
-                    DB::connection('ev')
+                    $this->db()
                         ->table('pln_charger_location_details')
                         ->insert($this->buildDetail($locationId, $detailRow));
                     $summary['inserted_details']++;
                 }
+            }
+
+            if ($prune) {
+                $summary['pruned_locations'] = $this->pruneLocations($locationsBySpkluId);
             }
 
             return $summary;
@@ -357,13 +421,13 @@ class SpkluCsvImportService
 
     private function ensureClusterIslands(): void
     {
-        $existing = DB::connection('ev')->table('cluster_islands')->get()->keyBy('name');
+        $existing = $this->db()->table('cluster_islands')->get()->keyBy('name');
 
         foreach ($this->clusterIslandSeed as $csvKey => $name) {
             $row = $existing->get($name);
 
             if (! $row) {
-                $id = DB::connection('ev')->table('cluster_islands')->insertGetId(array_merge([
+                $id = $this->db()->table('cluster_islands')->insertGetId(array_merge([
                     'name' => $name,
                 ], $this->timestampColumns('cluster_islands')));
             } else {
@@ -448,12 +512,17 @@ class SpkluCsvImportService
             ?? $this->clusterIslandMap['']
             ?? null;
 
+        [$latitude, $longitude] = $this->parseCoordWithinIndonesia(
+            $row['Latitude'] ?? '',
+            $row['Longitude'] ?? ''
+        );
+
         return [
             'pln_id' => $spkluId,
             'name' => trim($row['Nama Spklu'] ?? ''),
             'address' => trim($row['Alamat Spklu'] ?? ''),
-            'latitude' => $this->parseCoord($row['Latitude'] ?? ''),
-            'longitude' => $this->parseCoord($row['Longitude'] ?? ''),
+            'latitude' => $latitude,
+            'longitude' => $longitude,
             'province_id' => $this->mapProvince($row['Propinsi'] ?? ''),
             'cluster_island_id' => $clusterIslandId,
             'owner_machine' => trim($row['Kepemilikan Mesin'] ?? ''),
@@ -508,7 +577,7 @@ class SpkluCsvImportService
             return $this->resolvedChargingTypes[$normalizedName] = $mappedId;
         }
 
-        $existingId = DB::connection('ev')
+        $existingId = $this->db()
             ->table('charging_types')
             ->whereRaw('UPPER(name) = ?', [$normalizedName])
             ->value('id');
@@ -517,7 +586,7 @@ class SpkluCsvImportService
             return $this->resolvedChargingTypes[$normalizedName] = (int) $existingId;
         }
 
-        $id = DB::connection('ev')->table('charging_types')->insertGetId(array_merge([
+        $id = $this->db()->table('charging_types')->insertGetId(array_merge([
             'name' => $normalizedName,
         ], $this->timestampColumns('charging_types')));
 
@@ -540,7 +609,7 @@ class SpkluCsvImportService
             return $this->resolvedMerkChargers[$normalizedName] = $this->merkMap[$normalizedName];
         }
 
-        $existingId = DB::connection('ev')
+        $existingId = $this->db()
             ->table('merk_chargers')
             ->whereRaw('UPPER(name) = ?', [$normalizedName])
             ->value('id');
@@ -549,13 +618,13 @@ class SpkluCsvImportService
             return $this->resolvedMerkChargers[$normalizedName] = $existingId;
         }
 
-        $idColumnType = Schema::connection('ev')->getColumnType('merk_chargers', 'id');
+        $idColumnType = $this->schema()->getColumnType('merk_chargers', 'id');
         $isStringKey = in_array($idColumnType, ['char', 'string', 'varchar'], true);
 
         if ($isStringKey) {
             $id = (string) Str::uuid();
 
-            DB::connection('ev')->table('merk_chargers')->insert(array_merge([
+            $this->db()->table('merk_chargers')->insert(array_merge([
                 'id' => $id,
                 'name' => $normalizedName,
             ], $this->timestampColumns('merk_chargers')));
@@ -563,7 +632,7 @@ class SpkluCsvImportService
             return $this->resolvedMerkChargers[$normalizedName] = $id;
         }
 
-        $id = DB::connection('ev')->table('merk_chargers')->insertGetId(array_merge([
+        $id = $this->db()->table('merk_chargers')->insertGetId(array_merge([
             'name' => $normalizedName,
         ], $this->timestampColumns('merk_chargers')));
 
@@ -588,7 +657,7 @@ class SpkluCsvImportService
             return $this->resolvedProviders[$cacheKey];
         }
 
-        $providers = DB::connection('ev')
+        $providers = $this->db()
             ->table('providers')
             ->select(['id', 'name'])
             ->get();
@@ -668,7 +737,7 @@ class SpkluCsvImportService
                 return $cache[$normalizedName];
             }
 
-            $existingId = DB::connection('ev')
+            $existingId = $this->db()
                 ->table($table)
                 ->whereRaw('UPPER(name) = ?', [$normalizedName])
                 ->value('id');
@@ -680,7 +749,7 @@ class SpkluCsvImportService
 
         $name = $candidates[0];
         $normalizedName = $this->normalizeLookup($name);
-        $id = DB::connection('ev')->table($table)->insertGetId(array_merge([
+        $id = $this->db()->table($table)->insertGetId(array_merge([
             'name' => $name,
         ], $this->timestampColumns($table)));
 
@@ -696,7 +765,7 @@ class SpkluCsvImportService
         }
 
         $normalizedName = $this->normalizeLookup($name);
-        $existingId = DB::connection('ev')
+        $existingId = $this->db()
             ->table($table)
             ->whereRaw('UPPER(name) = ?', [$normalizedName])
             ->value('id');
@@ -707,7 +776,7 @@ class SpkluCsvImportService
 
         $id = (string) Str::uuid();
 
-        DB::connection('ev')->table($table)->insert(array_merge($extraColumns, [
+        $this->db()->table($table)->insert(array_merge($extraColumns, [
             'id' => $id,
             'name' => $name,
         ], $this->timestampColumns($table)));
@@ -748,11 +817,11 @@ class SpkluCsvImportService
     {
         $timestamps = [];
 
-        if (Schema::connection('ev')->hasColumn($table, 'created_at')) {
+        if ($this->schema()->hasColumn($table, 'created_at')) {
             $timestamps['created_at'] = now();
         }
 
-        if (Schema::connection('ev')->hasColumn($table, 'updated_at')) {
+        if ($this->schema()->hasColumn($table, 'updated_at')) {
             $timestamps['updated_at'] = now();
         }
 
@@ -764,6 +833,26 @@ class SpkluCsvImportService
         $value = str_replace(',', '.', trim($value));
 
         return is_numeric($value) ? (float) $value : null;
+    }
+
+    /**
+     * Parse pasangan koordinat lalu validasi terhadap bound Indonesia.
+     * Koordinat di luar bound (mis. 41260 rusak) di-set null — lokasi tetap
+     * masuk (audit via raw_payload di hydrate), hanya tidak di-serving.
+     */
+    private function parseCoordWithinIndonesia(string $latRaw, string $lngRaw): array
+    {
+        $lat = $this->parseCoord($latRaw);
+        $lng = $this->parseCoord($lngRaw);
+
+        $inBounds = $lat !== null
+            && $lng !== null
+            && $lat >= -12
+            && $lat <= 8
+            && $lng >= 94
+            && $lng <= 142;
+
+        return $inBounds ? [$lat, $lng] : [null, null];
     }
 
     private function parsePower(string $value): ?float

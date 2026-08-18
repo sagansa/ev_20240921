@@ -36,7 +36,10 @@ class ChargingSessionResource extends JsonResource
             'station_longitude' => isset($this->station_lng_snapshot)
                 ? (float) $this->station_lng_snapshot
                 : ($this->chargerLocation?->longitude !== null ? (float) $this->chargerLocation->longitude : null),
-            'station_provider' => $this->station_provider_snapshot ?? $this->whenLoaded('chargerLocation', fn () => $this->chargerLocation?->provider?->name),
+            'station_provider' => $this->station_provider_snapshot ?? $this->chargingStation?->provider?->name ?? $this->whenLoaded('chargerLocation', fn () => $this->chargerLocation?->provider?->name),
+            'station_provider_logo' => $this->chargingStation?->provider?->logo
+                ?? $this->whenLoaded('chargerLocation', fn () => $this->chargerLocation?->provider?->logo)
+                ?? ($this->station_provider_snapshot ? \App\Models\Provider::where('name', $this->station_provider_snapshot)->value('image') : null),
 
             // Region denormalized utk lokasi custom/home (bila reverse-geocode
             // berhasil). Dipakai mobile utk display "Kota, Provinsi" di riwayat.
