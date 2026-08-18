@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class SocialAuthController extends Controller
@@ -177,6 +178,7 @@ class SocialAuthController extends Controller
 
             $aud = $payloadArr['aud'] ?? null;
             if (! in_array($aud, $allowedAudiences, true)) {
+                Log::warning('google_id_token_aud_mismatch', ['aud' => $aud, 'allowed' => $allowedAudiences]);
                 return null;
             }
             if (! in_array($payloadArr['iss'] ?? null, ['https://accounts.google.com', 'accounts.google.com'], true)) {
