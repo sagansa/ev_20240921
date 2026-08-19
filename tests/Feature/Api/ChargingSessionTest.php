@@ -84,6 +84,45 @@ class ChargingSessionTest extends ApiTestCase
         ]);
     }
 
+    public function test_it_creates_charging_session_with_vehicle_without_fatal(): void
+    {
+        // Regression: store() memakai Vehicle::find() utk auto-fill km_before —
+        // tanpa `use App\Models\Vehicle;` PHP me-resolve ke
+        // App\Http\Controllers\Api\V1\Vehicle → fatal 500 "Class not found"
+        // pada SEMUA sesi user yang punya kendaraan.
+        $vehicle = Vehicle::factory()->for($this->authUser)->create();
+
+        $response = $this->postJson('/api/v1/charging-sessions', [
+            'vehicle_id' => $vehicle->id,
+            'date' => now()->toDateString(),
+            'kwh' => 12.5,
+            'total_cost' => 25000,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.vehicle_id', $vehicle->id);
+    }
+
+    public function test_it_rejects_battery_percent_out_of_range(): void
+    {
+        // Persentase baterai wajib 0–100 (min:0|max:100) — nilai >100/<0
+        // ditolak validasi, bukan tersimpan. ApiTestCase memakai
+        // withoutExceptionHandling → ValidationException ditangkap manual.
+        foreach ([150, -5] as $invalid) {
+            try {
+                $this->postJson('/api/v1/charging-sessions', [
+                    'date' => now()->toDateString(),
+                    'kwh' => 10,
+                    'total_cost' => 30000,
+                    'start_charging_now' => $invalid,
+                ]);
+                $this->fail("Expected ValidationException for start_charging_now={$invalid}.");
+            } catch (ValidationException $e) {
+                $this->assertArrayHasKey('start_charging_now', $e->errors());
+            }
+        }
+    }
+
     public function test_it_returns_analytics_summary(): void
     {
         Charge::create([

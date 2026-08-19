@@ -7,6 +7,7 @@ use App\Models\Battery;
 use App\Models\Charge;
 use App\Models\ChargingStation;
 use App\Models\FuelPrice;
+use App\Models\Vehicle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -734,9 +735,9 @@ class ChargingSessionController extends Controller
             'date' => $sometimes.'nullable|date',
             'km_before' => $sometimes.'nullable|numeric|min:0',
             'km_now' => $sometimes.'nullable|numeric|min:0',
-            'start_charging_now' => $sometimes.'nullable|numeric|min:0',
-            'finish_charging_now' => $sometimes.'nullable|numeric|min:0',
-            'finish_charging_before' => $sometimes.'nullable|numeric|min:0',
+            'start_charging_now' => $sometimes.'nullable|numeric|min:0|max:100',
+            'finish_charging_now' => $sometimes.'nullable|numeric|min:0|max:100',
+            'finish_charging_before' => $sometimes.'nullable|numeric|min:0|max:100',
             'is_finish_charging' => $sometimes.'boolean',
             'kwh' => $sometimes.'nullable|numeric|min:0',
             'is_kwh_measured' => $sometimes.'boolean',

@@ -39,7 +39,7 @@ class MonetizationController extends Controller
             'credits' => 0,
             'ad_free_days' => 30,
             'badge_text' => 'POPULER',
-            'is_best_value' => true,
+            'is_best_value' => false,
         ],
         [
             'sku' => 'remove_ads_yearly',
@@ -50,7 +50,7 @@ class MonetizationController extends Controller
             'credits' => 0,
             'ad_free_days' => 365,
             'badge_text' => 'HEMAT 17%',
-            'is_best_value' => false,
+            'is_best_value' => true,
         ],
     ];
 
