@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\FuelPriceController;
 use App\Http\Controllers\Api\V1\HomeChargingDiscountController;
 use App\Http\Controllers\Api\V1\LocationCategoryController;
 use App\Http\Controllers\Api\V1\LocationReportController;
+use App\Http\Controllers\Api\V1\MonetizationController;
 use App\Http\Controllers\Api\V1\PlnChargerLocationController;
 use App\Http\Controllers\Api\V1\ProviderController;
 use App\Http\Controllers\Api\V1\ScrapeIngestController;
@@ -88,6 +89,11 @@ Route::prefix('v1')->group(function () {
 
         // Akun (soft-delete + anonimisasi PII, lihat AccountController::destroy)
         Route::delete('/account', [AccountController::class, 'destroy']);
+
+        // Monetization / entitlement server-side (per akun app)
+        Route::get('/monetization/config', [MonetizationController::class, 'config']);
+        Route::post('/monetization/register-apple', [MonetizationController::class, 'registerApple']);
+        Route::post('/monetization/register-google', [MonetizationController::class, 'registerGoogle']);
 
         // User-specific routes
         Route::get('/vehicles/options', [VehicleController::class, 'options']);

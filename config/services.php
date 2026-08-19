@@ -17,6 +17,19 @@ return [
         // App bundle ID — audience untuk native iOS Sign in with Apple
         // (ASAuthorizationAppleIDProvider), yang token-nya ber-`aud` bundle ID.
         'bundle_id' => env('APPLE_BUNDLE_ID'),
+        // Kredensial App Store Server API (verifikasi transaksi server-side).
+        // OPTIONAL: bila kosong, register-apple memercayai klaim client (dev).
+        'team_id' => env('APPLE_TEAM_ID'),
+        'key_id' => env('APPLE_KEY_ID'),
+        'private_key_path' => env('APPLE_PRIVATE_KEY_PATH'),
+        'store_api_sandbox' => env('APPLE_STORE_API_SANDBOX', true),
+    ],
+
+    'google_play' => [
+        // Package name (Android application ID) — dipakai verifikasi purchase.
+        'package_name' => env('GOOGLE_PLAY_PACKAGE_NAME'),
+        // OPTIONAL: path ke service account JSON untuk Play Developer API.
+        'service_account_json' => env('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON'),
     ],
 
     'admob' => [

@@ -84,6 +84,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(ChargerLocation::class);
     }
 
+    public function userSubscriptions()
+    {
+        return $this->hasMany(UserSubscription::class);
+    }
+
     public function chargers()
     {
         return $this->hasMany(Charger::class);

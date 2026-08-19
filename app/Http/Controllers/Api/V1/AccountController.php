@@ -27,6 +27,10 @@ class AccountController extends Controller
 
         $user->tokens()->delete();
 
+        // Entitlement langganan ikut dihapus — tidak boleh bocor ke akun
+        // yang suatu saat memakai email yang sama.
+        $user->userSubscriptions()->delete();
+
         $user->update([
             'name' => 'Pengguna Terhapus',
             'email' => "deleted+{$suffix}@invalid.local",
