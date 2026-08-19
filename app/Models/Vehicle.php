@@ -23,11 +23,19 @@ class Vehicle extends Model
         'license_plate',
         'battery_capacity_kwh',
         'ac_charging_power_kw',
+        'initial_odometer',
         'brand_vehicle_id',
         'model_vehicle_id',
         'type_vehicle_id',
         'ownership',
         'status',
+    ];
+
+    protected $casts = [
+        'battery_capacity_kwh' => 'float',
+        'ac_charging_power_kw' => 'float',
+        'initial_odometer' => 'float',
+        'status' => 'integer',
     ];
 
     public function brandVehicle()

@@ -12,7 +12,11 @@ return [
     ],
 
     'apple' => [
+        // Services ID — audience untuk web flow (Sign in with Apple JS).
         'service_id' => env('APPLE_SERVICE_ID'),
+        // App bundle ID — audience untuk native iOS Sign in with Apple
+        // (ASAuthorizationAppleIDProvider), yang token-nya ber-`aud` bundle ID.
+        'bundle_id' => env('APPLE_BUNDLE_ID'),
     ],
 
     'admob' => [

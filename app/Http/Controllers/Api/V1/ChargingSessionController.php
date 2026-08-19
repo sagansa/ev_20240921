@@ -107,7 +107,8 @@ class ChargingSessionController extends Controller
 
         if (! empty($validated['vehicle_id'])) {
             $previous = $this->latestForVehicle($validated['vehicle_id']);
-            $validated['km_before'] = $previous?->km_now;
+            $vehicle = Vehicle::find($validated['vehicle_id']);
+            $validated['km_before'] = $previous?->km_now ?? $vehicle?->initial_odometer;
             $validated['finish_charging_before'] = $previous?->finish_charging_now;
         }
 

@@ -45,7 +45,11 @@ class AnalyticsController extends Controller
         $totalCost = $charges->sum('total_cost');
         $totalKwh = $charges->sum('kWh');
         $totalDistance = $charges->sum(function ($charge) {
-            return max(0, $charge->km_now - $charge->km_before);
+            $before = $charge->km_before ?? $charge->vehicle?->initial_odometer;
+            if ($charge->km_now !== null && $before !== null) {
+                return max(0, $charge->km_now - $before);
+            }
+            return 0;
         });
 
         // Group by month

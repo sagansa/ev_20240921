@@ -78,6 +78,7 @@ class VehicleController extends Controller
             'license_plate' => 'required|string|max:20',
             'battery_capacity_kwh' => 'nullable|numeric|min:0|max:300',
             'ac_charging_power_kw' => 'nullable|numeric|min:0|max:500',
+            'initial_odometer' => 'nullable|numeric|min:0',
             'ownership' => 'nullable|date',
             'status' => 'nullable|integer',
             'image' => 'nullable|string',
@@ -102,6 +103,8 @@ class VehicleController extends Controller
             'type_vehicle_id' => $typeId,
             'license_plate' => $validated['license_plate'],
             'battery_capacity_kwh' => $validated['battery_capacity_kwh'] ?? null,
+            'ac_charging_power_kw' => $validated['ac_charging_power_kw'] ?? null,
+            'initial_odometer' => $validated['initial_odometer'] ?? 0,
             'ownership' => $validated['ownership'] ?? null,
             'status' => $validated['status'] ?? 1,
             'image' => $validated['image'] ?? null,
@@ -171,6 +174,7 @@ class VehicleController extends Controller
             'license_plate' => 'nullable|string|max:20',
             'battery_capacity_kwh' => 'nullable|numeric|min:0|max:300',
             'ac_charging_power_kw' => 'nullable|numeric|min:0|max:500',
+            'initial_odometer' => 'nullable|numeric|min:0',
             'ownership' => 'nullable|date',
             'status' => 'nullable|integer',
             'image' => 'nullable|string',
@@ -194,6 +198,9 @@ class VehicleController extends Controller
         }
         if (array_key_exists('ac_charging_power_kw', $validated)) {
             $data['ac_charging_power_kw'] = $validated['ac_charging_power_kw'];
+        }
+        if (array_key_exists('initial_odometer', $validated)) {
+            $data['initial_odometer'] = $validated['initial_odometer'];
         }
         if (array_key_exists('ownership', $validated)) {
             $data['ownership'] = $validated['ownership'];

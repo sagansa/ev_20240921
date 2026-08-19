@@ -196,8 +196,14 @@ class SocialAuthController extends Controller
 
     private function verifyAppleToken(string $idToken): ?array
     {
-        $clientId = config('services.apple.service_id');
-        if (! $clientId) {
+        // Native iOS Sign in with Apple (ASAuthorizationAppleIDProvider) menerbitkan
+        // identity token dengan aud = app bundle ID; web flow (Sign in with Apple JS)
+        // memakai Services ID. Terima keduanya — mirror pendekatan multi-audience Google.
+        $allowedAudiences = array_values(array_filter([
+            config('services.apple.service_id'),       // Services ID (web flow)
+            config('services.apple.bundle_id'),        // Bundle ID (native iOS)
+        ]));
+        if (empty($allowedAudiences)) {
             return null;
         }
 
@@ -206,7 +212,9 @@ class SocialAuthController extends Controller
             $payload = JWT::decode($idToken, $keySet);
             $payloadArr = (array) $payload;
 
-            if (($payloadArr['aud'] ?? null) !== $clientId) {
+            $aud = $payloadArr['aud'] ?? null;
+            if (! in_array($aud, $allowedAudiences, true)) {
+                Log::warning('apple_id_token_aud_mismatch', ['aud' => $aud, 'allowed' => $allowedAudiences]);
                 return null;
             }
             if (($payloadArr['iss'] ?? null) !== 'https://appleid.apple.com') {
