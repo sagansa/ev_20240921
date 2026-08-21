@@ -69,3 +69,11 @@ Route::get('/find-nearby-chargers', [EvController::class, 'showFindNearbyCharger
 
 // Sitemap
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+
+// Syarat & Ketentuan + Kebijakan Privasi — URL pendek untuk link paywall
+// (wajib bagi auto-renewable subscription — App Store Guideline 3.1.2).
+// Alih ke controller Jetstream yang sama dengan /terms-of-service & /privacy-policy.
+Route::get('/terms', [\Laravel\Jetstream\Http\Controllers\Livewire\TermsOfServiceController::class, 'show'])
+    ->name('terms.short');
+Route::get('/privacy', [\Laravel\Jetstream\Http\Controllers\Livewire\PrivacyPolicyController::class, 'show'])
+    ->name('privacy.short');
