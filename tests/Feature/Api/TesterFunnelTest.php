@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Api;
 
+use App\Mail\TesterRegisteredMail;
 use App\Models\Tester;
 use App\Models\TesterPing;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -305,5 +307,65 @@ class TesterFunnelTest extends ApiTestCase
         } catch (HttpException $e) {
             $this->assertSame(403, $e->getStatusCode());
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Admin email notification
+    // ─────────────────────────────────────────────────────────────────────
+
+    public function test_register_sends_admin_notification_email(): void
+    {
+        config(['admin_notify.enabled' => true, 'admin_notify.email' => 'admin@example.com']);
+        Mail::fake();
+
+        $this->postJson('/api/v1/testers/register', [
+            'device_id' => 'dev-notify-1',
+            'platform' => 'android',
+        ])->assertStatus(201);
+
+        Mail::assertSent(TesterRegisteredMail::class, function (TesterRegisteredMail $mail) {
+            return $mail->hasTo('admin@example.com')
+                && $mail->tester->email === $this->authUser->email;
+        });
+    }
+
+    public function test_idempotent_register_does_not_send_duplicate_email(): void
+    {
+        config(['admin_notify.enabled' => true, 'admin_notify.email' => 'admin@example.com']);
+        Mail::fake();
+
+        $this->postJson('/api/v1/testers/register', ['device_id' => 'dev-notify-2'])->assertStatus(201);
+        $this->postJson('/api/v1/testers/register', ['device_id' => 'dev-notify-3'])->assertStatus(201);
+
+        // updateOrCreate on existing user_id → only one 'created' event → one email.
+        Mail::assertSent(TesterRegisteredMail::class, 1);
+    }
+
+    public function test_register_email_sends_admin_notification(): void
+    {
+        config(['admin_notify.enabled' => true, 'admin_notify.email' => 'admin@example.com']);
+        Mail::fake();
+
+        $this->app['auth']->forgetGuards();
+
+        $this->postJson('/api/v1/testers/register-email', [
+            'email' => 'new-tester@example.com',
+            'device_id' => 'dev-notify-4',
+        ])->assertStatus(201);
+
+        Mail::assertSent(TesterRegisteredMail::class, function (TesterRegisteredMail $mail) {
+            return $mail->hasTo('admin@example.com')
+                && $mail->tester->email === 'new-tester@example.com';
+        });
+    }
+
+    public function test_notification_not_sent_when_disabled(): void
+    {
+        config(['admin_notify.enabled' => false, 'admin_notify.email' => 'admin@example.com']);
+        Mail::fake();
+
+        $this->postJson('/api/v1/testers/register', ['device_id' => 'dev-notify-5'])->assertStatus(201);
+
+        Mail::assertNothingSent();
     }
 }

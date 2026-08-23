@@ -5,8 +5,10 @@ namespace App\Providers;
 use App\Models\ChargerLocation;
 use App\Models\LocationReport;
 use App\Models\PersonalAccessToken;
+use App\Models\Tester;
 use App\Observers\ChargerLocationObserver;
 use App\Observers\LocationReportObserver;
+use App\Observers\TesterObserver;
 use Filament\Forms\Components\DatePicker;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
@@ -56,6 +58,7 @@ class AppServiceProvider extends ServiceProvider
         // Register model observers
         ChargerLocation::observe(ChargerLocationObserver::class);
         LocationReport::observe(LocationReportObserver::class);
+        Tester::observe(TesterObserver::class);
 
         // Share App Download Setting with views
         View::composer(['layouts.main', 'layouts.ev.*'], function ($view) {
