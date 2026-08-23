@@ -81,13 +81,14 @@
         box-shadow: 0 0 8px #10b981 !important;
     }
 
-    /* Direct 2 Store Buttons Side-by-Side */
+    /* Direct 2 Store Buttons Side-by-Side (di bagian atas modal) */
     .ev-buttons-grid {
         display: grid !important;
         grid-template-columns: 1fr !important;
         gap: 12px !important;
-        margin-top: 24px !important;
-        margin-bottom: 16px !important;
+        /* margin-top 28px agar tidak tertutup tombol close (absolute, berakhir di 48px dari tepi atas box) */
+        margin-top: 28px !important;
+        margin-bottom: 24px !important;
     }
 
     @media (min-width: 480px) {
@@ -196,40 +197,12 @@
         </button>
         @endif
 
-        <!-- Single Clean Header -->
-        <div style="text-align: center;">
-            <div class="ev-badge-pill">
-                <span class="ev-badge-pulse-dot"></span>
-                <span>{{ $setting->badge_text ?? 'Official Mobile App' }}</span>
-            </div>
-
-            <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:8px;">
-                <img src="{{ asset('images/logo-files/logo.png') }}" 
-                     alt="EV Charge Logo" 
-                     style="width:42px; height:42px; border-radius:12px; background:#1e293b; padding:4px; border:1px solid rgba(52,211,153,0.4); object-fit:contain;"
-                     onerror="this.style.display='none';">
-                <h2 style="margin:0; font-size:22px; font-weight:800; color:#ffffff; line-height:1.2;">
-                    {{ $setting->title }}
-                </h2>
-            </div>
-
-            <p style="margin:8px 0 0 0; font-size:14px; color:#cbd5e1; line-height:1.5;">
-                {{ $setting->subtitle }}
-            </p>
-
-            @if($setting->description)
-            <p style="margin:8px 0 0 0; font-size:12px; color:#94a3b8; line-height:1.4;">
-                {{ $setting->description }}
-            </p>
-            @endif
-        </div>
-
         <!-- Direct 2 Store Buttons Side-by-Side: Left = Google Play, Right = Apple Store -->
         <div class="ev-buttons-grid">
-            
+
             <!-- Left: Google Play Store -->
-            <a href="{{ $setting->android_url ?? 'https://play.google.com/store/apps/details?id=id.sagansa.ev' }}" 
-               target="_blank" 
+            <a href="{{ $setting->android_url ?? 'https://play.google.com/store/apps/details?id=id.sagansa.ev' }}"
+               target="_blank"
                rel="noopener noreferrer"
                class="ev-store-btn">
                 <div class="ev-store-btn-icon">
@@ -246,10 +219,10 @@
                 </div>
             </a>
 
-            <!-- Right: Apple App Store -->
-            @if($setting->ios_status === 'app_store' && !empty($setting->ios_url))
-            <a href="{{ $setting->ios_url }}" 
-               target="_blank" 
+            <!-- Right: Apple App Store — aktif selama link terisi, terlepas dari dropdown Status iOS -->
+            @if(!empty($setting->ios_url))
+            <a href="{{ $setting->ios_url }}"
+               target="_blank"
                rel="noopener noreferrer"
                class="ev-store-btn">
                 <div class="ev-store-btn-icon">
@@ -276,6 +249,34 @@
             </div>
             @endif
 
+        </div>
+
+        <!-- Single Clean Header -->
+        <div style="text-align: center;">
+            <div class="ev-badge-pill">
+                <span class="ev-badge-pulse-dot"></span>
+                <span>{{ $setting->badge_text ?? 'Official Mobile App' }}</span>
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:8px;">
+                <img src="{{ asset('images/logo-files/logo.png') }}" 
+                     alt="EV Charge Logo" 
+                     style="width:42px; height:42px; border-radius:12px; background:#1e293b; padding:4px; border:1px solid rgba(52,211,153,0.4); object-fit:contain;"
+                     onerror="this.style.display='none';">
+                <h2 style="margin:0; font-size:22px; font-weight:800; color:#ffffff; line-height:1.2;">
+                    {{ $setting->title }}
+                </h2>
+            </div>
+
+            <p style="margin:8px 0 0 0; font-size:14px; color:#cbd5e1; line-height:1.5;">
+                {{ $setting->subtitle }}
+            </p>
+
+            @if($setting->description)
+            <p style="margin:8px 0 0 0; font-size:12px; color:#94a3b8; line-height:1.4;">
+                {{ $setting->description }}
+            </p>
+            @endif
         </div>
 
         <!-- Desktop QR Code -->
