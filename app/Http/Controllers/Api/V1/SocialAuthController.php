@@ -57,7 +57,7 @@ class SocialAuthController extends Controller
         $platform = $this->verifier->resolvePlatform('google', $payload);
         AppUser::recordLogin($user->id, 'google', $platform);
 
-        $token = $user->createToken("ev-{$platform}")->plainTextToken;
+        $token = $user->createToken($platform ? "ev-{$platform}" : 'ev')->plainTextToken;
 
         return response()->json([
             'success' => true,
@@ -114,7 +114,7 @@ class SocialAuthController extends Controller
         $platform = $this->verifier->resolvePlatform('apple', $payload);
         AppUser::recordLogin($user->id, 'apple', $platform);
 
-        $token = $user->createToken("ev-{$platform}")->plainTextToken;
+        $token = $user->createToken($platform ? "ev-{$platform}" : 'ev')->plainTextToken;
 
         return response()->json([
             'success' => true,

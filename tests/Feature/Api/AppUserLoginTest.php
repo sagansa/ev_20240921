@@ -158,6 +158,10 @@ class AppUserLoginTest extends TestCase
         $this->assertSame(1, $firstLogin->login_count);
         $this->assertNotNull($firstLogin->first_login_at);
 
+        // Timestamp sqlite berpresisi detik — majukan waktu agar last_login_at
+        // login kedua pasti berbeda dari login pertama.
+        $this->travel(1)->seconds();
+
         $this->fakeVerifier('google', 'android');
 
         $this->postJson('/api/v1/auth/google', [
@@ -259,7 +263,7 @@ class AppUserLoginTest extends TestCase
         ])->assertOk();
 
         $this->assertDatabaseHas('personal_access_tokens', [
-            'name' => 'ev-',
+            'name' => 'ev',
             'tokenable_id' => $this->user->id,
         ]);
     }

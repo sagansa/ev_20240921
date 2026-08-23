@@ -24,7 +24,10 @@ class PersonalAccessToken extends SanctumPersonalAccessToken
 
     public function __construct(array $attributes = [])
     {
-        $this->connection = Config::get('database.default') === 'testing'
+        // Saat testing, semua koneksi diarahkan ke database default (lihat
+        // UsesDefaultConnectionWhenTesting) supaya tulisan token masuk transaksi
+        // RefreshDatabase — PDO terpisah ke file sqlite yang sama akan deadlock.
+        $this->connection = app()->environment('testing')
             ? Config::get('database.default')
             : 'sagansa_user';
 
