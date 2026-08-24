@@ -81,14 +81,13 @@
         box-shadow: 0 0 8px #10b981 !important;
     }
 
-    /* Direct 2 Store Buttons Side-by-Side (di bagian atas modal) */
+    /* Direct 2 Store Buttons Side-by-Side */
     .ev-buttons-grid {
         display: grid !important;
         grid-template-columns: 1fr !important;
         gap: 12px !important;
-        /* margin-top 28px agar tidak tertutup tombol close (absolute, berakhir di 48px dari tepi atas box) */
-        margin-top: 28px !important;
-        margin-bottom: 24px !important;
+        margin-top: 24px !important;
+        margin-bottom: 16px !important;
     }
 
     @media (min-width: 480px) {
@@ -182,20 +181,48 @@
 </style>
 
 <!-- Modal Overlay -->
-<div id="evAppDownloadModal" 
+<div id="evAppDownloadModal"
      data-closable="{{ $setting->is_closable ? 'true' : 'false' }}">
-    
+
     <!-- Modal Card Box -->
     <div id="evAppModalBox">
 
         @if($setting->is_closable)
         <!-- Close Button (Only active if is_closable=true) -->
-        <button type="button" 
-                onclick="window.closeEvAppModal()" 
+        <button type="button"
+                onclick="window.closeEvAppModal()"
                 style="position:absolute; top:16px; right:16px; background:#1e293b; border:none; color:#94a3b8; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px;">
             &times;
         </button>
         @endif
+
+        <!-- Single Clean Header -->
+        <div style="text-align: center;">
+            <div class="ev-badge-pill">
+                <span class="ev-badge-pulse-dot"></span>
+                <span>{{ $setting->badge_text ?? 'Official Mobile App' }}</span>
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:8px;">
+                <img src="{{ asset('images/logo-files/logo.png') }}"
+                     alt="EV Charge Logo"
+                     style="width:42px; height:42px; border-radius:12px; background:#1e293b; padding:4px; border:1px solid rgba(52,211,153,0.4); object-fit:contain;"
+                     onerror="this.style.display='none';">
+                <h2 style="margin:0; font-size:22px; font-weight:800; color:#ffffff; line-height:1.2;">
+                    {{ $setting->title }}
+                </h2>
+            </div>
+
+            <p style="margin:8px 0 0 0; font-size:14px; color:#cbd5e1; line-height:1.5;">
+                {{ $setting->subtitle }}
+            </p>
+
+            @if($setting->description)
+            <p style="margin:8px 0 0 0; font-size:12px; color:#94a3b8; line-height:1.4;">
+                {{ $setting->description }}
+            </p>
+            @endif
+        </div>
 
         <!-- Direct 2 Store Buttons Side-by-Side: Left = Google Play, Right = Apple Store -->
         <div class="ev-buttons-grid">
@@ -251,40 +278,12 @@
 
         </div>
 
-        <!-- Single Clean Header -->
-        <div style="text-align: center;">
-            <div class="ev-badge-pill">
-                <span class="ev-badge-pulse-dot"></span>
-                <span>{{ $setting->badge_text ?? 'Official Mobile App' }}</span>
-            </div>
-
-            <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:8px;">
-                <img src="{{ asset('images/logo-files/logo.png') }}" 
-                     alt="EV Charge Logo" 
-                     style="width:42px; height:42px; border-radius:12px; background:#1e293b; padding:4px; border:1px solid rgba(52,211,153,0.4); object-fit:contain;"
-                     onerror="this.style.display='none';">
-                <h2 style="margin:0; font-size:22px; font-weight:800; color:#ffffff; line-height:1.2;">
-                    {{ $setting->title }}
-                </h2>
-            </div>
-
-            <p style="margin:8px 0 0 0; font-size:14px; color:#cbd5e1; line-height:1.5;">
-                {{ $setting->subtitle }}
-            </p>
-
-            @if($setting->description)
-            <p style="margin:8px 0 0 0; font-size:12px; color:#94a3b8; line-height:1.4;">
-                {{ $setting->description }}
-            </p>
-            @endif
-        </div>
-
         <!-- Desktop QR Code -->
         @if($setting->qr_code_enabled && $setting->android_url)
         <div class="ev-qr-box">
             <div style="background:#ffffff; padding:6px; border-radius:10px; display:flex; flex-shrink:0;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=2&data={{ urlencode($setting->android_url) }}" 
-                     alt="QR Code Play Store" 
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=2&data={{ urlencode($setting->android_url) }}"
+                     alt="QR Code Play Store"
                      style="width:48px; height:48px; display:block;">
             </div>
             <div>
@@ -319,8 +318,8 @@
                     <span style="font-size:12px; font-weight:600; color:#e2e8f0; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">WhatsApp: 08111923572</span>
                 </div>
             </div>
-            <a href="{{ $waUrl }}" 
-               target="_blank" 
+            <a href="{{ $waUrl }}"
+               target="_blank"
                rel="noopener noreferrer"
                style="display:inline-flex; align-items:center; gap:6px; padding:7px 14px; background:#25D366; color:#022c22; font-size:12px; font-weight:800; border-radius:10px; text-decoration:none; flex-shrink:0; box-shadow:0 3px 10px rgba(37,211,102,0.3); transition:transform 0.15s ease;">
                 <span>Chat WA</span>

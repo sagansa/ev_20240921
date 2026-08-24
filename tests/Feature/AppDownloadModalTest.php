@@ -64,7 +64,7 @@ class AppDownloadModalTest extends TestCase
         $this->assertStringContainsString('Segera Hadir di', $html);
     }
 
-    public function test_tombol_store_berada_di_atas_judul_popup(): void
+    public function test_tombol_store_berada_di_bawah_judul_popup(): void
     {
         $html = $this->renderModal([
             'ios_url' => 'https://apps.apple.com/id/app/ev/id123456',
@@ -76,6 +76,6 @@ class AppDownloadModalTest extends TestCase
 
         $this->assertNotFalse($buttonsPos);
         $this->assertNotFalse($headerPos);
-        $this->assertLessThan($headerPos, $buttonsPos);
+        $this->assertGreaterThan($headerPos, $buttonsPos);
     }
 }
