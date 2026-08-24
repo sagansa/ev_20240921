@@ -1,5 +1,14 @@
 @php
     $setting = $appDownloadSetting ?? \App\Models\AppDownloadSetting::current();
+    $preRelease = $setting && $setting->android_pre_release_flow;
+    $supportEmail = $setting ? ($setting->support_email ?: config('admin_notify.email')) : '';
+
+    $rawWa = $setting?->whatsapp_number ?? '08111923572';
+    $digitsWa = preg_replace('/[^0-9]/', '', $rawWa);
+    $cleanWa = str_starts_with($digitsWa, '0') ? ('62' . substr($digitsWa, 1)) : $digitsWa;
+    $waText = urlencode($setting?->whatsapp_text ?? 'Halo Admin EV Charge ID, saya ingin bertanya mengenai kerjasama / bantuan aplikasi.');
+    $waUrl = "https://wa.me/{$cleanWa}?text={$waText}";
+    $waTestingUrl = 'https://wa.me/' . $cleanWa . '?text=' . urlencode('Halo Admin EV Charge ID, saya ingin dimasukkan ke program closed testing aplikasi Android. Email/Gmail saya: ');
 @endphp
 
 @if($setting && $setting->is_active)
@@ -178,6 +187,135 @@
             display: flex !important;
         }
     }
+
+    /* Step 1: hint pre-release di bawah tombol store */
+    .ev-pre-release-hint {
+        margin: 0 0 4px 0 !important;
+        font-size: 11px !important;
+        color: #fbbf24 !important;
+        text-align: center !important;
+        line-height: 1.45 !important;
+    }
+
+    /* Step 2: alur 2 opsi pre-production Android */
+    #evAppStepAndroid {
+        display: none;
+    }
+
+    .ev-back-btn {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        padding: 7px 14px !important;
+        background: #1e293b !important;
+        border: 1px solid #334155 !important;
+        color: #cbd5e1 !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        border-radius: 10px !important;
+        cursor: pointer !important;
+        margin-bottom: 14px !important;
+    }
+
+    .ev-flow-note {
+        padding: 12px 14px !important;
+        background: rgba(251, 191, 36, 0.08) !important;
+        border: 1px solid rgba(251, 191, 36, 0.35) !important;
+        border-radius: 14px !important;
+        margin-bottom: 12px !important;
+    }
+    .ev-flow-note strong {
+        display: block !important;
+        font-size: 13px !important;
+        color: #fbbf24 !important;
+    }
+    .ev-flow-note p {
+        margin: 4px 0 0 0 !important;
+        font-size: 12px !important;
+        color: #cbd5e1 !important;
+        line-height: 1.5 !important;
+    }
+
+    .ev-option-card {
+        padding: 14px !important;
+        background: rgba(15, 23, 42, 0.8) !important;
+        border: 1px solid rgba(52, 211, 153, 0.3) !important;
+        border-radius: 16px !important;
+        margin-bottom: 12px !important;
+        box-sizing: border-box !important;
+    }
+    .ev-option-card-email {
+        border-color: rgba(96, 165, 250, 0.35) !important;
+    }
+
+    .ev-option-head {
+        display: flex !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+    }
+    .ev-option-badge {
+        flex-shrink: 0 !important;
+        padding: 3px 10px !important;
+        border-radius: 9999px !important;
+        font-size: 10px !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.04em !important;
+        text-transform: uppercase !important;
+    }
+    .ev-option-badge-ias {
+        background: rgba(16, 185, 129, 0.15) !important;
+        border: 1px solid rgba(52, 211, 153, 0.4) !important;
+        color: #6ee7b7 !important;
+    }
+    .ev-option-badge-email {
+        background: rgba(96, 165, 250, 0.15) !important;
+        border: 1px solid rgba(96, 165, 250, 0.4) !important;
+        color: #93c5fd !important;
+    }
+    .ev-option-title {
+        display: block !important;
+        font-size: 14px !important;
+        color: #ffffff !important;
+        line-height: 1.25 !important;
+    }
+    .ev-option-sub {
+        display: block !important;
+        margin-top: 2px !important;
+        font-size: 11px !important;
+        color: #94a3b8 !important;
+    }
+
+    .ev-option-steps {
+        margin: 12px 0 0 0 !important;
+        padding-left: 18px !important;
+        text-align: left !important;
+    }
+    .ev-option-steps li {
+        font-size: 12px !important;
+        color: #cbd5e1 !important;
+        line-height: 1.55 !important;
+        margin-bottom: 6px !important;
+    }
+    .ev-option-steps li:last-child {
+        margin-bottom: 0 !important;
+    }
+    .ev-option-steps strong {
+        color: #ffffff !important;
+    }
+
+    .ev-option-desc {
+        margin: 10px 0 0 0 !important;
+        font-size: 12px !important;
+        color: #cbd5e1 !important;
+        line-height: 1.55 !important;
+        text-align: left !important;
+    }
+
+    .ev-flow-btn {
+        margin-top: 12px !important;
+        padding: 10px 16px !important;
+        justify-content: center !important;
+    }
 </style>
 
 <!-- Modal Overlay -->
@@ -224,14 +362,19 @@
             @endif
         </div>
 
+        <!-- Step 1: pemilih store -->
+        <div id="evAppStepStores">
+
         <!-- Direct 2 Store Buttons Side-by-Side: Left = Google Play, Right = Apple Store -->
         <div class="ev-buttons-grid">
 
             <!-- Left: Google Play Store -->
-            <a href="{{ $setting->android_url ?? 'https://play.google.com/store/apps/details?id=id.sagansa.ev' }}"
+            <a id="evPlayStoreBtn"
+               href="{{ $setting->android_url ?? 'https://play.google.com/store/apps/details?id=id.sagansa.ev' }}"
                target="_blank"
                rel="noopener noreferrer"
-               class="ev-store-btn">
+               class="ev-store-btn"
+               data-pre-release="{{ $preRelease ? 'true' : 'false' }}">
                 <div class="ev-store-btn-icon">
                     <svg viewBox="0 0 512 512" style="width:28px; height:28px;" xmlns="http://www.w3.org/2000/svg">
                         <path fill="#00D3FF" d="M32.5 17.5c-4.2 4.4-6.5 11.2-6.5 20.3v436.4c0 9.1 2.3 15.9 6.5 20.3l1.2 1.1 244.7-244.7v-5.8L33.7 16.4l-1.2 1.1z"/>
@@ -278,6 +421,12 @@
 
         </div>
 
+        @if($preRelease)
+        <p class="ev-pre-release-hint">
+            &#9888;&#65039; Android masih tahap pengujian — ketuk tombol <strong>Google Play</strong> untuk melihat 2 cara memasang: <strong>Internal App Sharing</strong> atau <strong>email closed testing</strong>.
+        </p>
+        @endif
+
         <!-- Desktop QR Code -->
         @if($setting->qr_code_enabled && $setting->android_url)
         <div class="ev-qr-box">
@@ -291,19 +440,96 @@
                     ⚡ Scan QR Code dari Ponsel Anda
                 </strong>
                 <p style="margin:2px 0 0 0; font-size:11px; color:#94a3b8; line-height:1.3;">
-                    Buka kamera smartphone untuk langsung mengunduh aplikasi melalui Google Play Store.
+                    @if($preRelease)
+                        Scan dari HP, lalu aktifkan <strong>Internal App Sharing</strong> dulu (lihat Opsi 1 lewat tombol Google Play) bila aplikasi belum terpasang.
+                    @else
+                        Buka kamera smartphone untuk langsung mengunduh aplikasi melalui Google Play Store.
+                    @endif
                 </p>
             </div>
         </div>
         @endif
 
-        @php
-            $rawWa = $setting->whatsapp_number ?? '08111923572';
-            $digitsWa = preg_replace('/[^0-9]/', '', $rawWa);
-            $cleanWa = str_starts_with($digitsWa, '0') ? ('62' . substr($digitsWa, 1)) : $digitsWa;
-            $waText = urlencode($setting->whatsapp_text ?? 'Halo Admin EV Charge ID, saya ingin bertanya mengenai kerjasama / bantuan aplikasi.');
-            $waUrl = "https://wa.me/{$cleanWa}?text={$waText}";
-        @endphp
+        </div><!-- /#evAppStepStores -->
+
+        @if($preRelease)
+        <!-- Step 2: alur pemasangan pre-production Android — 2 opsi -->
+        <div id="evAppStepAndroid">
+            <button type="button" class="ev-back-btn" onclick="window.evAppBackToStores()">
+                <svg style="width:12px; height:12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                Kembali
+            </button>
+
+            <div class="ev-flow-note">
+                <strong>&#129514; Aplikasi belum rilis publik</strong>
+                <p>
+                    EV Charge ID untuk Android masih dalam tahap pengujian (closed testing), sehingga belum bisa dicari langsung di Play Store. Pilih salah satu dari 2 cara berikut untuk memasang.
+                </p>
+            </div>
+
+            <!-- Opsi 1: Internal App Sharing -->
+            <div class="ev-option-card">
+                <div class="ev-option-head">
+                    <span class="ev-option-badge ev-option-badge-ias">Opsi 1</span>
+                    <div>
+                        <strong class="ev-option-title">Internal App Sharing</strong>
+                        <span class="ev-option-sub">Pasang sekarang &mdash; setup sekali saja (&plusmn;2 menit)</span>
+                    </div>
+                </div>
+                <ol class="ev-option-steps">
+                    <li>Buka aplikasi <strong>Google Play Store</strong> di HP Anda.</li>
+                    <li>Ketuk foto profil di pojok kanan atas, lalu pilih <strong>Setelan</strong>.</li>
+                    <li>Buka bagian <strong>Tentang</strong>, lalu ketuk <strong>Versi Play Store</strong> sebanyak <strong>7 kali</strong> secara berurutan hingga muncul notifikasi &ldquo;Anda kini adalah seorang developer&rdquo;.</li>
+                    <li>Masuk ke <strong>Setelan &rarr; Umum &rarr; Opsi Developer</strong>.</li>
+                    <li>Aktifkan <strong>Berbagi aplikasi internal (Internal app sharing)</strong>, lalu ketuk <strong>Aktifkan</strong> saat jendela konfirmasi muncul.</li>
+                </ol>
+                <a href="{{ $setting->android_url ?? 'https://play.google.com/store/apps/details?id=id.sagansa.ev' }}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="ev-store-btn ev-flow-btn">
+                    <div class="ev-store-btn-text" style="align-items:center;">
+                        <span class="ev-store-btn-sub">Sudah aktif? Buka link aplikasinya di sini</span>
+                        <strong class="ev-store-btn-main">Buka Link Aplikasi</strong>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Opsi 2: Closed Testing via email -->
+            <div class="ev-option-card ev-option-card-email">
+                <div class="ev-option-head">
+                    <span class="ev-option-badge ev-option-badge-email">Opsi 2</span>
+                    <div>
+                        <strong class="ev-option-title">Ikut Closed Testing via Email</strong>
+                        <span class="ev-option-sub">Tanpa setup apa pun &mdash; cukup tunggu undangan</span>
+                    </div>
+                </div>
+                <p class="ev-option-desc">
+                    Keberatan mengaktifkan setelan developer di atas? Kirim email berisi alamat Gmail Anda &mdash; kami akan memasukkan Anda ke program closed testing Google Play. Setelah disetujui (kurang lebih 1&times;24 jam), aplikasi bisa diunduh seperti biasa dari Play Store.
+                </p>
+                @if($supportEmail)
+                <a href="mailto:{{ $supportEmail }}?subject={{ rawurlencode('Permintaan Akses Closed Testing — EV Charge ID (Android)') }}&body={{ rawurlencode("Halo Admin EV Charge ID,\n\nSaya ingin dimasukkan ke program closed testing aplikasi EV Charge ID untuk Android.\n\nAlamat Gmail saya: \n\nTerima kasih.") }}"
+                   class="ev-store-btn ev-flow-btn">
+                    <div class="ev-store-btn-text" style="align-items:center;">
+                        <span class="ev-store-btn-sub">Kirim ke {{ $supportEmail }}</span>
+                        <strong class="ev-store-btn-main">Kirim Email Permintaan Akses</strong>
+                    </div>
+                </a>
+                @else
+                <a href="{{ $waTestingUrl }}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="ev-store-btn ev-flow-btn">
+                    <div class="ev-store-btn-text" style="align-items:center;">
+                        <span class="ev-store-btn-sub">Email kontak belum dikonfigurasi &mdash; chat WhatsApp</span>
+                        <strong class="ev-store-btn-main">Minta Akses via WhatsApp</strong>
+                    </div>
+                </a>
+                @endif
+            </div>
+        </div>
+        @endif
 
         <!-- WhatsApp Partnership & Help Contact -->
         <div style="margin-top:14px; padding:10px 14px; background:rgba(30,41,59,0.7); border:1px solid rgba(52,211,153,0.3); border-radius:14px; display:flex; align-items:center; justify-content:space-between; gap:12px; box-sizing:border-box;">
@@ -358,6 +584,29 @@
                 modal.classList.remove('ev-modal-visible');
                 document.body.style.overflow = '';
             };
+
+            // Alur pre-release Android: klik tombol Play Store membuka step 2 (2 opsi),
+            // bukan langsung navigasi ke link IAS/store.
+            var modalBox = document.getElementById('evAppModalBox');
+            var playBtn = document.getElementById('evPlayStoreBtn');
+            var stepStores = document.getElementById('evAppStepStores');
+            var stepAndroid = document.getElementById('evAppStepAndroid');
+
+            window.evAppBackToStores = function() {
+                if (!stepStores || !stepAndroid) return;
+                stepAndroid.style.display = 'none';
+                stepStores.style.display = 'block';
+                if (modalBox) modalBox.scrollTop = 0;
+            };
+
+            if (playBtn && stepStores && stepAndroid && playBtn.getAttribute('data-pre-release') === 'true') {
+                playBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    stepStores.style.display = 'none';
+                    stepAndroid.style.display = 'block';
+                    if (modalBox) modalBox.scrollTop = 0;
+                });
+            }
 
             // Immediately show modal
             window.openEvAppModal();

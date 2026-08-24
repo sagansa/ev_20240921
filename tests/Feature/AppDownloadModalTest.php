@@ -21,6 +21,8 @@ class AppDownloadModalTest extends TestCase
             'badge_text' => 'Official Mobile App',
             'android_enabled' => true,
             'android_url' => 'https://play.google.com/store/apps/details?id=id.sagansa.ev',
+            'android_pre_release_flow' => false,
+            'support_email' => null,
             'ios_enabled' => true,
             'ios_status' => 'coming_soon',
             'ios_url' => '',
@@ -77,5 +79,50 @@ class AppDownloadModalTest extends TestCase
         $this->assertNotFalse($buttonsPos);
         $this->assertNotFalse($headerPos);
         $this->assertGreaterThan($headerPos, $buttonsPos);
+    }
+
+    public function test_alur_2_opsi_tampil_bila_pre_release_aktif(): void
+    {
+        $html = $this->renderModal([
+            'android_pre_release_flow' => true,
+            'support_email' => 'tester@evcharge.id',
+            'android_url' => 'https://play.google.com/apps/test/abc123',
+        ]);
+
+        // Tombol Play Store tidak lagi langsung navigasi, melainkan membuka step 2.
+        $this->assertStringContainsString('data-pre-release="true"', $html);
+        $this->assertStringContainsString('id="evAppStepAndroid"', $html);
+
+        // Opsi 1: langkah Internal App Sharing + tombol link IAS.
+        $this->assertStringContainsString('Internal App Sharing', $html);
+        $this->assertStringContainsString('7 kali', $html);
+        $this->assertStringContainsString('https://play.google.com/apps/test/abc123', $html);
+
+        // Opsi 2: mailto ke email kontak dengan subject closed testing.
+        $this->assertStringContainsString('mailto:tester@evcharge.id', $html);
+        $this->assertStringContainsString('closed%20testing', $html);
+    }
+
+    public function test_tombol_play_langsung_ke_store_saat_sudah_production(): void
+    {
+        $html = $this->renderModal();
+
+        $this->assertStringNotContainsString('data-pre-release="true"', $html);
+        $this->assertStringNotContainsString('id="evAppStepAndroid"', $html);
+        $this->assertStringContainsString('id="evAppStepStores"', $html);
+    }
+
+    public function test_opsi_email_fallback_whatsapp_bila_email_kontak_kosong(): void
+    {
+        config(['admin_notify.email' => '']);
+
+        $html = $this->renderModal([
+            'android_pre_release_flow' => true,
+            'support_email' => null,
+        ]);
+
+        $this->assertStringNotContainsString('mailto:', $html);
+        $this->assertStringContainsString('Minta Akses via WhatsApp', $html);
+        $this->assertStringContainsString('wa.me/628111923572', $html);
     }
 }

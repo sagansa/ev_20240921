@@ -125,6 +125,17 @@ class AppDownloadSettingResource extends Resource
                             ->label('Catatan Android')
                             ->default('Mendukung Android 7.0+ ke atas')
                             ->placeholder('Contoh: Mendukung Android 7.0+'),
+                        Toggle::make('android_pre_release_flow')
+                            ->label('Tampilkan Alur 2 Opsi (Belum Production)')
+                            ->helperText('Aktifkan selama aplikasi belum rilis publik. Tombol Google Play akan membuka 2 opsi pemasangan: langkah aktifasi Internal App Sharing, atau kirim email untuk diundang ke closed testing. Matikan saat sudah production agar tombol langsung menuju Play Store.')
+                            ->default(false)
+                            ->columnSpanFull(),
+                        TextInput::make('support_email')
+                            ->label('Email Kontak Permintaan Akses Closed Testing')
+                            ->email()
+                            ->nullable()
+                            ->helperText('Tujuan tombol "Kirim Email" pada alur 2 opsi. Kosong = pakai ADMIN_NOTIFY_EMAIL; jika keduanya kosong, tombol fallback ke WhatsApp.')
+                            ->columnSpanFull(),
                     ])->columns(2),
 
                 Section::make('Konfigurasi Aplikasi iOS')
