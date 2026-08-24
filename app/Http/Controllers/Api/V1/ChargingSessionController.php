@@ -113,6 +113,20 @@ class ChargingSessionController extends Controller
             $validated['finish_charging_before'] = $previous?->finish_charging_now;
         }
 
+        // Enforce: maksimal satu sesi berjalan (is_finish_charging = false) per kendaraan.
+        if (! empty($validated['vehicle_id']) && ($validated['is_finish_charging'] ?? false) === false) {
+            $existingUnfinished = Charge::where('user_id', Auth::id())
+                ->where('vehicle_id', $validated['vehicle_id'])
+                ->where('is_finish_charging', false)
+                ->exists();
+            if ($existingUnfinished) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Masih ada sesi berjalan untuk kendaraan ini. Selesaikan sesi tersebut dulu.',
+                ], 409);
+            }
+        }
+
         // Auto-assign baterai aktif kendaraan bila user tidak memilih baterai —
         // sesi charging menempel ke baterai yg sedang terpasang. Baterai baru
         // hasil swap otomatis dipakai utk sesi berikutnya tanpa interaksi user.
@@ -164,6 +178,27 @@ class ChargingSessionController extends Controller
         if (array_key_exists('charging_station_id', $validated) || array_key_exists('station_name', $validated)) {
             $data = array_merge($data, $this->stationSnapshot($request));
         }
+
+        // Enforce: bila update mengubah sesi menjadi berjalan, pastikan tidak ada
+        // sesi berjalan lain utk kendaraan yg sama (mengedit sesi berjalan itu
+        // sendiri tetap boleh — perubahan is_finish_charging bisa apa adanya).
+        $wouldBeUnfinished = array_key_exists('is_finish_charging', $data)
+            ? $data['is_finish_charging'] === false
+            : $chargingSession->is_finish_charging === false;
+        if ($wouldBeUnfinished && $chargingSession->vehicle_id) {
+            $otherUnfinished = Charge::where('user_id', Auth::id())
+                ->where('vehicle_id', $chargingSession->vehicle_id)
+                ->where('is_finish_charging', false)
+                ->where('id', '!=', $chargingSession->id)
+                ->exists();
+            if ($otherUnfinished) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Masih ada sesi berjalan lain untuk kendaraan ini. Selesaikan sesi tersebut dulu.',
+                ], 409);
+            }
+        }
+
         $chargingSession->update($data);
         $chargingSession->load(['vehicle', 'battery', 'chargingStation', 'chargerLocation']);
 

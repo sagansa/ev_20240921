@@ -741,4 +741,192 @@ class ChargingSessionTest extends ApiTestCase
         $this->assertNull($byName['Home Wallbox']['charging_station_id']);
         $this->assertTrue($byName['Home Wallbox']['is_home_charging']);
     }
+
+    // --- Enforce: satu sesi berjalan per kendaraan ---
+
+    public function test_store_rejects_unfinished_session_when_vehicle_already_has_one(): void
+    {
+        $vehicle = Vehicle::factory()->for($this->authUser)->create();
+
+        // Sesi pertama: berjalan.
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => false,
+            'kWh' => 10,
+        ]);
+
+        // Sesi kedua: juga berjalan → harus 409.
+        $response = $this->postJson('/api/v1/charging-sessions', [
+            'vehicle_id' => $vehicle->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => false,
+            'kwh' => 5,
+            'total_cost' => 15000,
+        ]);
+
+        $response->assertStatus(409)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Masih ada sesi berjalan untuk kendaraan ini. Selesaikan sesi tersebut dulu.',
+            ]);
+    }
+
+    public function test_store_allows_unfinished_session_when_vehicle_has_no_existing_unfinished(): void
+    {
+        $vehicle = Vehicle::factory()->for($this->authUser)->create();
+
+        $response = $this->postJson('/api/v1/charging-sessions', [
+            'vehicle_id' => $vehicle->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => false,
+            'kwh' => 10,
+            'total_cost' => 30000,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.vehicle_id', $vehicle->id);
+    }
+
+    public function test_store_allows_unfinished_session_for_different_vehicle(): void
+    {
+        $vehicle1 = Vehicle::factory()->for($this->authUser)->create();
+        $vehicle2 = Vehicle::factory()->for($this->authUser)->create();
+
+        // Sesi berjalan untuk vehicle1.
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle1->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => false,
+            'kWh' => 10,
+        ]);
+
+        // Sesi berjalan untuk vehicle2 → boleh (kendaraan berbeda).
+        $response = $this->postJson('/api/v1/charging-sessions', [
+            'vehicle_id' => $vehicle2->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => false,
+            'kwh' => 8,
+            'total_cost' => 25000,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.vehicle_id', $vehicle2->id);
+    }
+
+    public function test_store_allows_finished_session_when_vehicle_already_has_unfinished(): void
+    {
+        $vehicle = Vehicle::factory()->for($this->authUser)->create();
+
+        // Sesi berjalan.
+        Charge::create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => false,
+            'kWh' => 10,
+        ]);
+
+        // Sesi sudah selesai → boleh (tidak melanggar aturan).
+        $response = $this->postJson('/api/v1/charging-sessions', [
+            'vehicle_id' => $vehicle->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => true,
+            'kwh' => 15,
+            'total_cost' => 50000,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.is_finish_charging', true);
+    }
+
+    public function test_update_rejects_unfishing_when_other_session_exists_for_same_vehicle(): void
+    {
+        $vehicle = Vehicle::factory()->for($this->authUser)->create();
+
+        // Sesi A: berjalan.
+        $sessionA = Charge::create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => false,
+            'kWh' => 10,
+        ]);
+
+        // Sesi B: sudah selesai.
+        $sessionB = Charge::create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => true,
+            'kWh' => 8,
+        ]);
+
+        // Coba ubah sesi B menjadi berjalan → 409 (sudah ada sesi A berjalan).
+        $response = $this->putJson("/api/v1/charging-sessions/{$sessionB->id}", [
+            'is_finish_charging' => false,
+        ]);
+
+        $response->assertStatus(409)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Masih ada sesi berjalan lain untuk kendaraan ini. Selesaikan sesi tersebut dulu.',
+            ]);
+    }
+
+    public function test_update_allows_changing_own_unfinished_session(): void
+    {
+        $vehicle = Vehicle::factory()->for($this->authUser)->create();
+
+        // Sesi A: berjalan.
+        $sessionA = Charge::create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => false,
+            'kWh' => 10,
+        ]);
+
+        // Edit sesi A itu sendiri → boleh (meskipun berjalan).
+        $response = $this->putJson("/api/v1/charging-sessions/{$sessionA->id}", [
+            'kwh' => 12,
+            'total_cost' => 36000,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.kwh', 12);
+    }
+
+    public function test_update_allows_finishing_session_regardless_of_others(): void
+    {
+        $vehicle = Vehicle::factory()->for($this->authUser)->create();
+
+        // Sesi A: berjalan.
+        $sessionA = Charge::create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => false,
+            'kWh' => 10,
+        ]);
+
+        // Sesi B: berjalan.
+        $sessionB = Charge::create([
+            'user_id' => $this->authUser->id,
+            'vehicle_id' => $vehicle->id,
+            'date' => now()->toDateString(),
+            'is_finish_charging' => false,
+            'kWh' => 8,
+        ]);
+
+        // Selesaikan sesi A → boleh (menurunkan jumlah berjalan, bukan menambah).
+        $response = $this->putJson("/api/v1/charging-sessions/{$sessionA->id}", [
+            'is_finish_charging' => true,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.is_finish_charging', true);
+    }
 }
