@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\TesterController;
 use App\Http\Controllers\Api\V1\SavedStationController;
 use App\Http\Controllers\Api\V1\UserChargerLocationController;
 use App\Http\Controllers\Api\V1\VehicleController;
+use App\Http\Controllers\Api\V1\VehicleMarketController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +49,11 @@ Route::prefix('v1')->group(function () {
     Route::get('/spklu', [SpkluLocationController::class, 'index']);
     Route::get('/spklu/{id}', [SpkluLocationController::class, 'show']);
     Route::get('/meta/filters', [SpkluLocationController::class, 'metaFilters']);
+
+    // Data pasar kendaraan (sumber: import GAIKINDO) — publik, cache 24 jam
+    Route::get('/vehicle-market/summary', [VehicleMarketController::class, 'summary']);
+    Route::get('/vehicle-market/trend', [VehicleMarketController::class, 'trend']);
+    Route::get('/vehicle-market/top', [VehicleMarketController::class, 'top']);
 
     // Station reviews (Fase 1) — list & summary publik; eligibility/store/delete auth
     Route::get('/stations/{station}/reviews', [StationReviewController::class, 'index']);

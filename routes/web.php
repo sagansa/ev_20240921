@@ -30,12 +30,14 @@ Route::get('/admin/testers/export', [TesterExportController::class, 'csv'])
     ->middleware('auth:sanctum')
     ->name('admin.testers.export');
 
-// Verifikasi email via link sekali-tap (konvensi Laravel: {id}/{hash sha1 email}
-// + URL bertanda tangan). Publik — signature URL yang mengotentikasi, tanpa
-// session web, karena penerima adalah user aplikasi mobile yang belum login.
+// Verifikasi email via link sekali-tap bawaan Laravel (kontrak MustVerifyEmail):
+// notifikasi VerifyEmail membangun URL bertanda tangan atas nama route
+// 'verification.verify' ({id}/{hash sha1 email} + expires). Path dipertahankan
+// agar link dari email lama tetap sah. Publik — signature URL mengotentikasi,
+// tanpa session web, karena penerima adalah user aplikasi mobile yang belum login.
 Route::get('/email/verify-link/{id}/{hash}', [EmailLinkVerificationController::class, 'verify'])
     ->middleware(['signed', 'throttle:10,1'])
-    ->name('email.verify-link');
+    ->name('verification.verify');
 
 Route::get('/', [EvController::class, 'plnMap'])->name('home');
 

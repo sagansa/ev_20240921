@@ -3,58 +3,86 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\Controller;
-use App\Mail\EmailVerificationOtpMail;
-use App\Mail\PasswordResetOtpMail;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Password as PasswordBroker;
 use Spatie\Permission\Models\Role;
 
+/**
+ * Autentikasi email+password (versi app lama yang masih beredar di store).
+ *
+ * Verifikasi email memakai pipeline BAWAAN Laravel (kontrak MustVerifyEmail):
+ * register/resend → sendEmailVerificationNotification() → notifikasi standard
+ * VerifyEmail (queueable) → link bertanda tangan ke route web 'verification.verify'
+ * (EmailLinkVerificationController). Kontrak respons API dipertahankan identik
+ * dengan implementasi OTP lama agar app versi lama tetap kompatibel.
+ */
 class AuthController extends Controller
 {
     /**
-     * Masa berlaku kode OTP di cache (menit).
+     * Interval minimum antar pengiriman ulang email verifikasi (detik).
      */
-    private const OTP_EXPIRES_MINUTES = 10;
-
-    /**
-     * Interval minimum antar pengiriman ulang kode (detik).
-     */
-    private const OTP_RESEND_SECONDS = 60;
+    private const VERIFY_RESEND_SECONDS = 60;
 
     /**
      * Register a new user
      *
-     * User belum bisa login sebelum email diverifikasi via OTP (confirmVerification).
+     * User belum bisa login sebelum email diverifikasi (link di email).
+     * Email terdaftar tapi BELUM terverifikasi → kredensial diperbarui dan
+     * link dikirim ulang (menyembuhkan user yang macet karena email gagal
+     * terkirim pada percobaan pertama; dulunya terjebak error unique:users).
      */
     public function register(Request $request): JsonResponse
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'email' => ['required', 'string', 'email', 'max:255'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        // withTrashed: email yang soft-deleted juga tetap dianggap terdaftar,
+        // setara perilaku rule unique:users (unique index DB).
+        $existing = User::withTrashed()->where('email', $request->email)->first();
 
-        // Ensure default user role exists then assign
-        $defaultRole = Role::firstOrCreate(
-            ['name' => 'user', 'guard_name' => 'web']
-        );
-        $user->syncRoles([$defaultRole->name]);
+        if ($existing !== null) {
+            if ($existing->hasVerifiedEmail()) {
+                // Replika bentuk error validasi Laravel agar app lama tetap
+                // menampilkan pesan "email sudah dipakai" seperti sebelumnya.
+                return response()->json([
+                    'message' => 'The email has already been taken.',
+                    'errors' => ['email' => ['The email has already been taken.']],
+                ], 422);
+            }
 
-        $this->sendVerificationOtp($user);
+            $existing->update([
+                'name' => $request->name,
+                'password' => Hash::make($request->password),
+            ]);
+            $user = $existing->refresh();
+        } else {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
+
+            // Ensure default user role exists then assign
+            $defaultRole = Role::firstOrCreate(
+                ['name' => 'user', 'guard_name' => 'web']
+            );
+            $user->syncRoles([$defaultRole->name]);
+        }
+
+        $sendError = $this->deliverVerificationLink($user);
+        if ($sendError !== null) {
+            return $sendError;
+        }
 
         return response()->json([
             'success' => true,
@@ -110,12 +138,12 @@ class AuthController extends Controller
     }
 
     /**
-     * Trigger pengiriman kode OTP verifikasi email (6 digit) ke email user.
+     * Kirim ulang email verifikasi (link sekali-tap bawaan Laravel).
      */
     public function verifyEmail(Request $request): JsonResponse
     {
         $request->validate([
-            'email' => 'required|email',
+            'email' => ['required', 'email'],
         ]);
 
         $user = User::where('email', $request->email)->first();
@@ -134,52 +162,40 @@ class AuthController extends Controller
             ]);
         }
 
-        return $this->sendVerificationOtp($user);
-    }
-
-    /**
-     * Konfirmasi kode OTP verifikasi email. Berhasil → tandai email_verified_at.
-     */
-    public function confirmVerification(Request $request): JsonResponse
-    {
-        $request->validate([
-            'email' => 'required|email',
-            'otp' => 'required|string|size:6',
-        ]);
-
-        $user = User::where('email', $request->email)->first();
-
-        if (! $user) {
+        $rateLimitKey = "verify:sent:{$user->email}";
+        if (Cache::has($rateLimitKey)) {
             return response()->json([
                 'success' => false,
-                'message' => 'User not found',
-            ], 404);
+                'message' => 'Mohon tunggu 1 menit sebelum mengirim ulang kode.',
+            ], 429);
         }
 
-        if ($user->hasVerifiedEmail()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Email sudah terverifikasi.',
-            ]);
+        $sendError = $this->deliverVerificationLink($user);
+        if ($sendError !== null) {
+            return $sendError;
         }
 
-        $cachedOtp = Cache::get("verify:{$request->email}");
-
-        if (! $cachedOtp || ! hash_equals((string) $cachedOtp, $request->otp)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Kode verifikasi salah atau sudah kedaluwarsa.',
-            ], 422);
-        }
-
-        $user->markEmailAsVerified();
-
-        Cache::forget("verify:{$request->email}");
+        // Rate key hanya terpasang SETELAH pengiriman sukses — percobaan yang
+        // gagal karena SMTP tidak mengunci user dari mencoba lagi.
+        Cache::put($rateLimitKey, true, now()->addSeconds(self::VERIFY_RESEND_SECONDS));
 
         return response()->json([
             'success' => true,
-            'message' => 'Email berhasil diverifikasi. Silakan masuk.',
+            'message' => 'Link verifikasi terkirim ke email Anda.',
         ]);
+    }
+
+    /**
+     * @deprecated Konfirmasi via kode OTP dihentikan — verifikasi memakai link
+     * sekali-tap dari email bawaan Laravel. Endpoint tetap ada supaya app lama
+     * menerima JSON terstruktur, bukan 404.
+     */
+    public function confirmVerification(Request $request): JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'Verifikasi melalui kode OTP sudah dihentikan. Silakan buka tautan verifikasi dari email Anda.',
+        ], 410);
     }
 
     /**
@@ -193,7 +209,7 @@ class AuthController extends Controller
     public function forgotPassword(Request $request): JsonResponse
     {
         $request->validate([
-            'email' => 'required|email',
+            'email' => ['required', 'email'],
         ]);
 
         $status = PasswordBroker::sendResetLink(['email' => $request->email]);
@@ -216,8 +232,8 @@ class AuthController extends Controller
     public function resetPassword(Request $request): JsonResponse
     {
         $request->validate([
-            'email' => 'required|email',
-            'otp' => 'required|string|size:6',
+            'email' => ['required', 'email'],
+            'otp' => ['required', 'string', 'size:6'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
@@ -291,50 +307,29 @@ class AuthController extends Controller
     }
 
     /**
-     * Generate & simpan kode OTP verifikasi email, lalu kirim via email.
-     * Rate-limited 1x per [OTP_RESEND_SECONDS] per alamat email.
+     * Kirim notifikasi verifikasi bawaan Laravel (VerifyEmail, queueable).
+     * Kegagalan transport email tidak dibiarkan jadi exception 500 yang tak
+     * terkendali — direkam di log dan dilaporkan sebagai 503 tanpa mengunci
+     * rate-limit, sehingga user bisa langsung mencoba ulang.
+     *
+     * @return JsonResponse|null null bila pengiriman sukses.
      */
-    private function sendVerificationOtp(User $user): JsonResponse
+    private function deliverVerificationLink(User $user): ?JsonResponse
     {
-        $rateLimitKey = "verify:sent:{$user->email}";
-        if (Cache::has($rateLimitKey)) {
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (\Throwable $e) {
+            Log::error('Gagal mengirim email verifikasi', [
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Mohon tunggu 1 menit sebelum mengirim ulang kode.',
-            ], 429);
+                'message' => 'Gagal mengirim email verifikasi. Silakan coba beberapa saat lagi.',
+            ], 503);
         }
 
-        $otp = $this->generateOtp();
-        Cache::put("verify:{$user->email}", $otp, now()->addMinutes(self::OTP_EXPIRES_MINUTES));
-        Cache::put($rateLimitKey, true, now()->addSeconds(self::OTP_RESEND_SECONDS));
-
-        // Link verifikasi sekali-tap (konvensi Laravel: hash sha1 email, URL
-        // bertanda tangan bawaan) — dipakai tanpa session web karena signature
-        // URL-nya sendiri yang mengotentikasi (lihat EmailLinkVerificationController).
-        $verificationUrl = URL::temporarySignedRoute(
-            'email.verify-link',
-            now()->addMinutes(60),
-            ['id' => $user->getKey(), 'hash' => sha1($user->getEmailForVerification())]
-        );
-
-        Mail::to($user->email)->send(new EmailVerificationOtpMail(
-            name: $user->name,
-            otp: $otp,
-            expiresInMinutes: self::OTP_EXPIRES_MINUTES,
-            verificationUrl: $verificationUrl,
-        ));
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Kode verifikasi terkirim ke email Anda.',
-        ]);
-    }
-
-    /**
-     * Kode OTP 6 digit.
-     */
-    private function generateOtp(): string
-    {
-        return (string) random_int(100000, 999999);
+        return null;
     }
 }

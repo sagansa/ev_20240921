@@ -18,6 +18,7 @@ class TypeVehicle extends Model
     protected $fillable = [
         'name',
         'model_vehicle_id',
+        'image',
         'type_charger',
         'battery_capacity',
     ];

@@ -6,6 +6,7 @@ use App\Models\Concerns\UsesDefaultConnectionWhenTesting;
 use BezhanSalleh\FilamentShield\Traits\HasPanelShield;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -19,7 +20,12 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements FilamentUser
+/**
+ * Mengimplementasikan kontrak bawaan Laravel MustVerifyEmail: verifikasi email
+ * berjalan lewat pipeline standard (notifikasi VerifyEmail → signed URL ke
+ * route web 'verification.verify') via sendEmailVerificationNotification().
+ */
+class User extends Authenticatable implements FilamentUser, MustVerifyEmailContract
 {
     use HasApiTokens;
     use HasFactory;

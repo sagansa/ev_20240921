@@ -18,7 +18,12 @@ class ModelVehicle extends Model
     protected $fillable = [
         'image',
         'name',
+        'powertrain',
         'brand_vehicle_id',
+    ];
+
+    protected $casts = [
+        'powertrain' => 'string',
     ];
 
     public function brandVehicle()

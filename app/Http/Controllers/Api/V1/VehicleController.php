@@ -8,6 +8,7 @@ use App\Models\Charge;
 use App\Models\ModelVehicle;
 use App\Models\TypeVehicle;
 use App\Models\Vehicle;
+use App\Models\VehicleSalesStat;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -46,21 +47,73 @@ class VehicleController extends Controller
 
     /**
      * Master dropdown options for mobile forms (brands, models, types).
+     *
+     * Additive (backward compatible): bila ada data penjualan (import GAIKINDO),
+     * brands/models mendapat sales_units (unit terjual tahun terbaru) untuk
+     * pengurutan picker popularitas, dan models mendapat powertrain (BEV|PHEV|HEV|ICE).
      */
     public function options(): JsonResponse
     {
         $brands = BrandVehicle::select('id', 'name', 'image')->orderBy('name')->get();
-        $models = ModelVehicle::select('id', 'brand_vehicle_id', 'name', 'image')->orderBy('name')->get();
+        $models = ModelVehicle::select('id', 'brand_vehicle_id', 'name', 'image', 'powertrain')->orderBy('name')->get();
         $types = TypeVehicle::select('id', 'model_vehicle_id', 'name', 'battery_capacity')->orderBy('name')->get();
+
+        [$brandSales, $modelSales] = $this->latestYearSales();
 
         return response()->json([
             'success' => true,
             'data' => [
-                'brands' => $brands,
-                'models' => $models,
+                'brands' => $brands->map(fn (BrandVehicle $b) => [
+                    'id' => $b->id,
+                    'name' => $b->name,
+                    'image' => $b->image,
+                    'sales_units' => (int) ($brandSales[$b->id] ?? 0),
+                ]),
+                'models' => $models->map(fn (ModelVehicle $m) => [
+                    'id' => $m->id,
+                    'brand_vehicle_id' => $m->brand_vehicle_id,
+                    'name' => $m->name,
+                    'image' => $m->image,
+                    'powertrain' => $m->powertrain,
+                    'sales_units' => (int) ($modelSales[$m->id] ?? 0),
+                ]),
                 'types' => $types,
             ],
         ]);
+    }
+
+    /**
+     * Unit terjual tahun data terbaru per brand & model (katalog match).
+     * Hanya dari import terbaru per tahun (scopeLatestImports).
+     *
+     * @return array{0: \Illuminate\Support\Collection<int, int>, 1: \Illuminate\Support\Collection<int, int>}
+     */
+    protected function latestYearSales(): array
+    {
+        $latestYear = VehicleSalesStat::query()->max('year');
+        if ($latestYear === null) {
+            return [collect(), collect()];
+        }
+
+        $brandSales = VehicleSalesStat::query()
+            ->latestImports()
+            ->whereNull('month')
+            ->where('year', $latestYear)
+            ->whereNotNull('brand_vehicle_id')
+            ->selectRaw('brand_vehicle_id, SUM(units) as total')
+            ->groupBy('brand_vehicle_id')
+            ->pluck('total', 'brand_vehicle_id');
+
+        $modelSales = VehicleSalesStat::query()
+            ->latestImports()
+            ->whereNull('month')
+            ->where('year', $latestYear)
+            ->whereNotNull('model_vehicle_id')
+            ->selectRaw('model_vehicle_id, SUM(units) as total')
+            ->groupBy('model_vehicle_id')
+            ->pluck('total', 'model_vehicle_id');
+
+        return [$brandSales, $modelSales];
     }
 
     /**

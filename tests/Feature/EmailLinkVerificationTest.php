@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Mail\EmailVerificationOtpMail;
 use App\Models\User;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Feature\Api\ApiTestCase;
@@ -12,12 +12,13 @@ use Tests\Feature\Api\ApiTestCase;
 /**
  * Verifikasi email via link sekali-tap (gaya Laravel signed URL) —
  * GET /email/verify-link/{id}/{hash} (publik, middleware signed).
+ * Route bernama 'verification.verify' sesuai konvensi notifikasi VerifyEmail.
  */
 class EmailLinkVerificationTest extends ApiTestCase
 {
     private function signedUrl(?User $user, ?int $id = null, ?string $hash = null): string
     {
-        return URL::temporarySignedRoute('email.verify-link', now()->addHour(), [
+        return URL::temporarySignedRoute('verification.verify', now()->addHour(), [
             'id' => $id ?? $user->getKey(),
             'hash' => $hash ?? sha1($user->getEmailForVerification()),
         ]);
@@ -81,7 +82,7 @@ class EmailLinkVerificationTest extends ApiTestCase
 
     public function test_register_email_contains_one_tap_link(): void
     {
-        Mail::fake();
+        Notification::fake();
 
         $email = uniqid('tester') . '@example.com';
 
@@ -92,9 +93,12 @@ class EmailLinkVerificationTest extends ApiTestCase
             'password_confirmation' => 'Password123!',
         ])->assertStatus(201);
 
-        Mail::assertSent(EmailVerificationOtpMail::class, function (EmailVerificationOtpMail $mail) {
-            return $mail->verificationUrl !== null
-                && str_contains($mail->verificationUrl, '/email/verify-link/');
+        $user = User::where('email', $email)->first();
+
+        Notification::assertSentTo($user, VerifyEmail::class, function (VerifyEmail $notification) use ($user) {
+            $url = $notification->toMail($user)->actionUrl ?? '';
+
+            return str_contains($url, '/email/verify-link/');
         });
     }
 }

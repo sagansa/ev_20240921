@@ -1,0 +1,317 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\BrandVehicle;
+use App\Models\ModelVehicle;
+use App\Models\TypeVehicle;
+
+/**
+ * Matcher raw_brand/raw_model dari file GAIKINDO ke katalog brand_vehicles /
+ * model_vehicles. READ-ONLY terhadap katalog existing (tidak pernah mengubah/
+ * menghapus); brand/model baru di-auto-create mengikuti struktur existing.
+ * Model BEV baru dengan kWh diketahui mendapat satu type_vehicles default
+ * agar auto-fill "Baterai kWh" di form kendaraan mobile langsung berfungsi.
+ */
+class VehicleSalesMatcher
+{
+    /** @var array<string, int> cache nama ternormalisasi brand → id */
+    protected array $brandCache = [];
+
+    /** @var array<int, array<string, array{model: ModelVehicle, norm: string, nospace: string, score: int}>> */
+    protected array $modelCacheByBrand = [];
+
+    /** @var array<string, string> alias nama brand hasil normalisasi → nama kanonik ternormalisasi */
+    protected const BRAND_ALIASES = [
+        'HYUNDAI HMID' => 'HYUNDAI',
+        'HYUNDAI HMID INDONESIA' => 'HYUNDAI',
+        'MORRIS GARAGE' => 'MG',
+        'MG MOTOR' => 'MG',
+        'MG MOTOR INDONESIA' => 'MG',
+        'MERCEDES BENZ PC' => 'MERCEDES BENZ',
+        'MERCEDES BENZ CV' => 'MERCEDES BENZ',
+        'MITSUBISHI MOTORS' => 'MITSUBISHI',
+        'MITSUBISHI MOTORS INDONESIA' => 'MITSUBISHI',
+        'SUZUKI INDOMOBIL' => 'SUZUKI',
+        'SUZUKI INDOMOBIL SALES' => 'SUZUKI',
+        'TOYOTA TOYOTA' => 'TOYOTA',
+        'PT TOYOTA' => 'TOYOTA',
+        'VOLVO CARS' => 'VOLVO',
+    ];
+
+    /**
+     * Alias berbasis "mengandung" (urutan = spesifik dulu) untuk varian nama
+     * brand GAIKINDO yang tidak tercakup exact alias, mis. "MERCEDES BENZ PC (KPC)".
+     */
+    protected const BRAND_CONTAINS_ALIASES = [
+        'MITSUBISHI FUSO' => 'MITSUBISHI FUSO',
+        'M FUSO' => 'MITSUBISHI FUSO',
+        'MORRIS GARAGE' => 'MG',
+        'MERCEDES' => 'MERCEDES BENZ',
+        'HYUNDAI' => 'HYUNDAI',
+        'VOLVO' => 'VOLVO',
+        'MITSUBISHI' => 'MITSUBISHI',
+        'SUZUKI' => 'SUZUKI',
+        'TOYOTA' => 'TOYOTA',
+    ];
+
+    /** Alias → nama tampilan kanonik saat brand baru harus dibuat. */
+    protected const CANONICAL_DISPLAY = [
+        'HYUNDAI' => 'Hyundai',
+        'MG' => 'MG',
+        'MERCEDES BENZ' => 'Mercedes-Benz',
+        'MITSUBISHI' => 'Mitsubishi',
+        'MITSUBISHI FUSO' => 'Mitsubishi Fuso',
+        'SUZUKI' => 'Suzuki',
+        'TOYOTA' => 'Toyota',
+        'VOLVO' => 'Volvo',
+        'BMW' => 'BMW',
+        'GWM' => 'GWM',
+        'BAIC' => 'BAIC',
+        'UD TRUCKS' => 'UD Trucks',
+        'DFSK' => 'DFSK',
+        'MAXUS' => 'MAXUS',
+        'AION' => 'AION',
+        'NETA' => 'NETA',
+        'XPENG' => 'XPENG',
+    ];
+
+    /** Akronim yang tetap huruf besar saat title-case nama baru. */
+    protected const UPPER_WORDS = ['EV', 'BEV', 'PHEV', 'HEV', 'SUV', 'MPV', 'GT', 'DC', 'AC', 'PRO', 'MAX', 'MG', 'BYD', 'DNA', 'UT', 'PK', 'HD', 'X', 'S', 'E', 'V'];
+
+    protected int $createdBrands = 0;
+    protected int $createdModels = 0;
+    protected int $createdTypes = 0;
+
+    /** @var array<int> model_vehicle_id yang diklasifikasi BEV pada import ini */
+    protected array $bevModelIds = [];
+
+    /**
+     * @return array{brand_vehicle_id: int|null, model_vehicle_id: int|null,
+     *               brand_created: bool, model_created: bool, battery_kwh: float|null}
+     */
+    public function match(string $rawBrand, string $rawModel, ?float $batteryKwh = null): array
+    {
+        $brandCreated = false;
+        $modelCreated = false;
+
+        $brandId = $this->resolveBrand($rawBrand, $brandCreated);
+        $modelId = null;
+
+        if ($brandId !== null) {
+            $modelId = $this->resolveModel($brandId, $rawModel, $batteryKwh, $modelCreated);
+        }
+
+        return [
+            'brand_vehicle_id' => $brandId,
+            'model_vehicle_id' => $modelId,
+            'brand_created' => $brandCreated,
+            'model_created' => $modelCreated,
+            'battery_kwh' => $batteryKwh,
+        ];
+    }
+
+    /** Catat model sebagai BEV (untuk upgrade powertrain ICE → BEV di akhir import). */
+    public function markBevModel(?int $modelId): void
+    {
+        if ($modelId !== null) {
+            $this->bevModelIds[$modelId] = $modelId;
+        }
+    }
+
+    /**
+     * Upgrade powertrain model yang terdeteksi BEV. Tidak pernah downgrade
+     * (BEV tidak pernah diubah balik jadi ICE oleh import).
+     */
+    public function applyPowertrainUpgrade(): int
+    {
+        if ($this->bevModelIds === []) {
+            return 0;
+        }
+
+        return ModelVehicle::whereIn('id', array_values($this->bevModelIds))
+            ->where(function ($q) {
+                $q->whereNull('powertrain')->orWhere('powertrain', '!=', 'BEV');
+            })
+            ->update(['powertrain' => 'BEV']);
+    }
+
+    public function summary(): array
+    {
+        return [
+            'created_brands' => $this->createdBrands,
+            'created_models' => $this->createdModels,
+            'created_types' => $this->createdTypes,
+            'bev_models' => count($this->bevModelIds),
+        ];
+    }
+
+    /** Normalisasi nama brand ke kunci kanonik (exact alias, lalu contains alias). */
+    protected function canonicalBrandKey(string $norm): string
+    {
+        if (isset(self::BRAND_ALIASES[$norm])) {
+            return self::BRAND_ALIASES[$norm];
+        }
+        foreach (self::BRAND_CONTAINS_ALIASES as $needle => $canonical) {
+            if (str_contains($norm, $needle)) {
+                return $canonical;
+            }
+        }
+
+        return $norm;
+    }
+
+    protected function resolveBrand(string $rawBrand, bool &$created): ?int
+    {
+        $norm = $this->normalize($rawBrand);
+        if ($norm === '') {
+            return null;
+        }
+
+        $norm = $this->canonicalBrandKey($norm);
+
+        if ($this->brandCache === []) {
+            $this->brandCache = ['__loaded__' => 0];
+            BrandVehicle::query()->chunk(500, function ($brands) {
+                foreach ($brands as $brand) {
+                    $key = $this->canonicalBrandKey($this->normalize($brand->name));
+                    $this->brandCache[$key] ??= $brand->id;
+                }
+            });
+            unset($this->brandCache['__loaded__']);
+        }
+
+        if (isset($this->brandCache[$norm])) {
+            return $this->brandCache[$norm];
+        }
+
+        $brand = BrandVehicle::create([
+            'name' => self::CANONICAL_DISPLAY[$norm] ?? $this->prettyName($rawBrand),
+        ]);
+        $this->brandCache[$norm] = $brand->id;
+        $this->createdBrands++;
+
+        $created = true;
+
+        return $brand->id;
+    }
+
+    protected function resolveModel(int $brandId, string $rawModel, ?float $batteryKwh, bool &$created): ?int
+    {
+        $norm = $this->normalize($rawModel);
+        if ($norm === '') {
+            return null;
+        }
+
+        if (! isset($this->modelCacheByBrand[$brandId])) {
+            $this->modelCacheByBrand[$brandId] = [];
+            ModelVehicle::where('brand_vehicle_id', $brandId)
+                ->chunk(500, function ($models) use ($brandId) {
+                    foreach ($models as $model) {
+                        $mNorm = $this->normalize($model->name);
+                        $this->modelCacheByBrand[$brandId][] = [
+                            'model' => $model,
+                            'norm' => $mNorm,
+                            'nospace' => preg_replace('/\s+/', '', $mNorm),
+                        ];
+                    }
+                });
+        }
+
+        $best = null;
+        $bestScore = 0;
+        $nospace = preg_replace('/\s+/', '', $norm);
+
+        foreach ($this->modelCacheByBrand[$brandId] as $entry) {
+            $score = 0;
+            if ($entry['norm'] === $norm) {
+                $score = 100;
+            } elseif ($entry['nospace'] === $nospace && $nospace !== '') {
+                $score = 90;
+            } elseif (str_starts_with($norm, $entry['norm'] . ' ') || str_starts_with($entry['norm'], $norm . ' ')) {
+                // "ATTO 1 DYNAMIC" vs "ATTO 1" — raw GAIKINDO memuat varian.
+                $score = min(mb_strlen($entry['norm']), mb_strlen($norm)) >= 4 ? 70 : 0;
+            } elseif (str_contains($nospace, $entry['nospace']) || str_contains($entry['nospace'], $nospace)) {
+                // sekunder: "BINGUOEV" vs "BINGUO EV"
+                $score = min(mb_strlen($entry['nospace']), mb_strlen($nospace)) >= 5 ? 50 : 0;
+            }
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best = $entry['model'];
+            }
+        }
+
+        if ($best !== null) {
+            return $best->id;
+        }
+
+        $model = ModelVehicle::create([
+            'brand_vehicle_id' => $brandId,
+            'name' => $this->prettyName($rawModel),
+            'powertrain' => 'ICE', // dikoreksi oleh applyPowertrainUpgrade bila BEV
+        ]);
+        $this->modelCacheByBrand[$brandId][] = [
+            'model' => $model,
+            'norm' => $norm,
+            'nospace' => $nospace,
+        ];
+        $this->createdModels++;
+        $created = true;
+
+        // Satu type default agar auto-fill baterai mobile berfungsi; hanya untuk
+        // model baru — katalog existing tidak disentuh.
+        if ($batteryKwh !== null && $batteryKwh > 0) {
+            TypeVehicle::create([
+                'model_vehicle_id' => $model->id,
+                'name' => 'Standar',
+                'type_charger' => [], // json NOT NULL di skema existing
+                'battery_capacity' => $batteryKwh,
+            ]);
+            $this->createdTypes++;
+        }
+
+        return $model->id;
+    }
+
+    /** Upper-case, buang newline, collapse spasi. */
+    public function normalize(string $value): string
+    {
+        $value = preg_replace('/[\r\n]+/', ' ', trim($value)) ?? '';
+        $value = preg_replace('/\s+/', ' ', $value) ?? '';
+
+        return mb_strtoupper($value);
+    }
+
+    /** Title-case untuk nama katalog baru, akronim tetap besar. */
+    protected function prettyName(string $raw): string
+    {
+        $clean = preg_replace('/[\r\n]+/', ' ', trim($raw)) ?? '';
+        $clean = preg_replace('/\s+/', ' ', $clean) ?? '';
+
+        $words = explode(' ', $clean);
+        $out = [];
+        foreach ($words as $word) {
+            $upper = mb_strtoupper($word);
+            $out[] = in_array($upper, self::UPPER_WORDS, true) ? $upper : mb_convert_case($word, MB_CASE_TITLE, 'UTF-8');
+        }
+
+        return implode(' ', $out);
+    }
+
+    /** Ekstraksi kWh dari kolom TANK, mis. "51.8 kWh" → 51.8. */
+    public static function extractKwh(?string $tank): ?float
+    {
+        if ($tank === null || $tank === '') {
+            return null;
+        }
+
+        if (preg_match('/(\d+(?:[.,]\d+)?)\s*kwh/i', $tank, $m)) {
+            $kwh = (float) str_replace(',', '.', $m[1]);
+
+            return $kwh > 0 && $kwh <= 300 ? $kwh : null;
+        }
+
+        return null;
+    }
+}
