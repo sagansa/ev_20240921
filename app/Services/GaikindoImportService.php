@@ -79,6 +79,18 @@ class GaikindoImportService
             throw new \InvalidArgumentException("File tidak ditemukan: {$filePath}");
         }
 
+        // Guard environment: lock sudah memuat paket, tapi server yang belum
+        // menjalankan composer install (atau install-nya gagal karena ekstensi)
+        // akan melempar "Class IOFactory not found" yang membingungkan.
+        if (! class_exists(\PhpOffice\PhpSpreadsheet\IOFactory::class)) {
+            throw new \RuntimeException(
+                'Paket phpoffice/phpspreadsheet belum terpasang di server ini. '
+                .'Jalankan: composer install --no-dev --optimize-autoloader  '
+                .'(butuh PHP >= 8.2 dan ekstensi ext-gd, ext-zip, ext-xml, ext-mbstring), '
+                .'lalu php artisan optimize:clear.'
+            );
+        }
+
         $this->importYear = $year ?? $this->detectYear($filePath);
         $this->matcher = new VehicleSalesMatcher;
 
@@ -161,6 +173,23 @@ class GaikindoImportService
             $warnings[] = sprintf('Coverage %.1f%% < 90%% — sebagian blok model kemungkinan merged/tidak terbaca.', $coverage * 100);
         }
 
+        // Deteksi kontaminasi kolom brand (artefak konversi PDF→Excel: potongan
+        // section/kategorisasi ikut menjadi raw_brand). Data seperti ini membuat
+        // agregat powertrain menyesatkan meski coverage tampak bagus.
+        $dirtyBrands = collect($parsedRows)
+            ->filter(fn ($row) => str_contains($row['brand'], "\n")
+                || preg_match('/CC\s*[<≤>]|^[A-Z]{1,2}\d|\d{1,3}[.,]\d{3}/', $this->matcher->normalize($row['brand'])))
+            ->count();
+        if ($dirtyBrands > max(10, intdiv(count($parsedRows), 20))) {
+            $status = 'partial';
+            $warnings[] = sprintf(
+                '%d/%d baris memiliki raw_brand tercemar artefak konversi (potongan segmen/angka). '
+                .'File kemungkinan hasil konversi PDF→Excel yang tidak faithful pada level baris.',
+                $dirtyBrands,
+                count($parsedRows),
+            );
+        }
+
         return DB::connection($this->connectionName())->transaction(function () use ($filePath, $source, $parsedRows, $official, $coverage, $warnings, $sheetSummaries, $status, $periodStart, $periodEnd, $parsedTotal, $officialTotal) {
             $import = SalesImport::create([
                 'file_name' => basename($filePath),
@@ -217,7 +246,10 @@ class GaikindoImportService
     {
         $headers = $this->findHeaders($data);
         if ($headers === []) {
-            return null; // bukan sheet tabel penjualan bulanan
+            // Buku cetak terbaru kadang menaruh rekap resmi pada sheet TANPA
+            // kolom bulan — sheet seperti ini tetap dipindai khusus rekap,
+            // bukan dibuang begitu saja.
+            return ['rows' => [], 'official' => $this->scanOfficialRowsWithoutBlocks($data)];
         }
 
         $rows = [];
@@ -461,7 +493,7 @@ class GaikindoImportService
 
         for ($r = $fromRow; $r <= $toRow; $r++) {
             $label = $this->rowLabel($data, $r, $leftmostCol);
-            if ($label === '') {
+            if ($label === '' ) {
                 continue;
             }
 
@@ -477,37 +509,172 @@ class GaikindoImportService
                 continue;
             }
 
-            $months = [];
-            foreach ($header['months'] as $month => $col) {
-                $months[$month] = $this->parseUnits($this->cell($data, $r, $col));
+            $candidate = $this->captureOfficialFromColumns($data, $header, $r);
+            if ($candidate === null) {
+                // Layout rekap GAIKINDO: label di satu baris, angka di baris berikutnya.
+                $candidate = $this->captureOfficialFromColumns($data, $header, $r + 1);
             }
-            $total = $header['total'] !== null
-                ? $this->parseUnits($this->cell($data, $r, $header['total']))
-                : array_sum($months);
-            if ($total == 0) {
-                $total = array_sum($months);
+            if ($candidate === null) {
+                // Layout buku cetak (2022–2026 baru): seluruh rekap berupa SATU
+                // sel gabungan raksasa — teks label + deretan angka ribuan-koma
+                // + persen. Diekstrak dari teks langsung.
+                $candidate = $this->captureOfficialFromMergedText($data, $r);
             }
-
-            // Layout rekap GAIKINDO: label di satu baris, angka di baris berikutnya.
-            if ($total == 0 && array_sum($months) == 0) {
-                foreach ($header['months'] as $month => $col) {
-                    $months[$month] = $this->parseUnits($this->cell($data, $r + 1, $col));
-                }
-                $total = $header['total'] !== null
-                    ? $this->parseUnits($this->cell($data, $r + 1, $header['total']))
-                    : array_sum($months);
-                if ($total == 0) {
-                    $total = array_sum($months);
-                }
-            }
-            if ($total == 0 && array_sum($months) == 0) {
-                continue; // label cocok tapi tanpa angka (bukan baris rekap)
+            if ($candidate === null) {
+                continue; // label cocok tapi tanpa angka yang bisa dibaca
             }
 
-            $official[$type] = ['label' => mb_substr($label, 0, 80), 'total' => $total, 'months' => $months];
+            $official[$type] = ['label' => mb_substr($label, 0, 80)] + $candidate;
         }
 
         return $official;
+    }
+
+    /**
+     * Scan rekap resmi pada sheet TANPA kolom bulan (sheet rekap tersendiri di
+     * buku cetak terbaru). Label dideteksi dari gabungan sel seluruh baris,
+     * angka dari ekstraksi teks sel gabungan.
+     *
+     * @return array<string, array{label: string, total: int, months: array<int, int>}>
+     */
+    protected function scanOfficialRowsWithoutBlocks(array $data): array
+    {
+        $official = [];
+
+        foreach ($data as $rowRef => $row) {
+            $r = is_int($rowRef) ? $rowRef : (int) filter_var($rowRef, FILTER_SANITIZE_NUMBER_INT);
+            if ($r < 1) {
+                continue;
+            }
+
+            $fullLabel = trim(preg_replace('/\s+/', ' ', implode(' ', array_map('strval', $row))) ?? '');
+            if ($fullLabel === '') {
+                continue;
+            }
+
+            $type = null;
+            if (preg_match(self::OFFICIAL_GRAND, $fullLabel)) {
+                $type = 'grand';
+            } elseif (preg_match(self::OFFICIAL_PASSENGER, $fullLabel) && ! str_contains(mb_strtoupper($fullLabel), 'COMMERCIAL')) {
+                $type = 'passenger';
+            } elseif (preg_match(self::OFFICIAL_COMMERCIAL, $fullLabel)) {
+                $type = 'commercial';
+            }
+            if ($type === null || isset($official[$type])) {
+                continue;
+            }
+
+            $candidate = $this->captureOfficialFromMergedText($data, $r)
+                ?: $this->captureOfficialFromMergedText($data, $r + 1);
+            if ($candidate === null) {
+                continue;
+            }
+
+            $official[$type] = ['label' => mb_substr($fullLabel, 0, 80)] + $candidate;
+        }
+
+        return $official;
+    }
+
+    /**
+     * Baca angka rekap per-kolom (layout klasik); null bila semuanya nol/kosong.
+     *
+     * @param array{row: int, months: array<int, int>, total: ?int, ...} $header
+     *
+     * @return array{total: int, months: array<int, int>}|null
+     */
+    protected function captureOfficialFromColumns(array $data, array $header, int $r): ?array
+    {
+        $months = [];
+        foreach ($header['months'] as $month => $col) {
+            $months[$month] = $this->parseUnits($this->cell($data, $r, $col));
+        }
+        $total = $header['total'] !== null
+            ? $this->parseUnits($this->cell($data, $r, $header['total']))
+            : array_sum($months);
+        if ($total == 0) {
+            $total = array_sum($months);
+        }
+        if ($total == 0 && array_sum($months) == 0) {
+            return null;
+        }
+
+        return ['total' => $total, 'months' => $months];
+    }
+
+    /**
+     * Ekstraksi baris rekap dari SEL GABUNGAN raksasa. Tiga varian nyata:
+     *   1) bulanan(12/7)+total+kumulatif — "… 84,149 … 105,354 1,048,040 …"
+     *   2) total-tahunan tunggal — P-cell "1.005.802\n100%" (kasus 2023)
+     *   3) YTD parsial dengan dash pengisi — "… 81,115 - - - - - 517.742 …"
+     * Algoritma: persen dibuang; token numerik dipindai berurutan; batas
+     * total = token pertama (indeks ≥4) yang nilainya ≥ jumlah semua token
+     * sebelumnya (toleransi pembulatan 2%). Singleton → total-only.
+     *
+     * @return array{total: int, months: array<int, int>}|null
+     */
+    protected function captureOfficialFromMergedText(array $data, int $r): ?array
+    {
+        foreach ([$r, $r + 1, $r - 1] as $rr) {
+            $row = $data[$rr] ?? [];
+            $parts = [];
+            foreach ($row as $value) {
+                $sv = trim((string) $value);
+                if ($sv !== '') {
+                    $parts[] = $sv;
+                }
+            }
+            $text = implode(' ', $parts);
+            $text = preg_replace('/\d+\s*%/', '', $text) ?? '';
+            // Terima dua gaya penulisan: ber-grup ribuan (84,149 / 84.149)
+            // maupun angka panjang polos tanpa pemisah.
+            if (! preg_match('/\d{1,3}(?:[.,]\d{3})+/', $text) && ! preg_match('/\d{5,}/', $text)) {
+                continue;
+            }
+
+            preg_match_all('/\d{1,3}(?:[.,]\d{3})+|\d{4,}/', $text, $matches);
+            $values = array_map(fn ($token) => (int) preg_replace('/[.,]/', '', $token), $matches[0]);
+            if ($values === []) {
+                continue;
+            }
+
+            // Varian singleton: hanya satu angka ⇒ itu total tahunan.
+            if (count($values) === 1) {
+                $total = $values[0];
+
+                return ($total >= 1000 && $total <= 50_000_000)
+                    ? ['total' => $total, 'months' => []]
+                    : null;
+            }
+
+            // Cari batas total: token pertama ≥ running-sum sebelumnya (2% bawah).
+            $sumBefore = 0;
+            $totalIndex = null;
+            foreach ($values as $i => $value) {
+                if ($i >= 4 && $sumBefore > 0 && $value >= $sumBefore - intdiv($sumBefore, 50)) {
+                    $totalIndex = $i;
+                    break;
+                }
+                $sumBefore += $value;
+            }
+            if ($totalIndex === null || $totalIndex < 4) {
+                continue;
+            }
+
+            $total = $values[$totalIndex];
+            if ($total < 1000 || $total > 50_000_000) {
+                continue;
+            }
+
+            $months = [];
+            foreach (array_slice($values, 0, $totalIndex) as $i => $unit) {
+                $months[$i + 1] = $unit;
+            }
+
+            return ['total' => $total, 'months' => $months];
+        }
+
+        return null;
     }
 
     protected function matchSegment(string $label): ?string

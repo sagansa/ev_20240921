@@ -98,6 +98,36 @@ class GaikindoImportServiceTest extends TestCase
         $this->assertGreaterThan(0, $summary['stat_rows']);
     }
 
+    /**
+     * Layout buku cetak (file bersih GAIKINDO_YYYY.xlsx): baris rekap adalah
+     * SATU sel gabungan raksasa berisi teks + deretan angka ribuan-koma + %.
+     * Parser harus mengekstrak dari teks dengan konteks jumlah bulan.
+     */
+    public function test_import_rekap_sel_gabungan_terekstrak(): void
+    {
+        $file = $this->fixtureDir.'/wholesales_merged_recap.xlsx';
+        $rows = [
+            ['NO', 'BRAND', 'TYPE', 'CC', 'TANK', 'JAN', 'FEB', 'MAR', 'APR', 'TOTAL'],
+            ['SEDAN'],
+            [1, 'TOYOTA', 'Veloz 1.5 V HEV A/T', '1500', '45 L', 10.512, 20103, 5025, 1000, 36640],
+            [2, 'HONDA', 'Brio Satya E', '1200', '40 L', 500, 400, 300, 100, 1300],
+            [3, 'WULING', 'Air EV', '-', '', 400, 300, 200, 75, 975],
+            ['TOTAL', null, null, null, null, 11512, 20753, 5475, 1175, 38915],
+            [],
+            // Simulasi sel gabungan raksasa (nilai menempel dalam satu string).
+            ['PASSENGER CAR SALES TOTAL DOMESTIC SALES CUMULATIVE 12,512 20,753 5,475 1,175 42,465 11,512 32,265 37,740 44,485 100%'],
+        ];
+
+        $this->writeXlsx($file, 'Page 3 Table 1', $rows);
+
+        $summary = app(GaikindoImportService::class)->importFromFile($file, 2024);
+
+        $this->assertSame(42465, $summary['official_total']);
+        $this->assertSame('processed', $summary['status']);
+        $grand = $summary['official']['grand'];
+        $this->assertEquals([1 => 12512, 2 => 20753, 3 => 5475, 4 => 1175], $grand['months']);
+    }
+
     public function test_import_ditolak_bila_baris_resmi_tidak_ada(): void
     {
         $file = $this->fixtureDir.'/wholesales_no_official.xlsx';

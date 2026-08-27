@@ -3,18 +3,19 @@
 namespace App\Console\Commands;
 
 use App\Services\GaikindoImportService;
+use App\Services\GaikindoPdfImportService;
 use Illuminate\Console\Command;
 
 class ImportVehicleSales extends Command
 {
     protected $signature = 'vehicle-sales:import
-                            {file : Path ke file xlsx wholesales GAIKINDO}
+                            {file : Path ke file xlsx/pdf wholesales GAIKINDO}
                             {--year= : Tahun periode (default: dideteksi dari nama file)}
                             {--source=gaikindo : Sumber data}';
 
-    protected $description = 'Import file wholesales GAIKINDO (xlsx) ke sales_imports + vehicle_sales_stats, lalu fuzzy-match ke katalog brand/model/type kendaraan.';
+    protected $description = 'Import file wholesales GAIKINDO (xlsx native ATAU pdf asli) ke sales_imports + vehicle_sales_stats, lalu fuzzy-match ke katalog brand/model/type kendaraan.';
 
-    public function handle(GaikindoImportService $service): int
+    public function handle(GaikindoImportService $xlsxService): int
     {
         // xlsx GAIKINDO besar (ribuan baris × kolom) — naikkan memory CLI one-shot.
         ini_set('memory_limit', '512M');
@@ -28,10 +29,22 @@ class ImportVehicleSales extends Command
             return 1;
         }
 
-        $this->info('Mengimport: '.basename($filePath).( $year !== null ? " (tahun {$year})" : ''));
+        if (strtolower(pathinfo($filePath, PATHINFO_EXTENSION)) === 'pdf') {
+            // PDF cetak GAIKINDO: header bulan terjalin huruf-per-huruf antar
+            // sub-baris & grid vertikal tak kontinu → rekonstruksi faithful
+            // butuh parser font-metrik khusus (lihat spec & skrip v3 di
+            // scripts/gaikindo_pdf_rows.py). Sengaja ditolak agar undercount
+            // tidak masuk DB; gunakan Excel native GAIKINDO.
+            $this->error('Import PDF asli belum didukung: layout cetak berlapis menghasilkan data tidak reliable.');
+            $this->line('Gunakan file Excel native GAIKINDO (pola 3_GAIKINDO_wholesales_data_*.xlsx).');
+
+            return 1;
+        }
+
+        $this->info('Mengimport: '.basename($filePath).' (XLSX)'.($year !== null ? " (tahun {$year})" : ''));
 
         try {
-            $summary = $service->importFromFile($filePath, $year, (string) $this->option('source'));
+            $summary = $xlsxService->importFromFile($filePath, $year, (string) $this->option('source'));
         } catch (\Throwable $e) {
             $this->error('Import gagal: '.$e->getMessage());
 
