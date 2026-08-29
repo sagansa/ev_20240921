@@ -163,8 +163,9 @@ def main():
                             months[str(b["m"])] = None
                     if month_bounds:
                         last = month_bounds[-1]["hi"]
-                        ytd_seg = "".join(c["text"] for c in row["cells"] if c["x"] >= last).strip()
-                        ytd_seg = re.sub(r"[%\s]", "", ytd_seg)
+                        ytd_seg = "".join(c["text"] for c in row["cells"] if c["x"] >= last)
+                        # buang token persen BESERTA digitnya (kolom share)
+                        ytd_seg = re.sub(r"\d+\s*%", "", ytd_seg)
                         m = re.search(r"\d{1,3}(?:[.,]\d{3})+|\d+", ytd_seg)
                         ytd = int(re.sub(r"[.,]", "", m.group())) if m else None
                 if left_cells or months or ytd is not None:
