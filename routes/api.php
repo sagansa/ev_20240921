@@ -54,6 +54,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/vehicle-market/summary', [VehicleMarketController::class, 'summary']);
     Route::get('/vehicle-market/trend', [VehicleMarketController::class, 'trend']);
     Route::get('/vehicle-market/top', [VehicleMarketController::class, 'top']);
+    Route::get('/vehicle-market/catalog', [VehicleMarketController::class, 'catalog']);
 
     // Station reviews (Fase 1) — list & summary publik; eligibility/store/delete auth
     Route::get('/stations/{station}/reviews', [StationReviewController::class, 'index']);

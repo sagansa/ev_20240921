@@ -64,4 +64,17 @@ class VehicleMarketController extends Controller
             ),
         ]);
     }
+
+    /** GET /vehicle-market/catalog?year= — peta brand → model utk filter. */
+    public function catalog(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'year' => ['nullable', 'integer', 'min:2000', 'max:2100'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->market->catalog($validated['year'] ?? null),
+        ]);
+    }
 }

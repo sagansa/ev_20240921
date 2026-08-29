@@ -206,6 +206,41 @@ class VehicleMarketService
         return (int) ($found ?: VehicleSalesStat::query()->latestImports()->max('year'));
     }
 
+    /**
+     * Peta brand → model utk picker bertingkat layar Pasar EV (baris tahunan,
+     * scope satu tahun). Brand & model diurut units desc.
+     */
+    public function catalog(?int $year = null): array
+    {
+        $year ??= (int) VehicleSalesStat::query()->latestImports()->whereNull('month')->max('year');
+
+        return $this->cached("catalog:{$year}", function () use ($year) {
+            $rows = VehicleSalesStat::query()
+                ->latestImports()
+                ->whereNull('month')
+                ->where('year', $year)
+                ->selectRaw('raw_brand, raw_model, SUM(units) as units')
+                ->groupBy('raw_brand', 'raw_model')
+                ->orderBy('raw_brand')
+                ->orderByDesc('units')
+                ->get();
+
+            $brands = [];
+            foreach ($rows as $row) {
+                if (! isset($brands[$row->raw_brand])) {
+                    $brands[$row->raw_brand] = ['brand' => $row->raw_brand, 'units' => 0, 'models' => []];
+                }
+                $brands[$row->raw_brand]['units'] += (int) $row->units;
+                $brands[$row->raw_brand]['models'][] = ['model' => $row->raw_model, 'units' => (int) $row->units];
+            }
+
+            return [
+                'year' => $year,
+                'brands' => collect($brands)->sortByDesc('units')->values()->all(),
+            ];
+        });
+    }
+
     /** Naikkan versi cache — dipanggil importer setelah import baru. */
     public function flush(): void
     {
