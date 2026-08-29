@@ -75,9 +75,10 @@ class ImportVehicleSalesCsvTest extends TestCase
         $this->assertSame('TOYOTA', $jan->raw_brand);
         $this->assertSame('Agya 1.2 G AT', $jan->raw_model);
         $this->assertSame(2022, (int) $jan->year);
-        $this->assertNotNull($jan->brand_vehicle_id);
-        $this->assertNotNull($jan->model_vehicle_id);
-        $this->assertNotNull($jan->type_vehicle_id);
+        // ATURAN BEV-ONLY: baris ICE tidak membuat/menaut katalog.
+        $this->assertNull($jan->brand_vehicle_id);
+        $this->assertNull($jan->model_vehicle_id);
+        $this->assertNull($jan->type_vehicle_id);
         $this->assertSame('ICE', $jan->powertrain);
 
         $sep = VehicleSalesStat::query()->where('month', 9)->firstOrFail();
@@ -96,13 +97,12 @@ class ImportVehicleSalesCsvTest extends TestCase
             ->all();
         $this->assertSame([4, 13], $annualUnits);
 
-        $agyaType = TypeVehicle::query()->where('name', 'Agya 1.2 G AT')->firstOrFail();
-        $this->assertSame([], $agyaType->type_charger);
-        $this->assertSame('Agya', $agyaType->modelVehicle->name);
+        // Type hanya dibuat untuk baris BEV.
+        $this->assertSame(0, TypeVehicle::query()->where('name', 'Agya 1.2 G AT')->count());
+        $this->assertSame(1, TypeVehicle::count());
 
         $ioniqType = TypeVehicle::query()->where('name', 'Ioniq EV Prime')->firstOrFail();
         $this->assertSame('Ioniq', $ioniqType->modelVehicle->name);
-        $this->assertSame(2, TypeVehicle::count());
     }
 
     public function test_monthly_import_replaces_instead_of_duplicating(): void
@@ -134,7 +134,7 @@ class ImportVehicleSalesCsvTest extends TestCase
         $path = $this->writeCsv(
             ['BRAND', 'TYPE MODEL', 'CC', 'TRANS', 'FUEL', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC', 'TOTAL'],
             [
-                ['TOYOTA', 'All New Avanza 1.5 G AT', '1500', 'AT', 'G', '5', '', '', '', '', '', '', '', '', '', '', '', '5'],
+                ['BYD', 'All New Seal Premium', '', '', 'BEV', '5', '', '', '', '', '', '', '', '', '', '', '', '5'],
             ],
         );
 
@@ -143,17 +143,17 @@ class ImportVehicleSalesCsvTest extends TestCase
             '--year' => '2023',
         ])->assertSuccessful();
 
-        $model = ModelVehicle::query()->where('name', 'Avanza')->firstOrFail();
+        $model = ModelVehicle::query()->where('name', 'Seal')->firstOrFail();
 
         $type = TypeVehicle::query()
             ->where('model_vehicle_id', $model->id)
-            ->where('name', 'All New Avanza 1.5 G AT')
+            ->where('name', 'All New Seal Premium')
             ->firstOrFail();
 
         $stat = VehicleSalesStat::query()->whereNull('month')->firstOrFail();
         $this->assertSame($model->id, (int) $stat->model_vehicle_id);
         $this->assertSame($type->id, (int) $stat->type_vehicle_id);
-        $this->assertSame('All New Avanza 1.5 G AT', $stat->raw_model);
+        $this->assertSame('All New Seal Premium', $stat->raw_model);
         $this->assertSame(5, (int) $stat->units);
     }
 }
