@@ -25,6 +25,7 @@ class VehicleSalesStat extends Model
         'raw_model',
         'brand_vehicle_id',
         'model_vehicle_id',
+        'type_vehicle_id',
         'segment',
         'powertrain',
         'year',
