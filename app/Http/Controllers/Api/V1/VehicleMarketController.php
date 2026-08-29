@@ -77,4 +77,18 @@ class VehicleMarketController extends Controller
             'data' => $this->market->catalog($validated['year'] ?? null),
         ]);
     }
+
+    /** GET /vehicle-market/model-history?brand=&model= — histori tahunan model spesifik. */
+    public function modelHistory(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'brand' => ['required', 'string', 'max:100'],
+            'model' => ['required', 'string', 'max:100'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->market->modelHistory($validated['brand'], $validated['model']),
+        ]);
+    }
 }

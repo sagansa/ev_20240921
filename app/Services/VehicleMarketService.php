@@ -207,36 +207,107 @@ class VehicleMarketService
     }
 
     /**
-     * Peta brand → model utk picker bertingkat layar Pasar EV (baris tahunan,
-     * scope satu tahun). Brand & model diurut units desc.
+     * Peta brand → model khusus kendaraan listrik (BEV / PHEV) untuk filter & katalog.
+     * Brand diurutkan berdasarkan penjualan EV tahun sebelumnya (fallback tahun berjalan).
      */
     public function catalog(?int $year = null): array
     {
         $year ??= (int) VehicleSalesStat::query()->latestImports()->whereNull('month')->max('year');
+        $prevYear = $year - 1;
 
-        return $this->cached("catalog:{$year}", function () use ($year) {
+        return $this->cached("catalog:v3:{$year}", function () use ($year, $prevYear) {
+            // Hanya model & brand yang memiliki tipe EV (BEV/PHEV)
             $rows = VehicleSalesStat::query()
                 ->latestImports()
                 ->whereNull('month')
                 ->where('year', $year)
+                ->whereIn('powertrain', ['BEV', 'PHEV'])
                 ->selectRaw('raw_brand, raw_model, SUM(units) as units')
                 ->groupBy('raw_brand', 'raw_model')
                 ->orderBy('raw_brand')
                 ->orderByDesc('units')
                 ->get();
 
+            // Ambil penjualan tahun sebelumnya untuk pengurutan
+            $prevYearSales = VehicleSalesStat::query()
+                ->latestImports()
+                ->whereNull('month')
+                ->where('year', $prevYear)
+                ->whereIn('powertrain', ['BEV', 'PHEV'])
+                ->selectRaw('raw_brand, SUM(units) as units')
+                ->groupBy('raw_brand')
+                ->pluck('units', 'raw_brand')
+                ->map(fn ($u) => (int) $u)
+                ->all();
+
             $brands = [];
             foreach ($rows as $row) {
                 if (! isset($brands[$row->raw_brand])) {
-                    $brands[$row->raw_brand] = ['brand' => $row->raw_brand, 'units' => 0, 'models' => []];
+                    $brands[$row->raw_brand] = [
+                        'brand' => $row->raw_brand,
+                        'units' => 0,
+                        'prev_units' => $prevYearSales[$row->raw_brand] ?? 0,
+                        'models' => [],
+                    ];
                 }
                 $brands[$row->raw_brand]['units'] += (int) $row->units;
                 $brands[$row->raw_brand]['models'][] = ['model' => $row->raw_model, 'units' => (int) $row->units];
             }
 
+            // Urutkan brand berdasarkan penjualan tahun sebelumnya desc (fallback penjualan tahun ini)
+            $sortedBrands = collect($brands)
+                ->sort(function ($a, $b) {
+                    if ($b['prev_units'] !== $a['prev_units']) {
+                        return $b['prev_units'] <=> $a['prev_units'];
+                    }
+                    return $b['units'] <=> $a['units'];
+                })
+                ->values()
+                ->all();
+
             return [
                 'year' => $year,
-                'brands' => collect($brands)->sortByDesc('units')->values()->all(),
+                'brands' => $sortedBrands,
+            ];
+        });
+    }
+
+    /**
+     * Histori penjualan per tahun untuk satu model kendaraan spesifik (brand + model),
+     * khusus powertrain EV (BEV / PHEV).
+     */
+    public function modelHistory(string $brand, string $model): array
+    {
+        $key = 'model-history:v2:' . rawurlencode($brand) . ':' . rawurlencode($model);
+
+        return $this->cached($key, function () use ($brand, $model) {
+            $rows = VehicleSalesStat::query()
+                ->latestImports()
+                ->whereNull('month')
+                ->where('raw_brand', $brand)
+                ->where('raw_model', $model)
+                ->whereIn('powertrain', ['BEV', 'PHEV'])
+                ->selectRaw('year, powertrain, SUM(units) as units')
+                ->groupBy('year', 'powertrain')
+                ->orderBy('year')
+                ->get();
+
+            $years = [];
+            foreach ($rows as $row) {
+                $years[] = [
+                    'year' => (int) $row->year,
+                    'powertrain' => $row->powertrain,
+                    'units' => (int) $row->units,
+                ];
+            }
+
+            $totalUnits = (int) $rows->sum('units');
+
+            return [
+                'brand' => $brand,
+                'model' => $model,
+                'total_units' => $totalUnits,
+                'years' => $years,
             ];
         });
     }

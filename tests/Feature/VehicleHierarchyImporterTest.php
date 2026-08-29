@@ -142,4 +142,80 @@ class VehicleHierarchyImporterTest extends TestCase
 
         $this->invokeRow('BYD', 'Sealion 7', 'Premium', 'GASOLINE');
     }
+
+    private function invokeClassifiedRow(
+        string $brand,
+        string $model,
+        ?string $category = null,
+        ?string $size = null,
+        string $type = '',
+    ): void {
+        $importer = new VehicleHierarchyImporter(
+            import: new Import(),
+            columnMap: [
+                'BRAND' => 'BRAND', 'MODEL' => 'MODEL', 'TYPE' => 'TYPE',
+                'POWERTRAIN' => 'POWERTRAIN', 'CATEGORY' => 'CATEGORY', 'SIZE' => 'SIZE',
+            ],
+            options: [],
+        );
+
+        ($importer)(array_filter([
+            'BRAND' => $brand,
+            'MODEL' => $model,
+            'TYPE' => $type,
+            'CATEGORY' => $category,
+            'SIZE' => $size,
+        ], fn ($v) => $v !== null && $v !== ''));
+    }
+
+    public function test_category_and_size_are_set_on_new_model(): void
+    {
+        $this->invokeClassifiedRow('TOYOTA', 'Avanza', 'mpv', 'small', '1.5 G');
+
+        $model = ModelVehicle::query()->where('name', 'Avanza')->firstOrFail();
+        $this->assertSame('MPV', $model->category);
+        $this->assertSame('Small', $model->size_class);
+    }
+
+    public function test_category_without_size_leaves_size_null(): void
+    {
+        $this->invokeClassifiedRow('SUZUKI', 'Jimny', 'off-road');
+
+        $model = ModelVehicle::query()->where('name', 'Jimny')->firstOrFail();
+        $this->assertSame('Off-Road', $model->category);
+        $this->assertNull($model->size_class);
+    }
+
+    public function test_category_overwrites_existing_model_classification(): void
+    {
+        $this->invokeClassifiedRow('HONDA', 'CR-V', 'MPV');
+        $this->invokeClassifiedRow('HONDA', 'CR-V', 'SUV', 'Medium');
+
+        $this->assertSame(1, ModelVehicle::count());
+        $this->assertSame('SUV', ModelVehicle::query()->value('category'));
+        $this->assertSame('Medium', ModelVehicle::query()->value('size_class'));
+    }
+
+    public function test_invalid_category_fails_the_row(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        // TYPE harus terisi — baris tanpa type selesai di resolveRecord
+        // sebelum validateData (perilaku Filament Importer).
+        $this->invokeClassifiedRow('TOYOTA', 'Avanza', 'Kapal Selam', null, '1.5 G');
+    }
+
+    public function test_size_without_sizable_category_fails_the_row(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->invokeClassifiedRow('SUZUKI', 'Jimny', 'Off-Road', 'Small');
+    }
+
+    public function test_size_without_category_fails_the_row(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->invokeClassifiedRow('SUZUKI', 'Jimny', null, 'Small');
+    }
 }

@@ -5,11 +5,13 @@ namespace App\Filament\Imports;
 use App\Models\BrandVehicle;
 use App\Models\ModelVehicle;
 use App\Models\TypeVehicle;
+use App\Support\VehicleCategories;
 use Filament\Actions\Imports\ImportColumn;
 use Filament\Actions\Imports\Importer;
 use Filament\Actions\Imports\Models\Import;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class VehicleHierarchyImporter extends Importer
@@ -33,6 +35,22 @@ class VehicleHierarchyImporter extends Importer
                 // Normalisasi dini agar rule `in:` kebal selisih huruf/spasi.
                 ->castStateUsing(fn (mixed $state): ?string => filled($state) ? strtoupper(trim((string) $state)) : null)
                 ->rules(['nullable', 'in:BEV,PHEV,HEV,ICE']),
+            ImportColumn::make('CATEGORY')
+                ->label('CATEGORY')
+                ->example('SUV')
+                // Valid → kanonik; invalid → diteruskan apa adanya agar rule
+                // `Rule::in` MENOLAK barisnya (jangan didiamkan jadi null).
+                ->castStateUsing(fn (mixed $state): ?string => filled($state)
+                    ? (VehicleCategories::normalizeCategory((string) $state) ?? trim((string) $state))
+                    : null)
+                ->rules(['nullable', Rule::in(VehicleCategories::CATEGORIES)]),
+            ImportColumn::make('SIZE')
+                ->label('SIZE')
+                ->example('Medium')
+                ->castStateUsing(fn (mixed $state): ?string => filled($state)
+                    ? (VehicleCategories::normalizeSize((string) $state) ?? trim((string) $state))
+                    : null)
+                ->rules(['nullable', Rule::in(VehicleCategories::SIZES)]),
             ImportColumn::make('TYPE')
                 ->label('TYPE')
                 ->rules(['max:255']),
@@ -47,10 +65,20 @@ class VehicleHierarchyImporter extends Importer
         $powertrain = filled($this->data['POWERTRAIN'] ?? null)
             ? strtoupper(trim((string) $this->data['POWERTRAIN']))
             : null;
+        $category = VehicleCategories::normalizeCategory($this->data['CATEGORY'] ?? null);
+        $sizeClass = VehicleCategories::normalizeSize($this->data['SIZE'] ?? null);
 
         if ($brandName === '' || $modelName === '') {
             throw ValidationException::withMessages([
                 'BRAND' => ['Kolom BRAND dan MODEL wajib terisi pada setiap baris.'],
+            ]);
+        }
+
+        // SIZE hanya bermakna untuk kategori ber-ukuran — kombinasi lain
+        // ditolak agar CSV tidak menyimpan data yang tidak akan pernah dipakai.
+        if ($sizeClass !== null && ($category === null || ! in_array($category, VehicleCategories::SIZABLE, true))) {
+            throw ValidationException::withMessages([
+                'SIZE' => ['SIZE hanya berlaku untuk kategori ber-ukuran ('.implode(', ', VehicleCategories::SIZABLE).').'],
             ]);
         }
 
@@ -65,19 +93,24 @@ class VehicleHierarchyImporter extends Importer
             ->whereRaw('LOWER(name) = ?', [Str::lower($modelName)])
             ->first();
 
+        // Klasifikasi level model — CSV adalah sumber kebenaran: hanya
+        // atribut yang disediakan CSV yang dibuat/diperbarui.
+        $modelAttributes = [
+            ...($powertrain !== null ? ['powertrain' => $powertrain] : []),
+            ...($category !== null ? ['category' => $category] : []),
+            ...($sizeClass !== null ? ['size_class' => $sizeClass] : []),
+        ];
+
         if ($model === null) {
             $model = ModelVehicle::query()->create([
                 'name' => $modelName,
                 'brand_vehicle_id' => $brand->getKey(),
-                // Kolom varchar(8) NOT NULL default 'ICE' — hanya dikirim bila
-                // CSV menyediakan POWERTRAIN, selain itu biarkan default DB.
-                ...($powertrain !== null ? ['powertrain' => $powertrain] : []),
+                // Kolom powertrain varchar(8) NOT NULL default 'ICE' — biarkan
+                // default DB bila CSV tidak menyediakan nilainya.
+                ...$modelAttributes,
             ]);
-        } elseif ($powertrain !== null && $model->powertrain !== $powertrain) {
-            // CSV adalah sumber kebenaran klasifikasi powertrain: nilai lama
-            // (termasuk default 'ICE' dari impor tanpa kolom ini) diperbarui.
-            $model->powertrain = $powertrain;
-            $model->save();
+        } elseif ($modelAttributes !== []) {
+            $model->fill($modelAttributes)->save();
         }
 
         if ($typeName === '') {
