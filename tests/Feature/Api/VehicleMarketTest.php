@@ -217,8 +217,10 @@ class VehicleMarketTest extends TestCase
         $brands = collect($res->json('data.brands'))->keyBy('brand');
         $this->assertEquals(12000, $brands['BYD']['units']);
         $this->assertSame('Atto 1', $brands['BYD']['models'][0]['model']);
-        // Brand diurut unit terbesar: LAIN (50000) di atas BYD (12000).
-        $this->assertSame('LAIN', $res->json('data.brands.0.brand'));
+        // Katalog BEV/PHEV-only: brand ICE murni (LAIN) tidak masuk; satu-
+        // satunya brand EV tersisa otomatis jadi urutan pertama.
+        $this->assertArrayNotHasKey('LAIN', $brands);
+        $this->assertSame('BYD', $res->json('data.brands.0.brand'));
     }
 
     public function test_catalog_tanpa_year_pakai_tahun_data_terbaru(): void
@@ -229,6 +231,7 @@ class VehicleMarketTest extends TestCase
 
         $brands = collect($res->json('data.brands'))->keyBy('brand');
         $this->assertEquals(6000, $brands['WULING']['units']);
-        $this->assertEquals(20000, $brands['TOYOTA']['units']);
+        // Katalog BEV/PHEV-only: TOYOTA (ICE murni) tidak ikut katalog.
+        $this->assertArrayNotHasKey('TOYOTA', $brands);
     }
 }
