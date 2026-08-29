@@ -22,7 +22,7 @@ class VehicleSalesMatcher
     protected array $modelCacheByBrand = [];
 
     /** @var array<string, string> alias nama brand hasil normalisasi → nama kanonik ternormalisasi */
-    protected const BRAND_ALIASES = [
+    public const BRAND_ALIASES = [
         'HYUNDAI HMID' => 'HYUNDAI',
         'HYUNDAI HMID INDONESIA' => 'HYUNDAI',
         'MORRIS GARAGE' => 'MG',
@@ -43,7 +43,7 @@ class VehicleSalesMatcher
      * Alias berbasis "mengandung" (urutan = spesifik dulu) untuk varian nama
      * brand GAIKINDO yang tidak tercakup exact alias, mis. "MERCEDES BENZ PC (KPC)".
      */
-    protected const BRAND_CONTAINS_ALIASES = [
+    public const BRAND_CONTAINS_ALIASES = [
         'MITSUBISHI FUSO' => 'MITSUBISHI FUSO',
         'M FUSO' => 'MITSUBISHI FUSO',
         'MORRIS GARAGE' => 'MG',
@@ -284,7 +284,7 @@ class VehicleSalesMatcher
     }
 
     /** Title-case untuk nama katalog baru, akronim tetap besar. */
-    protected function prettyName(string $raw): string
+    public function prettyName(string $raw): string
     {
         $clean = preg_replace('/[\r\n]+/', ' ', trim($raw)) ?? '';
         $clean = preg_replace('/\s+/', ' ', $clean) ?? '';
