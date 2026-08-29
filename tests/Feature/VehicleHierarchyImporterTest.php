@@ -38,6 +38,7 @@ class VehicleHierarchyImporterTest extends TestCase
         $this->assertSame('Premium', $type->name);
         $this->assertSame('AION UT', $type->modelVehicle->name);
         $this->assertSame('AION', $type->modelVehicle->brandVehicle->name);
+        $this->assertSame([], $type->type_charger);
     }
 
     public function test_matches_brand_case_insensitively_and_keeps_first_casing(): void
@@ -74,5 +75,28 @@ class VehicleHierarchyImporterTest extends TestCase
         $this->expectException(ValidationException::class);
 
         $this->invokeRow('', 'Sealion 7');
+    }
+
+    public function test_blank_model_is_rejected(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->invokeRow('BYD', '');
+    }
+
+    public function test_whitespace_only_inputs_are_rejected(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->invokeRow('   ', '   ');
+    }
+
+    public function test_reimport_with_different_type_casing_keeps_first_casing(): void
+    {
+        $this->invokeRow('AION', 'AION UT', 'Premium');
+        $this->invokeRow('AION', 'AION UT', 'PREMIUM');
+
+        $this->assertSame(1, TypeVehicle::count());
+        $this->assertSame('Premium', TypeVehicle::query()->value('name'));
     }
 }

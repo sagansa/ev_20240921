@@ -82,6 +82,12 @@ class VehicleHierarchyImporter extends Importer
 
     public function fillRecord(): void
     {
+        // Baris yang sudah cocok tidak boleh berubah (kapitalisasi pertama yang
+        // menang; nama manual dari admin tidak boleh tertimpa impor ulang).
+        if ($this->record->exists) {
+            return;
+        }
+
         // Nama kolom BRAND/MODEL bukan atribut TypeVehicle — hanya nama type
         // yang diisi; kolom lain (powertrain, type_charger, dst.) tidak disentuh.
         $typeName = trim((string) ($this->data['TYPE'] ?? ''));
