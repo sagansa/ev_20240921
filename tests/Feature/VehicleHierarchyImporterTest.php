@@ -15,15 +15,21 @@ class VehicleHierarchyImporterTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function invokeRow(string $brand, string $model, string $type = ''): void
+    private function invokeRow(string $brand, string $model, string $type = '', ?string $powertrain = null): void
     {
         $importer = new VehicleHierarchyImporter(
             import: new Import(),
-            columnMap: ['BRAND' => 'BRAND', 'MODEL' => 'MODEL', 'TYPE' => 'TYPE'],
+            columnMap: ['BRAND' => 'BRAND', 'MODEL' => 'MODEL', 'TYPE' => 'TYPE', 'POWERTRAIN' => 'POWERTRAIN'],
             options: [],
         );
 
-        ($importer)(['BRAND' => $brand, 'MODEL' => $model, 'TYPE' => $type]);
+        $row = ['BRAND' => $brand, 'MODEL' => $model, 'TYPE' => $type];
+
+        if ($powertrain !== null) {
+            $row['POWERTRAIN'] = $powertrain;
+        }
+
+        ($importer)($row);
     }
 
     public function test_creates_full_hierarchy_from_one_row(): void
@@ -98,5 +104,42 @@ class VehicleHierarchyImporterTest extends TestCase
 
         $this->assertSame(1, TypeVehicle::count());
         $this->assertSame('Premium', TypeVehicle::query()->value('name'));
+    }
+
+    public function test_powertrain_is_set_on_new_model(): void
+    {
+        $this->invokeRow('AION', 'AION UT', 'Premium', 'BEV');
+
+        $this->assertSame('BEV', ModelVehicle::query()->where('name', 'AION UT')->value('powertrain'));
+    }
+
+    public function test_missing_powertrain_falls_back_to_default(): void
+    {
+        $this->invokeRow('AION', 'AION ES');
+
+        $this->assertSame('ICE', ModelVehicle::query()->value('powertrain'));
+    }
+
+    public function test_powertrain_overwrites_existing_model_classification(): void
+    {
+        $this->invokeRow('AION', 'AION UT', 'Premium', 'ICE');
+        $this->invokeRow('AION', 'AION UT', 'Premium', 'BEV');
+
+        $this->assertSame(1, ModelVehicle::count());
+        $this->assertSame('BEV', ModelVehicle::query()->value('powertrain'));
+    }
+
+    public function test_lowercase_powertrain_is_normalized(): void
+    {
+        $this->invokeRow('BYD', 'Sealion 7', 'Premium', 'bev');
+
+        $this->assertSame('BEV', ModelVehicle::query()->value('powertrain'));
+    }
+
+    public function test_invalid_powertrain_fails_the_row(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->invokeRow('BYD', 'Sealion 7', 'Premium', 'GASOLINE');
     }
 }
