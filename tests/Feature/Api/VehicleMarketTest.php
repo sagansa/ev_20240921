@@ -139,4 +139,38 @@ class VehicleMarketTest extends TestCase
         $trendMonths = collect($this->getJson('/api/v1/vehicle-market/trend?year=2025')->json('data.months'));
         $this->assertCount(0, $trendMonths);
     }
+
+    public function test_trend_tanpa_year_pakai_tahun_data_bulanan_terbaru(): void
+    {
+        // Hapus import 2026 → tahun bulanan terbaru tinggal 2025. Default
+        // TIDAK boleh now()->year (tahun berjalan kosong = chart rusak).
+        SalesImport::where('year', 2026)->delete();
+
+        $res = $this->getJson('/api/v1/vehicle-market/trend');
+        $res->assertOk();
+        $this->assertEquals(2025, $res->json('data.year'));
+        $this->assertCount(12, $res->json('data.months'));
+    }
+
+    public function test_trend_filter_brand_dan_model(): void
+    {
+        $res = $this->getJson('/api/v1/vehicle-market/trend?year=2026&brand=WULING&model=Binguo');
+        $res->assertOk();
+
+        $months = collect($res->json('data.months'));
+        $this->assertCount(3, $months);
+        $this->assertEquals(2000, $months->firstWhere('month', 1)['bev_units']);
+        // market_total saat terfilter = hasil parse (2000), BUKAN total resmi
+        // nasional (30000) — angka resmi hanya berlaku utk scope nasional.
+        $this->assertEquals(2000, $months->firstWhere('month', 1)['market_total']);
+    }
+
+    public function test_trend_default_year_ikut_brand_filter(): void
+    {
+        // BYD hanya punya baris bulanan di 2025 → default = 2025.
+        $res = $this->getJson('/api/v1/vehicle-market/trend?brand=BYD');
+        $res->assertOk();
+        $this->assertEquals(2025, $res->json('data.year'));
+        $this->assertCount(12, $res->json('data.months'));
+    }
 }

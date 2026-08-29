@@ -79,18 +79,34 @@ class VehicleMarketService
         });
     }
 
-    public function trend(int $year): array
+    public function trend(?int $year = null, ?string $brand = null, ?string $model = null): array
     {
-        return $this->cached("trend:{$year}", function () use ($year) {
-            $monthly = VehicleSalesStat::query()
+        // Default: tahun terbaru yang BENAR-BENAR punya baris bulanan (di
+        // scope filter bila ada) — bukan now()->year yang bisa kosong.
+        $year ??= $this->latestMonthlyYear($brand, $model);
+        $key = "trend:{$year}:" . ($brand ?? '-') . ':' . ($model ?? '-');
+
+        return $this->cached($key, function () use ($year, $brand, $model) {
+            $query = VehicleSalesStat::query()
                 ->latestImports()
                 ->monthly()
-                ->where('year', $year)
+                ->where('year', $year);
+            if ($brand !== null) {
+                $query->where('raw_brand', $brand);
+            }
+            if ($model !== null) {
+                $query->where('raw_model', $model);
+            }
+            $monthly = $query
                 ->selectRaw('month, powertrain, SUM(units) as units')
                 ->groupBy('month', 'powertrain')
                 ->get();
 
-            $officialMonths = $this->officialTotalsByYear()[$year]['months'] ?? [];
+            // Total resmi GAIKINDO hanya valid utk scope NASIONAL — saat
+            // difilter per brand/model, market_total = hasil parse.
+            $officialMonths = ($brand === null && $model === null)
+                ? ($this->officialTotalsByYear()[$year]['months'] ?? [])
+                : [];
 
             $months = [];
             foreach (range(1, 12) as $m) {
@@ -114,6 +130,20 @@ class VehicleMarketService
 
             return ['year' => $year, 'months' => $months];
         });
+    }
+
+    /** Tahun terbaru yang punya baris bulanan, opsional terbatas brand/model. */
+    protected function latestMonthlyYear(?string $brand, ?string $model): int
+    {
+        $query = VehicleSalesStat::query()->latestImports()->monthly();
+        if ($brand !== null) {
+            $query->where('raw_brand', $brand);
+        }
+        if ($model !== null) {
+            $query->where('raw_model', $model);
+        }
+
+        return (int) ($query->max('year') ?: now()->year);
     }
 
     public function top(?int $year, ?string $powertrain, int $limit = 10): array

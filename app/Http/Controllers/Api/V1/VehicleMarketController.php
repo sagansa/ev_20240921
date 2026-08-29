@@ -25,18 +25,22 @@ class VehicleMarketController extends Controller
         ]);
     }
 
-    /** GET /vehicle-market/trend?year= — unit bulanan per powertrain. */
+    /** GET /vehicle-market/trend?year=&brand=&model= — unit bulanan per powertrain. */
     public function trend(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'year' => ['nullable', 'integer', 'min:2000', 'max:2100'],
+            'brand' => ['nullable', 'string', 'max:100'],
+            'model' => ['nullable', 'string', 'max:100'],
         ]);
-
-        $year = $validated['year'] ?? (int) now()->year;
 
         return response()->json([
             'success' => true,
-            'data' => $this->market->trend($year),
+            'data' => $this->market->trend(
+                $validated['year'] ?? null,
+                $validated['brand'] ?? null,
+                $validated['model'] ?? null,
+            ),
         ]);
     }
 
