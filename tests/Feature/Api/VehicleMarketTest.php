@@ -173,4 +173,39 @@ class VehicleMarketTest extends TestCase
         $this->assertEquals(2025, $res->json('data.year'));
         $this->assertCount(12, $res->json('data.months'));
     }
+
+    public function test_top_tanpa_year_pakai_tahun_punya_data_model(): void
+    {
+        // 2026 punya baris level model → default 2026 (perilaku lama max(year)).
+        $res = $this->getJson('/api/v1/vehicle-market/top');
+        $res->assertOk();
+        $this->assertEquals(2026, $res->json('data.year'));
+        $this->assertNotSame([], $res->json('data.models'));
+    }
+
+    public function test_top_tanpa_year_fallback_bila_tahun_baru_tanpa_model(): void
+    {
+        // Skenario produksi: 2026 baru punya rekap, belum ada baris level
+        // model → default harus 2025 (yang punya model), BUKAN 2026 kosong.
+        VehicleSalesStat::where('year', 2026)->whereNotNull('model_vehicle_id')->delete();
+
+        $res = $this->getJson('/api/v1/vehicle-market/top');
+        $res->assertOk();
+        $this->assertEquals(2025, $res->json('data.year'));
+        $this->assertNotSame([], $res->json('data.models'));
+    }
+
+    public function test_top_filter_brand(): void
+    {
+        $res = $this->getJson('/api/v1/vehicle-market/top?year=2025&brand=BYD');
+        $res->assertOk();
+
+        $models = collect($res->json('data.models'));
+        $this->assertCount(1, $models);
+        $this->assertSame('Atto 1', $models->first()['model']);
+
+        $brands = collect($res->json('data.brands'));
+        $this->assertCount(1, $brands);
+        $this->assertSame('BYD', $brands->first()['brand']);
+    }
 }

@@ -146,17 +146,23 @@ class VehicleMarketService
         return (int) ($query->max('year') ?: now()->year);
     }
 
-    public function top(?int $year, ?string $powertrain, int $limit = 10): array
+    public function top(?int $year = null, ?string $powertrain = null, ?string $brand = null, int $limit = 10): array
     {
-        $year ??= (int) VehicleSalesStat::query()->max('year');
+        // Default: tahun terbaru yang punya baris LEVEL MODEL — tahun yang
+        // hanya berisi rekap nasional menghasilkan ranking kosong.
+        $year ??= $this->latestModelYear($brand);
         $powertrain = strtoupper($powertrain ?? 'BEV');
+        $key = "top:{$year}:{$powertrain}:" . ($brand ?? '-') . ":{$limit}";
 
-        return $this->cached("top:{$year}:{$powertrain}:{$limit}", function () use ($year, $powertrain, $limit) {
+        return $this->cached($key, function () use ($year, $powertrain, $brand, $limit) {
             $base = VehicleSalesStat::query()
                 ->latestImports()
                 ->whereNull('month')
                 ->where('year', $year)
                 ->powertrain($powertrain);
+            if ($brand !== null) {
+                $base->where('raw_brand', $brand);
+            }
 
             $brands = (clone $base)
                 ->selectRaw('raw_brand as brand, SUM(units) as units, COUNT(DISTINCT model_vehicle_id) as models')
@@ -183,6 +189,21 @@ class VehicleMarketService
 
             return ['year' => $year, 'powertrain' => $powertrain, 'brands' => $brands, 'models' => $models];
         });
+    }
+
+    /** Tahun terbaru yang punya baris level model; fallback tahun apa pun. */
+    protected function latestModelYear(?string $brand): int
+    {
+        $query = VehicleSalesStat::query()
+            ->latestImports()
+            ->whereNull('month')
+            ->whereNotNull('model_vehicle_id');
+        if ($brand !== null) {
+            $query->where('raw_brand', $brand);
+        }
+        $found = $query->max('year');
+
+        return (int) ($found ?: VehicleSalesStat::query()->latestImports()->max('year'));
     }
 
     /** Naikkan versi cache — dipanggil importer setelah import baru. */

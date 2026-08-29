@@ -44,12 +44,13 @@ class VehicleMarketController extends Controller
         ]);
     }
 
-    /** GET /vehicle-market/top?year=&powertrain=BEV&limit=10 — top brand & model. */
+    /** GET /vehicle-market/top?year=&powertrain=&brand=&limit= — top brand & model. */
     public function top(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'year' => ['nullable', 'integer', 'min:2000', 'max:2100'],
             'powertrain' => ['nullable', 'string', 'in:BEV,PHEV,HEV,ICE,ALL,EV'],
+            'brand' => ['nullable', 'string', 'max:100'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
@@ -58,6 +59,7 @@ class VehicleMarketController extends Controller
             'data' => $this->market->top(
                 $validated['year'] ?? null,
                 $validated['powertrain'] ?? null,
+                $validated['brand'] ?? null,
                 $validated['limit'] ?? 10,
             ),
         ]);
