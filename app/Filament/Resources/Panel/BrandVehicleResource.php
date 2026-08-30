@@ -3,27 +3,28 @@
 namespace App\Filament\Resources\Panel;
 
 use App\Filament\Forms\ImageFileUpload;
-use Filament\Forms;
-use Filament\Tables;
-use Filament\Actions;
-use Livewire\Component;
-use Filament\Schemas\Schema;
-use Filament\Tables\Table;
+use App\Filament\Resources\Panel\BrandVehicleResource\Pages;
+use App\Filament\Resources\Panel\BrandVehicleResource\RelationManagers;
 use App\Models\BrandVehicle;
+use Filament\Actions;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\ImageColumn;
-use Illuminate\Database\Eloquent\Builder;
-use Filament\Forms\Components\FileUpload;
-use App\Filament\Resources\Panel\BrandVehicleResource\Pages;
-use App\Filament\Resources\Panel\BrandVehicleResource\RelationManagers;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class BrandVehicleResource extends Resource
 {
     protected static ?string $model = BrandVehicle::class;
+
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-tag';
+
+    protected static string | \UnitEnum | null $navigationGroup = 'Referensi Kendaraan';
+
+    protected static ?int $navigationSort = 1;
 
     public static function getNavigationIcon(): string | \BackedEnum | null
     {
@@ -33,11 +34,6 @@ class BrandVehicleResource extends Resource
     public static function getNavigationGroup(): string | \UnitEnum | null
     {
         return 'Referensi Kendaraan';
-    }
-
-    public static function getNavigationSort(): ?int
-    {
-        return 1;
     }
 
     public static function getModelLabel(): string
@@ -58,17 +54,23 @@ class BrandVehicleResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Section::make()->schema([
-                Grid::make(['default' => 1])->schema([
-                    ImageFileUpload::make('image')
-                        ->directory('images/brand'),
+            Section::make('Informasi Brand / Merek')
+                ->description('Kelola data induk merek kendaraan.')
+                ->schema([
+                    Grid::make(['default' => 1, 'md' => 2])->schema([
+                        ImageFileUpload::make('image')
+                            ->directory('images/brand')
+                            ->image()
+                            ->label('Logo Brand'),
 
-                    TextInput::make('name')
-                        ->required()
-                        ->string()
-                        ->autofocus(),
+                        TextInput::make('name')
+                            ->required()
+                            ->string()
+                            ->label('Nama Brand')
+                            ->placeholder('cth. Wuling, BYD, Hyundai, Chery, MG')
+                            ->autofocus(),
+                    ]),
                 ]),
-            ]),
         ]);
     }
 
@@ -77,9 +79,30 @@ class BrandVehicleResource extends Resource
         return $table
             ->poll('60s')
             ->columns([
-                ImageColumn::make('image')->visibility('public'),
+                ImageColumn::make('image')
+                    ->label('Logo')
+                    ->circular()
+                    ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=Brand&color=10b981&background=ecfdf5')
+                    ->visibility('public'),
 
-                TextColumn::make('name'),
+                TextColumn::make('name')
+                    ->label('Nama Brand')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
+
+                TextColumn::make('model_vehicles_count')
+                    ->counts('modelVehicles')
+                    ->label('Jumlah Model')
+                    ->badge()
+                    ->color('primary')
+                    ->sortable(),
+
+                TextColumn::make('created_at')
+                    ->label('Terdaftar')
+                    ->dateTime('d M Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([])
             ->recordActions([
@@ -91,7 +114,7 @@ class BrandVehicleResource extends Resource
                     Actions\DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('id', 'desc');
+            ->defaultSort('name', 'asc');
     }
 
     public static function getRelations(): array

@@ -122,6 +122,8 @@
                         Unduh CSV → CONNECTING ({{ count($result['new']) }} baris, kategori diisi manual)
                     </button>
                 </x-filament::section>
+
+
             @else
                 <x-filament::section>
                     <p class="py-2 text-sm text-success-600 dark:text-success-400">
@@ -130,6 +132,61 @@
                     </p>
                 </x-filament::section>
             @endif
+
+                {{-- Simpan mapping eksplisit --}}
+                <x-filament::section>
+                    <x-slot name="heading">
+                        Simpan Mapping Eksplisit
+                    </x-slot>
+
+                    <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                        Petakan nama mentah → katalog sekali, tersimpan permanen: semua impor berikutnya
+                        otomatis ter-link tanpa tebakan. Katalog tujuan harus sudah ada.
+                    </p>
+
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-5">
+                        <label class="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
+                            Raw Brand (laporan)
+                            <input type="text" wire:model="mapRawBrand" placeholder="WULING-DBG"
+                                   class="fi-input rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                        </label>
+                        <label class="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
+                            Raw Model (laporan)
+                            <input type="text" wire:model="mapRawModel" placeholder="Air EV Baru"
+                                   class="fi-input rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                        </label>
+                        <label class="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
+                            → Brand Katalog
+                            <input type="text" wire:model="mapBrandName" placeholder="Wuling"
+                                   class="fi-input rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                        </label>
+                        <label class="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
+                            → Model Katalog
+                            <input type="text" wire:model="mapModelName" placeholder="Air EV"
+                                   class="fi-input rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                        </label>
+                        <button type="button" wire:click="saveMapping"
+                                class="self-end rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 dark:bg-white dark:text-gray-950">
+                            Simpan Mapping
+                        </button>
+                    </div>
+
+                    <label class="mt-3 flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
+                        Catatan (opsional)
+                        <input type="text" wire:model="mapCatatan"
+                               class="fi-input rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                    </label>
+
+                    @if ($mapMessage)
+                        <p class="mt-3 text-sm {{ str_starts_with($mapMessage, '✓') ? 'text-success-500' : 'text-danger-500' }}">
+                            {{ $mapMessage }}
+                        </p>
+                    @endif
+                    @error('mapRawBrand')<p class="mt-1 text-xs text-danger-500">{{ $message }}</p>@enderror
+                    @error('mapRawModel')<p class="mt-1 text-xs text-danger-500">{{ $message }}</p>@enderror
+                    @error('mapBrandName')<p class="mt-1 text-xs text-danger-500">{{ $message }}</p>@enderror
+                    @error('mapModelName')<p class="mt-1 text-xs text-danger-500">{{ $message }}</p>@enderror
+                </x-filament::section>
         @endif
     </div>
 </x-filament-panels::page>

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\BrandVehicle;
 use App\Models\ModelVehicle;
 use App\Models\SalesImport;
+use App\Models\VehicleNameMapping;
 use App\Models\VehicleSalesStat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -148,5 +149,42 @@ class PreviewVehicleSalesTest extends TestCase
         // BEV ter-link, non-BEV masuk stats dengan link NULL (by design).
         $this->assertSame(1, ModelVehicle::count());
         $this->assertSame(2, VehicleSalesStat::whereNotNull('model_vehicle_id')->count());
+    }
+
+
+    public function test_mapping_eksplisit_menang_dan_preview_menandai_termatch(): void
+    {
+        $this->seedCatalog();
+
+        // Raw menyimpang total — hanya bisa ter-match lewat mapping tabel.
+        VehicleNameMapping::record('WULING-DBG', 'Air EV Baru', 'BYD', 'Atto 1', null, 'data hantu digabung');
+
+        $preview = app(\App\Services\VehicleSalesMatcher::class)
+            ->preview('WULING-DBG', 'Air EV Baru', 'Air EV Baru Max');
+
+        $this->assertFalse($preview['brand_new']);
+        $this->assertFalse($preview['model_new']);
+        $this->assertTrue($preview['mapping_used']);
+        $this->assertSame('BYD', $preview['brand_name']);
+        $this->assertSame('Atto 1', $preview['model_name']);
+    }
+
+    public function test_match_dengan_mapping_menghubungkan_katalog_tanpa_auto_create(): void
+    {
+        $this->seedCatalog();
+        VehicleNameMapping::record('WULING-DBG', 'Air EV Baru', 'BYD', 'Atto 1');
+
+        $brandsBefore = BrandVehicle::count();
+        $modelsBefore = ModelVehicle::count();
+
+        $match = app(\App\Services\VehicleSalesMatcher::class)
+            ->match('WULING-DBG', 'Air EV Baru', null, 'Air EV Baru Max');
+
+        $this->assertTrue($match['mapping_used']);
+        $this->assertSame('BYD', BrandVehicle::find($match['brand_vehicle_id'])->name);
+        $this->assertSame('Atto 1', ModelVehicle::find($match['model_vehicle_id'])->name);
+        // Tidak ada auto-create baru.
+        $this->assertSame($brandsBefore, BrandVehicle::count());
+        $this->assertSame($modelsBefore, ModelVehicle::count());
     }
 }

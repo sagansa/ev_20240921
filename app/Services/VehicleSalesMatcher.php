@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\BrandVehicle;
 use App\Models\ModelVehicle;
 use App\Models\TypeVehicle;
+use App\Models\VehicleNameMapping;
 
 /**
  * Matcher raw_brand/raw_model dari file GAIKINDO ke katalog brand_vehicles /
@@ -17,6 +18,9 @@ class VehicleSalesMatcher
 {
     /** @var array<string, int> cache nama ternormalisasi brand → id */
     protected array $brandCache = [];
+
+    /** @var array<string, ?VehicleNameMapping> cache lookup mapping eksplisit */
+    protected array $mappingCache = [];
 
     /** @var array<int, array<string, array{model: ModelVehicle, norm: string, nospace: string, score: int}>> */
     protected array $modelCacheByBrand = [];
@@ -91,8 +95,23 @@ class VehicleSalesMatcher
      * @return array{brand_vehicle_id: int|null, model_vehicle_id: int|null,
      *               brand_created: bool, model_created: bool, battery_kwh: float|null}
      */
-    public function match(string $rawBrand, string $rawModel, ?float $batteryKwh = null): array
+    public function match(string $rawBrand, string $rawModel, ?float $batteryKwh = null, ?string $fullRawModel = null): array
     {
+        // LAPISAN 1: mapping eksplisit (keputusan manusia di tabel
+        // vehicle_name_mappings) — menang atas alias/fuzzy/auto-create.
+        $mapping = $this->lookupMapping($rawBrand, $rawModel, $fullRawModel);
+
+        if ($mapping !== null) {
+            return [
+                'brand_vehicle_id' => $mapping->brand_vehicle_id,
+                'model_vehicle_id' => $mapping->model_vehicle_id,
+                'brand_created' => false,
+                'model_created' => false,
+                'battery_kwh' => $batteryKwh,
+                'mapping_used' => true,
+            ];
+        }
+
         $brandCreated = false;
         $modelCreated = false;
 
@@ -109,6 +128,7 @@ class VehicleSalesMatcher
             'brand_created' => $brandCreated,
             'model_created' => $modelCreated,
             'battery_kwh' => $batteryKwh,
+            'mapping_used' => false,
         ];
     }
 
@@ -120,8 +140,24 @@ class VehicleSalesMatcher
      * @return array{brand_vehicle_id: ?int, brand_name: ?string, model_vehicle_id: ?int,
      *               model_name: ?string, match_score: int, brand_new: bool, model_new: bool}
      */
-    public function preview(string $rawBrand, string $rawModel): array
+    public function preview(string $rawBrand, string $rawModel, ?string $fullRawModel = null): array
     {
+        // LAPISAN 1: mapping eksplisit — ter-match tanpa tebakan.
+        $mapping = $this->lookupMapping($rawBrand, $rawModel, $fullRawModel);
+
+        if ($mapping !== null) {
+            return [
+                'brand_vehicle_id' => $mapping->brand_vehicle_id,
+                'brand_name' => $mapping->brandVehicle?->name,
+                'model_vehicle_id' => $mapping->model_vehicle_id,
+                'model_name' => $mapping->modelVehicle?->name,
+                'match_score' => 100,
+                'brand_new' => false,
+                'model_new' => false,
+                'mapping_used' => true,
+            ];
+        }
+
         $brandId = $this->lookupBrand($rawBrand);
         $brandNew = $brandId === null;
         $brandName = $brandId !== null ? BrandVehicle::find($brandId)?->name : null;
@@ -157,7 +193,33 @@ class VehicleSalesMatcher
             'match_score' => $score,
             'brand_new' => $brandNew,
             'model_new' => $modelNew,
+            'mapping_used' => false,
         ];
+    }
+
+    /** Mapping eksplisit utk pasangan raw (model keluarga ATAU raw penuh). */
+    protected function lookupMapping(string $rawBrand, string $rawModel, ?string $fullRawModel = null): ?VehicleNameMapping
+    {
+        $brandNorm = $this->normalize($rawBrand);
+        $modelNorms = array_values(array_filter([
+            $this->normalize($rawModel),
+            $fullRawModel !== null ? $this->normalize($fullRawModel) : null,
+        ], fn ($v) => $v !== null && $v !== ''));
+
+        if ($brandNorm === '' || $modelNorms === []) {
+            return null;
+        }
+
+        $cacheKey = $brandNorm.'|'.implode('/', $modelNorms);
+
+        if (! array_key_exists($cacheKey, $this->mappingCache)) {
+            $this->mappingCache[$cacheKey] = VehicleNameMapping::query()
+                ->where('raw_brand_norm', $brandNorm)
+                ->whereIn('raw_model_norm', $modelNorms)
+                ->first();
+        }
+
+        return $this->mappingCache[$cacheKey];
     }
 
     /** Catat model sebagai BEV (untuk upgrade powertrain ICE → BEV di akhir import). */

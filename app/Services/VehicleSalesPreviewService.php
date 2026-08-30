@@ -51,7 +51,7 @@ class VehicleSalesPreviewService
                 continue;
             }
 
-            $preview = $this->matcher->preview($row['brand'], $split['model']);
+            $preview = $this->matcher->preview($row['brand'], $split['model'], $row['type_model']);
 
             if (! $preview['brand_new'] && ! $preview['model_new']) {
                 $matched++;

@@ -21,9 +21,9 @@ class VehicleHierarchyReport
     /**
      * @return array{years: list<int>, year: int, brands: list<array<string, mixed>>,
      *               unlinked: list<array<string, mixed>>, orphanTypes: int,
-     *               modelsWithoutCategory: int, totals: array{units: int, prevUnits: int}}
+     *               modelsWithoutCategory: int, totals: array{units: int, prevUnits: int, totalBrands: int, totalModels: int, totalTypes: int, maxBrandUnits: int}}
      */
-    public function build(?int $year, string $powertrain = 'ALL', ?string $category = null): array
+    public function build(?int $year, string $powertrain = 'ALL', ?string $category = null, ?string $search = null, bool $onlyIssues = false): array
     {
         $years = VehicleSalesStat::query()
             ->latestImports()
@@ -91,8 +91,9 @@ class VehicleHierarchyReport
 
         // Kelompokkan per brand, urutkan unit desc.
         $brands = [];
-        $totals = ['units' => 0, 'prevUnits' => 0];
+        $totals = ['units' => 0, 'prevUnits' => 0, 'totalBrands' => 0, 'totalModels' => 0, 'totalTypes' => 0, 'maxBrandUnits' => 0];
         $modelsWithoutCategory = 0;
+        $searchLower = $search !== null && trim($search) !== '' ? strtolower(trim($search)) : null;
 
         foreach ($modelsById as $bucket) {
             if ($bucket['brand_id'] === null) {
@@ -103,19 +104,63 @@ class VehicleHierarchyReport
                 $modelsWithoutCategory++;
             }
 
+            if ($onlyIssues && ! $bucket['has_issue']) {
+                continue;
+            }
+
             $brands[$bucket['brand_id']] ??= [
                 'id' => $bucket['brand_id'],
                 'name' => $bucket['brand_name'],
                 'units' => 0,
                 'prev_units' => 0,
+                'total_types' => 0,
+                'has_issue' => false,
                 'models' => [],
             ];
+
             $brands[$bucket['brand_id']]['models'][] = $bucket;
             $brands[$bucket['brand_id']]['units'] += $bucket['units'];
             $brands[$bucket['brand_id']]['prev_units'] += $bucket['prev_units'];
+            $brands[$bucket['brand_id']]['total_types'] += count($bucket['types']);
+            if ($bucket['has_issue']) {
+                $brands[$bucket['brand_id']]['has_issue'] = true;
+            }
+
             $totals['units'] += $bucket['units'];
             $totals['prevUnits'] += $bucket['prev_units'];
+            $totals['totalModels']++;
+            $totals['totalTypes'] += count($bucket['types']);
         }
+
+        // Filter search bila diisi
+        if ($searchLower !== null) {
+            $filteredBrands = [];
+            foreach ($brands as $brandId => $brandData) {
+                $brandMatches = str_contains(strtolower($brandData['name']), $searchLower);
+                $matchedModels = [];
+
+                foreach ($brandData['models'] as $m) {
+                    $modelMatches = str_contains(strtolower($m['name']), $searchLower)
+                        || ($m['category'] && str_contains(strtolower($m['category']), $searchLower))
+                        || ($m['powertrain'] && str_contains(strtolower($m['powertrain']), $searchLower));
+
+                    $matchedTypes = array_filter($m['types'], fn ($t) => str_contains(strtolower($t['name']), $searchLower));
+
+                    if ($brandMatches || $modelMatches || count($matchedTypes) > 0) {
+                        $matchedModels[] = $m;
+                    }
+                }
+
+                if ($brandMatches || count($matchedModels) > 0) {
+                    $brandData['models'] = $matchedModels;
+                    $filteredBrands[$brandId] = $brandData;
+                }
+            }
+            $brands = $filteredBrands;
+        }
+
+        $totals['totalBrands'] = count($brands);
+        $totals['maxBrandUnits'] = ! empty($brands) ? max(array_column($brands, 'units')) : 0;
 
         usort($brands, fn ($a, $b) => $b['units'] <=> $a['units']);
         array_walk($brands, fn (&$b) => usort($b['models'], fn ($a, $c) => $c['units'] <=> $a['units']));

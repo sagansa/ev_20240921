@@ -102,7 +102,7 @@ class ImportVehicleSalesCsv extends Command
                     continue;
                 }
 
-                $probe = $matcher->preview($row['brand'], $split['model']);
+                $probe = $matcher->preview($row['brand'], $split['model'], $row['type_model']);
 
                 if ($probe['brand_new'] || $probe['model_new']) {
                     $unlinked[] = $row['brand'].' | '.$split['model'];
@@ -159,7 +159,7 @@ class ImportVehicleSalesCsv extends Command
 
                     // Match di level KELUARGA (hasil splitter), bukan varian penuh.
                     $match = $isBev
-                        ? $matcher->match($row['brand'], $split['model'])
+                        ? $matcher->match($row['brand'], $split['model'], null, $row['type_model'])
                         : ['brand_vehicle_id' => null, 'model_vehicle_id' => null, 'brand_created' => false, 'model_created' => false, 'battery_kwh' => null];
 
                     $typeId = null;

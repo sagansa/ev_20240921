@@ -35,6 +35,12 @@ class VehicleHierarchyExplorer extends Page
     #[Url]
     public string $category = 'ALL';
 
+    #[Url]
+    public string $search = '';
+
+    #[Url]
+    public bool $onlyIssues = false;
+
     /** Node yang sedang terbuka: "b{brandId}" / "m{modelId}". */
     public array $expanded = ['brands' => [], 'models' => []];
 
@@ -61,7 +67,13 @@ class VehicleHierarchyExplorer extends Page
 
     public function expandAll(): void
     {
-        $report = app(VehicleHierarchyReport::class)->build($this->year, $this->powertrain, $this->category === 'ALL' ? null : $this->category);
+        $report = app(VehicleHierarchyReport::class)->build(
+            $this->year,
+            $this->powertrain,
+            $this->category === 'ALL' ? null : $this->category,
+            $this->search,
+            $this->onlyIssues
+        );
 
         $this->expanded = [
             'brands' => array_map(fn ($b) => 'b'.$b['id'], $report['brands']),
@@ -77,9 +89,31 @@ class VehicleHierarchyExplorer extends Page
         $this->expanded = ['brands' => [], 'models' => []];
     }
 
+    public function resetFilters(): void
+    {
+        $this->search = '';
+        $this->powertrain = 'ALL';
+        $this->category = 'ALL';
+        $this->onlyIssues = false;
+    }
+
+    public function toggleOnlyIssues(): void
+    {
+        $this->onlyIssues = ! $this->onlyIssues;
+        if ($this->onlyIssues) {
+            $this->expandAll();
+        }
+    }
+
     protected function getViewData(): array
     {
-        $report = app(VehicleHierarchyReport::class)->build($this->year, $this->powertrain, $this->category === 'ALL' ? null : $this->category);
+        $report = app(VehicleHierarchyReport::class)->build(
+            $this->year,
+            $this->powertrain,
+            $this->category === 'ALL' ? null : $this->category,
+            $this->search,
+            $this->onlyIssues
+        );
 
         return array_merge(parent::getViewData(), [
             'report' => $report,

@@ -43,6 +43,64 @@ class VehicleSalesPreviewImport extends Page
 
     public ?string $error = null;
 
+    /** Form simpan mapping eksplisit dari baris "baru". */
+    public ?string $mapRawBrand = null;
+
+    public ?string $mapRawModel = null;
+
+    public ?string $mapBrandName = null;
+
+    public ?string $mapModelName = null;
+
+    public ?string $mapCatatan = null;
+
+    public ?string $mapMessage = null;
+
+    public function saveMapping(): void
+    {
+        $this->validate([
+            'mapRawBrand' => ['required', 'string', 'max:255'],
+            'mapRawModel' => ['required', 'string', 'max:255'],
+            'mapBrandName' => ['required', 'string', 'max:255'],
+            'mapModelName' => ['required', 'string', 'max:255'],
+        ], [
+            'mapRawBrand.required' => 'Raw brand wajib diisi.',
+            'mapRawModel.required' => 'Raw model wajib diisi.',
+            'mapBrandName.required' => 'Brand katalog wajib diisi.',
+            'mapModelName.required' => 'Model katalog wajib diisi.',
+        ]);
+
+        $mapping = \App\Models\VehicleNameMapping::record(
+            $this->mapRawBrand,
+            $this->mapRawModel,
+            $this->mapBrandName,
+            $this->mapModelName,
+            null,
+            $this->mapCatatan,
+        );
+
+        if ($mapping === null) {
+            $this->mapMessage = "✗ Katalog '{$this->mapBrandName} / {$this->mapModelName}' belum ada — buat dulu lewat Brand Vehicles → Import.";
+
+            return;
+        }
+
+        $this->mapMessage = '✓ Mapping tersimpan — laporan berikutnya otomatis ter-link. Untuk stats lama, jalankan vehicle-mapping:relink.';
+        $this->mapRawBrand = $this->mapRawModel = $this->mapBrandName = $this->mapModelName = $this->mapCatatan = null;
+
+        // Segarkan hasil analisis dengan mapping baru.
+        if ($this->csvFile !== null) {
+            try {
+                $this->result = app(VehicleSalesPreviewService::class)->analyze(
+                    $this->csvFile->getRealPath(),
+                    $this->month,
+                );
+            } catch (RuntimeException) {
+                // biarkan hasil lama
+            }
+        }
+    }
+
     public function analyze(): void
     {
         $this->validate([
