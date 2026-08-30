@@ -321,6 +321,8 @@ class VehicleSalesMatcher
             return null;
         }
 
+        $nospace = preg_replace('/\s+/', '', $norm);
+
         if (! isset($this->modelCacheByBrand[$brandId])) {
             $this->loadModelsForBrand($brandId);
         }
