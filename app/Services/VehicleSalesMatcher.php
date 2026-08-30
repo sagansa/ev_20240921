@@ -112,6 +112,54 @@ class VehicleSalesMatcher
         ];
     }
 
+    /**
+     * Versi READ-ONLY dari match() untuk preview/dry-run: TIDAK PERNAH
+     * membuat brand/model — yang belum ada di katalog dilaporkan sebagai
+     * `brand_new`/`model_new` agar bisa direview manusia dulu.
+     *
+     * @return array{brand_vehicle_id: ?int, brand_name: ?string, model_vehicle_id: ?int,
+     *               model_name: ?string, match_score: int, brand_new: bool, model_new: bool}
+     */
+    public function preview(string $rawBrand, string $rawModel): array
+    {
+        $brandId = $this->lookupBrand($rawBrand);
+        $brandNew = $brandId === null;
+        $brandName = $brandId !== null ? BrandVehicle::find($brandId)?->name : null;
+
+        $modelId = null;
+        $modelName = null;
+        $score = 0;
+        $modelNew = false;
+
+        if ($brandId !== null) {
+            $norm = $this->normalize($rawModel);
+
+            if ($norm !== '') {
+                $best = $this->bestModelMatch($brandId, $norm);
+
+                if ($best !== null) {
+                    $modelId = $best['model']->id;
+                    $modelName = $best['model']->name;
+                    $score = $best['score'];
+                } else {
+                    $modelNew = true;
+                }
+            } else {
+                $modelNew = true;
+            }
+        }
+
+        return [
+            'brand_vehicle_id' => $brandId,
+            'brand_name' => $brandName,
+            'model_vehicle_id' => $modelId,
+            'model_name' => $modelName,
+            'match_score' => $score,
+            'brand_new' => $brandNew,
+            'model_new' => $modelNew,
+        ];
+    }
+
     /** Catat model sebagai BEV (untuk upgrade powertrain ICE → BEV di akhir import). */
     public function markBevModel(?int $modelId): void
     {
@@ -162,7 +210,8 @@ class VehicleSalesMatcher
         return $norm;
     }
 
-    protected function resolveBrand(string $rawBrand, bool &$created): ?int
+    /** Cari brand existing (read-only, tanpa membuat) — dipakai preview(). */
+    protected function lookupBrand(string $rawBrand): ?int
     {
         $norm = $this->normalize($rawBrand);
         if ($norm === '') {
@@ -182,8 +231,21 @@ class VehicleSalesMatcher
             unset($this->brandCache['__loaded__']);
         }
 
-        if (isset($this->brandCache[$norm])) {
-            return $this->brandCache[$norm];
+        return $this->brandCache[$norm] ?? null;
+    }
+
+    protected function resolveBrand(string $rawBrand, bool &$created): ?int
+    {
+        $norm = $this->normalize($rawBrand);
+        if ($norm === '') {
+            return null;
+        }
+
+        $norm = $this->canonicalBrandKey($norm);
+
+        $found = $this->lookupBrand($rawBrand);
+        if ($found !== null) {
+            return $found;
         }
 
         $brand = BrandVehicle::create([
@@ -197,26 +259,32 @@ class VehicleSalesMatcher
         return $brand->id;
     }
 
-    protected function resolveModel(int $brandId, string $rawModel, ?float $batteryKwh, bool &$created): ?int
+    /** Muat cache model milik satu brand. */
+    protected function loadModelsForBrand(int $brandId): void
     {
-        $norm = $this->normalize($rawModel);
-        if ($norm === '') {
-            return null;
-        }
+        $this->modelCacheByBrand[$brandId] = [];
 
+        ModelVehicle::where('brand_vehicle_id', $brandId)
+            ->chunk(500, function ($models) use ($brandId) {
+                foreach ($models as $model) {
+                    $mNorm = $this->normalize($model->name);
+                    $this->modelCacheByBrand[$brandId][] = [
+                        'model' => $model,
+                        'norm' => $mNorm,
+                        'nospace' => preg_replace('/\s+/', '', $mNorm),
+                    ];
+                }
+            });
+    }
+
+    /**
+     * Kandidat model terbaik utk nama ternormalisasi (read-only) —
+     * @return array{model: ModelVehicle, score: int}|null
+     */
+    protected function bestModelMatch(int $brandId, string $norm): ?array
+    {
         if (! isset($this->modelCacheByBrand[$brandId])) {
-            $this->modelCacheByBrand[$brandId] = [];
-            ModelVehicle::where('brand_vehicle_id', $brandId)
-                ->chunk(500, function ($models) use ($brandId) {
-                    foreach ($models as $model) {
-                        $mNorm = $this->normalize($model->name);
-                        $this->modelCacheByBrand[$brandId][] = [
-                            'model' => $model,
-                            'norm' => $mNorm,
-                            'nospace' => preg_replace('/\s+/', '', $mNorm),
-                        ];
-                    }
-                });
+            $this->loadModelsForBrand($brandId);
         }
 
         $best = null;
@@ -239,12 +307,28 @@ class VehicleSalesMatcher
 
             if ($score > $bestScore) {
                 $bestScore = $score;
-                $best = $entry['model'];
+                $best = $entry;
             }
         }
 
+        return $best !== null ? ['model' => $best['model'], 'score' => $bestScore] : null;
+    }
+
+    protected function resolveModel(int $brandId, string $rawModel, ?float $batteryKwh, bool &$created): ?int
+    {
+        $norm = $this->normalize($rawModel);
+        if ($norm === '') {
+            return null;
+        }
+
+        if (! isset($this->modelCacheByBrand[$brandId])) {
+            $this->loadModelsForBrand($brandId);
+        }
+
+        $best = $this->bestModelMatch($brandId, $norm);
+
         if ($best !== null) {
-            return $best->id;
+            return $best['model']->id;
         }
 
         $model = ModelVehicle::create([

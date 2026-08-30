@@ -45,7 +45,8 @@ class ImportVehicleSalesCsv extends Command
         {file : Path ke file CSV GAIKINDO}
         {--year= : Tahun periode (default: dideteksi dari nama file)}
         {--month= : Bulan periode 1-12 (kosong = import tahunan JAN..DEC)}
-        {--source=gaikindo-csv : Sumber data}';
+        {--source=gaikindo-csv : Sumber data}
+        {--require-full-link : Tolak import bila masih ada baris BEV yang gagal ter-match ke katalog (jalankan vehicle-sales:preview dulu)}';
 
     protected $description = 'Import CSV wholesales GAIKINDO per tahun/bulan ke vehicle_sales_stats + match katalog brand/model/type (stats periode terkait DIGANTI, bukan ditumpuk).';
 
@@ -86,6 +87,36 @@ class ImportVehicleSalesCsv extends Command
         }
 
         [$rows, $junkSkipped] = $parsed;
+
+        // --require-full-link: pre-flight read-only — semua baris BEV wajib
+        // ter-match ke katalog SEBELUM ada penulisan (lihat
+        // vehicle-sales:preview utk laporannya). Non-BEV memang by-design
+        // tidak ter-link (aturan BEV-only).
+        if ($this->option('require-full-link')) {
+            $unlinked = [];
+
+            foreach ($rows as $row) {
+                $split = $splitter->split($row['brand'], $row['type_model'], $row['fuel']);
+
+                if ($split['flag'] === 'junk' || $split['model'] === '' || $split['powertrain'] !== 'BEV') {
+                    continue;
+                }
+
+                $probe = $matcher->preview($row['brand'], $split['model']);
+
+                if ($probe['brand_new'] || $probe['model_new']) {
+                    $unlinked[] = $row['brand'].' | '.$split['model'];
+                }
+            }
+
+            if ($unlinked !== []) {
+                $this->error('Import ditolak (--require-full-link): '.count($unlinked).
+                    ' kombinasi BEV belum ada di katalog. Jalankan vehicle-sales:preview, lengkapi katalog, lalu ulangi.');
+                $this->line('  contoh: '.implode('; ', array_slice(array_unique($unlinked), 0, 8)));
+
+                return self::FAILURE;
+            }
+        }
 
         try {
             $summary = DB::transaction(function () use ($rows, $junkSkipped, $filePath, $year, $month, $splitter, $matcher) {
