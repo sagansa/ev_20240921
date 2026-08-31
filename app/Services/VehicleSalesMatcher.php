@@ -60,7 +60,7 @@ class VehicleSalesMatcher
         'DFSK GELORA' => 'DFSK', 'DFSK GLORY' => 'DFSK',
         'CHANGAN DEEPAL' => 'CHANGAN', 'CHANGAN LUMIN' => 'CHANGAN',
         'GWM HAVAL' => 'GWM', 'GWM ORA' => 'GWM', 'GWM TANK' => 'GWM', 'TANK GWM' => 'GWM',
-        'TANK' => 'GWM', 'HAVAL' => 'GWM',
+        'TANK' => 'GWM', 'HAVAL' => 'GWM', 'TATA MOTORS' => 'TATA',
         'GEELY STARRAY' => 'GEELY', 'HYUNDAI - HMID' => 'HYUNDAI',
         'VINFAST VF' => 'VINFAST', 'AION HYPTEC' => 'AION', 'BYD AION' => 'BYD',
         'SUZUKI ALL' => 'SUZUKI', 'SUZUKI APV' => 'SUZUKI', 'SUZUKI S' => 'SUZUKI',
