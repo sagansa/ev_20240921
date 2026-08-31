@@ -302,14 +302,25 @@ class VehicleNameSplitter
             return 'ICE';
         }
 
-        if ($catalogPowertrain !== null && $catalogPowertrain !== '') {
-            return $catalogPowertrain;
+        // Sinyal NAMA lebih spesifik daripada powertrain keluarga di katalog:
+        // GAIKINDO menulis varian hybrid eksplisit ("Zenix G Hev", "Hybrid AT")
+        // — file 2025/2026 tanpa kolom FUEL hanya bisa diklasifikasi dari sini.
+        if (preg_match('/PHEV|REEV/i', $typeModel)) {
+            return 'PHEV';
+        }
+
+        if (preg_match('/\bHEV\b|HYBRI/i', $typeModel)) {
+            return 'HEV';
         }
 
         foreach (self::BEV_NAME_PATTERNS as $pattern) {
             if (preg_match($pattern, $typeModel)) {
                 return 'BEV';
             }
+        }
+
+        if ($catalogPowertrain !== null && $catalogPowertrain !== '') {
+            return $catalogPowertrain;
         }
 
         $flag = 'powertrain-guess';

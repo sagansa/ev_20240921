@@ -131,4 +131,17 @@ class VehicleNameSplitterTest extends TestCase
 
         $this->assertSame('junk', $result['flag']);
     }
+
+    public function test_tanpa_fuel_sinyal_nama_hev_phev_dipakai_sebelum_katalog(): void
+    {
+        // File 2025/2026 tanpa kolom FUEL — hybrid hanya terbaca dari nama.
+        $r = $this->splitter->split('TOYOTA', 'All New Kijang Innova Zenix G Hev Cvt 2.0', null);
+        $this->assertSame('HEV', $r['powertrain'], 'varian Hev harus HEV');
+
+        $r = $this->splitter->split('MITSUBISHI', 'Outlander PHEV', null);
+        $this->assertSame('PHEV', $r['powertrain']);
+
+        $r = $this->splitter->split('WULING', 'Almaz RS Hybrid', null);
+        $this->assertSame('HEV', $r['powertrain']);
+    }
 }
