@@ -215,18 +215,28 @@ class VehicleMarketService
         $year ??= (int) VehicleSalesStat::query()->latestImports()->whereNull('month')->max('year');
         $prevYear = $year - 1;
 
-        return $this->cached("catalog:v3:{$year}", function () use ($year, $prevYear) {
+        return $this->cached("catalog:v4:{$year}", function () use ($year, $prevYear) {
             // Hanya model & brand yang memiliki tipe EV (BEV/PHEV)
             $rows = VehicleSalesStat::query()
                 ->latestImports()
                 ->whereNull('month')
                 ->where('year', $year)
                 ->whereIn('powertrain', ['BEV', 'PHEV'])
-                ->selectRaw('raw_brand, raw_model, SUM(units) as units')
+                ->selectRaw('raw_brand, raw_model, SUM(units) as units, MAX(model_vehicle_id) as model_vehicle_id')
                 ->groupBy('raw_brand', 'raw_model')
                 ->orderBy('raw_brand')
                 ->orderByDesc('units')
                 ->get();
+
+            // Lookup category/size_class dari model_vehicles untuk setiap model ter-link
+            $modelIds = $rows->pluck('model_vehicle_id')->filter()->unique()->values();
+            $categoryById = collect();
+            if ($modelIds->isNotEmpty()) {
+                $categoryById = \App\Models\ModelVehicle::query()
+                    ->whereIn('id', $modelIds)
+                    ->get(['id', 'category', 'size_class'])
+                    ->keyBy('id');
+            }
 
             // Ambil penjualan tahun sebelumnya untuk pengurutan
             $prevYearSales = VehicleSalesStat::query()
@@ -251,7 +261,13 @@ class VehicleMarketService
                     ];
                 }
                 $brands[$row->raw_brand]['units'] += (int) $row->units;
-                $brands[$row->raw_brand]['models'][] = ['model' => $row->raw_model, 'units' => (int) $row->units];
+                $linked = $row->model_vehicle_id ? $categoryById->get($row->model_vehicle_id) : null;
+                $brands[$row->raw_brand]['models'][] = [
+                    'model' => $row->raw_model,
+                    'units' => (int) $row->units,
+                    'category' => $linked?->category,
+                    'size_class' => $linked?->size_class,
+                ];
             }
 
             // Urutkan brand berdasarkan penjualan tahun sebelumnya desc (fallback penjualan tahun ini)
