@@ -229,9 +229,11 @@ class VehicleMarketTest extends TestCase
         $res->assertOk();
         $this->assertEquals(2026, $res->json('data.year'));
 
+        // Brand kini dari KATALOG (nama katalog, bukan raw) — "Wuling".
         $brands = collect($res->json('data.brands'))->keyBy('brand');
-        $this->assertEquals(6000, $brands['WULING']['units']);
+        $this->assertEquals(6000, $brands['Wuling']['units']);
         // Katalog BEV/PHEV-only: TOYOTA (ICE murni) tidak ikut katalog.
         $this->assertArrayNotHasKey('TOYOTA', $brands);
+        $this->assertArrayNotHasKey('WULING', $brands);
     }
 }
