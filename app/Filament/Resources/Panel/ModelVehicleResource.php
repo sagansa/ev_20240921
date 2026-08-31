@@ -136,6 +136,13 @@ class ModelVehicleResource extends Resource
                     ->searchable()
                     ->weight('bold'),
 
+                TextColumn::make('vehicles_count')
+                    ->counts('vehicles')
+                    ->label('Dipakai User')
+                    ->badge()
+                    ->color(fn ($state) => $state > 0 ? 'success' : 'gray')
+                    ->sortable(),
+
                 TextColumn::make('powertrain')
                     ->label('Powertrain')
                     ->badge()

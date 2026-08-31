@@ -14,6 +14,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 class BrandVehicleResource extends Resource
@@ -98,13 +99,30 @@ class BrandVehicleResource extends Resource
                     ->color('primary')
                     ->sortable(),
 
+                TextColumn::make('vehicles_count')
+                    ->counts('vehicles')
+                    ->label('Dipakai User')
+                    ->badge()
+                    ->color(fn ($state) => $state > 0 ? 'success' : 'gray')
+                    ->sortable()
+                    ->description('Jumlah kendaraan milik user'),
+
                 TextColumn::make('created_at')
                     ->label('Terdaftar')
                     ->dateTime('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([])
+            ->filters([
+                // Brand yang belum dipakai user — kandidat aman untuk dihapus
+                // (tetap cek stats penjualan/type sebelum menghapus).
+                TernaryFilter::make('in_use')
+                    ->label('Dipakai User')
+                    ->queries(
+                        true: fn ($query) => $query->has('vehicles'),
+                        false: fn ($query) => $query->doesntHave('vehicles'),
+                    ),
+            ])
             ->recordActions([
                 Actions\EditAction::make(),
                 Actions\ViewAction::make(),

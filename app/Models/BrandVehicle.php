@@ -25,8 +25,12 @@ class BrandVehicle extends Model
         return $this->hasMany(ModelVehicle::class);
     }
 
+    /**
+     * Kendaraan milik user di bawah brand ini — through model (tabel vehicles
+     * memakai model_vehicle_id, bukan brand_vehicle_id).
+     */
     public function vehicles()
     {
-        return $this->hasMany(Vehicle::class);
+        return $this->hasManyThrough(Vehicle::class, ModelVehicle::class, 'brand_vehicle_id', 'model_vehicle_id');
     }
 }
