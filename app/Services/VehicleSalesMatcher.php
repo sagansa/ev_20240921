@@ -42,6 +42,29 @@ class VehicleSalesMatcher
         'TOYOTA TOYOTA' => 'TOYOTA',
         'PT TOYOTA' => 'TOYOTA',
         'VOLVO CARS' => 'VOLVO',
+        // Varian suffix/prefix keluarga di CONNECTING & laporan tahunan
+        'BMW CBU' => 'BMW', 'BMW XM' => 'BMW',
+        'CHERY GT' => 'CHERY', 'CHERY OMDA' => 'CHERY', 'CHERY TIGGO' => 'CHERY',
+        'HINO A' => 'HINO', 'HINO FB' => 'HINO', 'HINO FC' => 'HINO', 'HINO FG' => 'HINO',
+        'HINO FL' => 'HINO', 'HINO FLX' => 'HINO', 'HINO FM' => 'HINO', 'HINO FMX' => 'HINO',
+        'HINO GY' => 'HINO', 'HINO R' => 'HINO', 'HINO RN' => 'HINO', 'HINO SG' => 'HINO',
+        'HINO ZY' => 'HINO',
+        'ISUZU CYZ' => 'ISUZU', 'ISUZU FVR' => 'ISUZU', 'ISUZU GVR' => 'ISUZU',
+        'ISUZU GVZ' => 'ISUZU', 'ISUZU GXZ' => 'ISUZU', 'ISUZU NPS' => 'ISUZU', 'ISUZU PHR' => 'ISUZU',
+        'TOYOTA GR' => 'TOYOTA', 'TOYOTA LAND' => 'TOYOTA', 'TOYOTA PRIUS' => 'TOYOTA',
+        'TOYOTA RAIZE' => 'TOYOTA', 'TOYOTA RAV' => 'TOYOTA', 'TOYOTA VIOS' => 'TOYOTA',
+        'LEXUS ES' => 'LEXUS', 'LEXUS LBX' => 'LEXUS', 'LEXUS LC' => 'LEXUS', 'LEXUS LM' => 'LEXUS',
+        'LEXUS LS' => 'LEXUS', 'LEXUS LX' => 'LEXUS', 'LEXUS NX' => 'LEXUS', 'LEXUS RX' => 'LEXUS',
+        'LEXUS RZ' => 'LEXUS', 'LEXUS UX' => 'LEXUS',
+        'MAXUS MIFA' => 'MAXUS', 'FARIZON SV' => 'FARIZON',
+        'DFSK GELORA' => 'DFSK', 'DFSK GLORY' => 'DFSK',
+        'CHANGAN DEEPAL' => 'CHANGAN', 'CHANGAN LUMIN' => 'CHANGAN',
+        'GWM HAVAL' => 'GWM', 'GWM ORA' => 'GWM', 'GWM TANK' => 'GWM', 'TANK GWM' => 'GWM',
+        'TANK' => 'GWM', 'HAVAL' => 'GWM',
+        'GEELY STARRAY' => 'GEELY', 'HYUNDAI - HMID' => 'HYUNDAI',
+        'VINFAST VF' => 'VINFAST', 'AION HYPTEC' => 'AION', 'BYD AION' => 'BYD',
+        'SUZUKI ALL' => 'SUZUKI', 'SUZUKI APV' => 'SUZUKI', 'SUZUKI S' => 'SUZUKI',
+        'HONDA CITY' => 'HONDA', 'HONDA NEW' => 'HONDA', 'HONDA STEP' => 'HONDA', 'HONDA WRV' => 'HONDA',
     ];
 
     /**
@@ -270,6 +293,38 @@ class VehicleSalesMatcher
         }
 
         return $norm;
+    }
+
+    /**
+     * Nama brand kanonik utk raw brand laporan (alias exact → alias contains
+     * → nama brand existing di DB → pretty name). Dipakai CONNECTING dan
+     * konsolidasi katalog agar satu brand tidak duplikat banyak nama.
+     */
+    public function canonicalBrandName(string $rawBrand): string
+    {
+        $norm = $this->normalize($rawBrand);
+        if ($norm === '') {
+            return trim($rawBrand);
+        }
+
+        $key = $this->canonicalBrandKey($norm);
+
+        if (isset(self::CANONICAL_DISPLAY[$key])) {
+            return self::CANONICAL_DISPLAY[$key];
+        }
+
+        // Preferensi: brand dgn nama persis sama (ternormalisasi) → brand
+        // lain yang kanonik-key-nya sama (bisa non-kanonik, jadi terakhir).
+        $byKey = null;
+        $exact = null;
+        foreach (BrandVehicle::query()->get() as $brand) {
+            if ($this->normalize($brand->name) === $key) { $exact = $brand; break; }
+            if ($byKey === null && $this->canonicalBrandKey($this->normalize($brand->name)) === $key) {
+                $byKey = $brand;
+            }
+        }
+
+        return $exact?->name ?? $byKey?->name ?? $this->prettyName($rawBrand);
     }
 
     /** Cari brand existing (read-only, tanpa membuat) — dipakai preview(). */

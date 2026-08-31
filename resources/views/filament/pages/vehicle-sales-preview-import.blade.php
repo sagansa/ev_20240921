@@ -1,112 +1,266 @@
 <x-filament-panels::page>
-    <div class="space-y-6" x-data="{ downloading: false }">
+    <style>
+        :root {
+            --vsp-bg-card: #ffffff;
+            --vsp-bg-header: rgba(0, 0, 0, 0.015);
+            --vsp-bg-sub: rgba(0, 0, 0, 0.02);
+            --vsp-border: rgba(156, 163, 175, 0.25);
+            --vsp-border-sub: rgba(156, 163, 175, 0.15);
+            --vsp-text-title: #111827;
+            --vsp-text-body: #374151;
+            --vsp-text-muted: #6b7280;
+            --vsp-input-bg: #ffffff;
+            --vsp-input-border: rgba(156, 163, 175, 0.35);
+        }
+
+        .dark, [data-theme="dark"] {
+            --vsp-bg-card: rgba(255, 255, 255, 0.04);
+            --vsp-bg-header: rgba(255, 255, 255, 0.02);
+            --vsp-bg-sub: rgba(255, 255, 255, 0.02);
+            --vsp-border: rgba(255, 255, 255, 0.1);
+            --vsp-border-sub: rgba(255, 255, 255, 0.07);
+            --vsp-text-title: #f9fafb;
+            --vsp-text-body: #e5e7eb;
+            --vsp-text-muted: #9ca3af;
+            --vsp-input-bg: rgba(255, 255, 255, 0.05);
+            --vsp-input-border: rgba(255, 255, 255, 0.15);
+        }
+
+        .vsp-card {
+            border: 1px solid var(--vsp-border);
+            border-radius: 12px;
+            padding: 16px;
+            background: var(--vsp-bg-card);
+            color: var(--vsp-text-body);
+            transition: all 0.15s ease;
+        }
+        .vsp-grid-5 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+        .vsp-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+        .vsp-badge-success { background: rgba(16, 185, 129, 0.15); color: #059669; }
+        .dark .vsp-badge-success, [data-theme="dark"] .vsp-badge-success { background: rgba(16, 185, 129, 0.25); color: #34d399; }
+        .vsp-badge-warn { background: rgba(245, 158, 11, 0.18); color: #b45309; }
+        .dark .vsp-badge-warn, [data-theme="dark"] .vsp-badge-warn { background: rgba(245, 158, 11, 0.25); color: #fbbf24; }
+        .vsp-badge-danger { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
+        .dark .vsp-badge-danger, [data-theme="dark"] .vsp-badge-danger { background: rgba(239, 68, 68, 0.25); color: #f87171; }
+        .vsp-badge-gray { background: rgba(156, 163, 175, 0.15); color: #4b5563; }
+        .dark .vsp-badge-gray, [data-theme="dark"] .vsp-badge-gray { background: rgba(255, 255, 255, 0.08); color: #d1d5db; }
+        .vsp-input-control {
+            background: var(--vsp-input-bg);
+            color: var(--vsp-text-title);
+            border: 1px solid var(--vsp-input-border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 13px;
+            outline: none;
+            width: 100%;
+        }
+        .vsp-input-control:focus {
+            border-color: #10b981;
+        }
+        .vsp-btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #ffffff;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .vsp-btn-primary:hover {
+            opacity: 0.92;
+        }
+        .vsp-btn-dark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid var(--vsp-input-border);
+            background: var(--vsp-input-bg);
+            color: var(--vsp-text-title);
+            transition: all 0.15s ease;
+        }
+        .vsp-btn-dark:hover {
+            background: rgba(156, 163, 175, 0.15);
+        }
+    </style>
+
+    <div style="display: flex; flex-direction: column; gap: 24px;" x-data="{ downloading: false }">
+        {{-- 1. UPLOAD FORM SECTION --}}
         <x-filament::section>
             <x-slot name="heading">
                 Upload Laporan Penjualan (CSV GAIKINDO)
             </x-slot>
 
-            <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-                Read-only: file dianalisis terhadap katalog base (brand → model) — tidak ada data yang ditulis.
-                Kombinasi BEV yang belum ada di katalog dilaporkan agar bisa diputuskan dulu
-                (varian existing → alias / benar-benar baru → masuk CONNECTING + kategori → impor hierarki).
+            <p style="margin-top: 2px; margin-bottom: 16px; font-size: 13px; color: var(--vsp-text-muted); line-height: 1.5;">
+                <strong>Mode Analisis Dry-Run (Read-Only)</strong>: File CSV diperiksa terhadap katalog master (Brand → Model).
+                Kombinasi BEV yang belum terdaftar di katalog akan diidentifikasi sebelum data diimpor secara permanen.
             </p>
 
-            <div class="flex flex-wrap items-end gap-4">
-                <label class="flex flex-col gap-1 text-sm text-gray-500 dark:text-gray-400">
-                    File CSV
-                    <input type="file" accept=".csv"
-                           wire:model.live="csvFile"
-                           class="fi-input rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white" />
-                </label>
+            <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px;">
+                <div style="flex: 1; min-width: 260px;">
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--vsp-text-muted);">
+                        Pilih File CSV GAIKINDO:
+                        <input type="file" accept=".csv"
+                               wire:model.live="csvFile"
+                               class="vsp-input-control" style="padding: 6px 10px;" />
+                    </label>
+                </div>
 
-                <label class="flex flex-col gap-1 text-sm text-gray-500 dark:text-gray-400">
-                    Periode
-                    <select wire:model.live="month"
-                            class="fi-input min-w-40 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white">
-                        <option value="">Tahunan (kolom JAN..DEC)</option>
-                        @foreach (['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'] as $i => $name)
-                            <option value="{{ $i + 1 }}" @selected($month === $i + 1)>{{ $name }} (kolom bulan / UNITS)</option>
-                        @endforeach
-                    </select>
-                </label>
+                <div style="min-width: 200px;">
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--vsp-text-muted);">
+                        Periode Penjualan:
+                        <select wire:model.live="month" class="vsp-input-control">
+                            <option value="">📊 Tahunan (Kolom JAN..DEC)</option>
+                            @foreach (['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'] as $i => $name)
+                                <option value="{{ $i + 1 }}" @selected($month === $i + 1)>🗓️ {{ $name }} (Kolom Bulan / UNITS)</option>
+                            @endforeach
+                        </select>
+                    </label>
+                </div>
 
-                <button type="button" wire:click="analyze" wire:loading.attr="disabled"
-                        class="rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-50">
-                    <span wire:loading.remove wire:target="analyze">Analisis</span>
-                    <span wire:loading wire:target="analyze">Menganalisis…</span>
-                </button>
+                <div>
+                    <button type="button" wire:click="analyze" wire:loading.attr="disabled" class="vsp-btn-primary">
+                        <span wire:loading.remove wire:target="analyze">⚡ Mulai Analisis Laporan</span>
+                        <span wire:loading wire:target="analyze">⏳ Menganalisis File…</span>
+                    </button>
+                </div>
             </div>
 
             @error('csvFile')
-                <p class="mt-3 text-sm text-danger-500">{{ $message }}</p>
+                <div style="margin-top: 12px; padding: 10px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 13px; font-weight: 600;">
+                    ⚠️ {{ $message }}
+                </div>
             @enderror
 
             @if ($error)
-                <p class="mt-3 rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-600 dark:bg-danger-500/10 dark:text-danger-400">
-                    {{ $error }}
-                </p>
+                <div style="margin-top: 12px; padding: 10px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 13px; font-weight: 600;">
+                    ❌ {{ $error }}
+                </div>
             @endif
         </x-filament::section>
 
+        {{-- 2. HASIL ANALISIS DASHBOARD --}}
         @if ($result !== null)
             @php $s = $result['summary']; @endphp
 
-            <div class="grid grid-cols-2 gap-4 md:grid-cols-5">
-                <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Baris dibaca</p>
-                    <p class="text-2xl font-bold text-gray-950 dark:text-white">{{ number_format($s['rows']) }}</p>
+            <div class="vsp-grid-5">
+                {{-- Baris Dibaca --}}
+                <div class="vsp-card">
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--vsp-text-muted);">Baris Dibaca</div>
+                    <div style="margin-top: 8px; font-size: 22px; font-weight: 800; font-family: monospace; color: var(--vsp-text-title);">
+                        {{ number_format($s['rows']) }}
+                    </div>
+                    <div style="margin-top: 4px; font-size: 11px; color: var(--vsp-text-muted);">Total baris CSV</div>
                 </div>
-                <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Dilewati (junk)</p>
-                    <p class="text-2xl font-bold text-gray-950 dark:text-white">{{ number_format($s['skipped']) }}</p>
+
+                {{-- Dilewati --}}
+                <div class="vsp-card">
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--vsp-text-muted);">Dilewati (Junk)</div>
+                    <div style="margin-top: 8px; font-size: 22px; font-weight: 800; font-family: monospace; color: var(--vsp-text-title);">
+                        {{ number_format($s['skipped']) }}
+                    </div>
+                    <div style="margin-top: 4px; font-size: 11px; color: var(--vsp-text-muted);">Header / subtotal</div>
                 </div>
-                <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Non-BEV (tanpa link, by design)</p>
-                    <p class="text-2xl font-bold text-gray-950 dark:text-white">{{ number_format($s['nonBev']) }}</p>
+
+                {{-- Non-BEV --}}
+                <div class="vsp-card">
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--vsp-text-muted);">Non-BEV</div>
+                    <div style="margin-top: 8px; font-size: 22px; font-weight: 800; font-family: monospace; color: var(--vsp-text-title);">
+                        {{ number_format($s['nonBev']) }}
+                    </div>
+                    <div style="margin-top: 4px; font-size: 11px; color: var(--vsp-text-muted);">Tanpa link (by design)</div>
                 </div>
-                <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Ter-match katalog</p>
-                    <p class="text-2xl font-bold text-success-500">{{ number_format($s['matched']) }}</p>
+
+                {{-- Ter-match Katalog --}}
+                <div class="vsp-card" style="border-color: rgba(16, 185, 129, 0.4);">
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #10b981;">Ter-match Katalog</div>
+                    <div style="margin-top: 8px; font-size: 22px; font-weight: 800; font-family: monospace; color: #10b981;">
+                        {{ number_format($s['matched']) }}
+                    </div>
+                    <div style="margin-top: 4px; font-size: 11px; color: #10b981; font-weight: 600;">✓ Siap diimpor</div>
                 </div>
-                <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">BARU (perlu keputusan)</p>
-                    <p class="text-2xl font-bold {{ $s['new'] > 0 ? 'text-amber-500' : 'text-success-500' }}">{{ number_format($s['new']) }}</p>
+
+                {{-- BARU --}}
+                <div class="vsp-card" style="border-color: {{ $s['new'] > 0 ? 'rgba(245, 158, 11, 0.5)' : 'rgba(16, 185, 129, 0.4)' }}; background: {{ $s['new'] > 0 ? 'rgba(245, 158, 11, 0.08)' : 'var(--vsp-bg-card)' }};">
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: {{ $s['new'] > 0 ? '#f59e0b' : '#10b981' }};">BARU (perlu keputusan)</div>
+                    <div style="margin-top: 8px; font-size: 22px; font-weight: 800; font-family: monospace; color: {{ $s['new'] > 0 ? '#f59e0b' : '#10b981' }};">
+                        {{ number_format($s['new']) }}
+                    </div>
+                    <div style="margin-top: 4px; font-size: 11px; color: {{ $s['new'] > 0 ? '#d97706' : '#10b981' }}; font-weight: 600;">
+                        {{ $s['new'] > 0 ? '⚠️ Butuh aksi' : '✓ 100% matched' }}
+                    </div>
                 </div>
             </div>
 
+            {{-- 3. TABEL KOMBINASI BARU --}}
             @if ($s['new'] > 0)
                 <x-filament::section>
                     <x-slot name="heading">
-                        Kombinasi BARU terhadap katalog base
+                        <span style="color: #f59e0b;">⚠️ Kombinasi BARU Terdeteksi ({{ count($result['new']) }} Kombinasi)</span>
                     </x-slot>
 
-                    <div class="mb-4 overflow-x-auto">
-                        <table class="w-full text-sm">
+                    <p style="margin-bottom: 12px; font-size: 12px; color: var(--vsp-text-muted);">
+                        Kombinasi model di bawah ini terdeteksi pada file laporan tetapi belum terdaftar dalam master katalog.
+                        Unduh file CSV untuk digabungkan ke <code>CONNECTING</code>, atau simpan mapping eksplisit di bawah.
+                    </p>
+
+                    <div style="overflow-x: auto; margin-bottom: 16px;">
+                        <table style="width: 100%; font-size: 13px; text-align: left; border-collapse: collapse;">
                             <thead>
-                                <tr class="border-b border-gray-200 text-left text-gray-500 dark:border-white/10 dark:text-gray-400">
-                                    <th class="px-4 py-2 font-medium">Brand (laporan)</th>
-                                    <th class="px-4 py-2 font-medium">Model</th>
-                                    <th class="px-4 py-2 font-medium">Type</th>
-                                    <th class="px-4 py-2 font-medium">Powertrain</th>
-                                    <th class="px-4 py-2 font-medium">Unit</th>
-                                    <th class="px-4 py-2 font-medium">Status katalog</th>
+                                <tr style="border-bottom: 1px solid var(--vsp-border); color: var(--vsp-text-muted);">
+                                    <th style="padding: 8px 12px; font-weight: 600;">Brand (Laporan)</th>
+                                    <th style="padding: 8px 12px; font-weight: 600;">Model</th>
+                                    <th style="padding: 8px 12px; font-weight: 600;">Type</th>
+                                    <th style="padding: 8px 12px; font-weight: 600;">Powertrain</th>
+                                    <th style="padding: 8px 12px; font-weight: 600; text-align: right;">Unit</th>
+                                    <th style="padding: 8px 12px; font-weight: 600;">Status Katalog</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($result['new'] as $row)
-                                    <tr class="border-b border-gray-100 last:border-0 dark:border-white/5">
-                                        <td class="px-4 py-2 font-mono text-xs">{{ $row['brand'] }}</td>
-                                        <td class="px-4 py-2">{{ $row['model'] }}</td>
-                                        <td class="px-4 py-2 text-gray-500">{{ $row['type'] ?: '—' }}</td>
-                                        <td class="px-4 py-2">{{ $row['powertrain'] }}</td>
-                                        <td class="px-4 py-2">{{ number_format($row['units']) }}</td>
-                                        <td class="px-4 py-2">
+                                    <tr style="border-bottom: 1px solid var(--vsp-border-sub);">
+                                        <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: var(--vsp-text-title);">{{ $row['brand'] }}</td>
+                                        <td style="padding: 8px 12px; font-weight: 600; color: var(--vsp-text-title);">{{ $row['model'] }}</td>
+                                        <td style="padding: 8px 12px; color: var(--vsp-text-muted);">{{ $row['type'] ?: '—' }}</td>
+                                        <td style="padding: 8px 12px;">
+                                            <span class="vsp-badge {{ $row['powertrain'] === 'BEV' ? 'vsp-badge-success' : 'vsp-badge-gray' }}">
+                                                {{ $row['powertrain'] }}
+                                            </span>
+                                        </td>
+                                        <td style="padding: 8px 12px; text-align: right; font-family: monospace; font-weight: 700; color: var(--vsp-text-title);">
+                                            {{ number_format($row['units']) }}
+                                        </td>
+                                        <td style="padding: 8px 12px;">
                                             @if ($row['brand_name'])
-                                                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+                                                <span class="vsp-badge vsp-badge-warn">
                                                     model baru di {{ $row['brand_name'] }}
                                                 </span>
                                             @else
-                                                <span class="rounded-full bg-danger-50 px-2 py-0.5 text-xs text-danger-600 dark:bg-danger-500/10 dark:text-danger-400">
+                                                <span class="vsp-badge vsp-badge-danger">
                                                     brand baru
                                                 </span>
                                             @endif
@@ -117,76 +271,81 @@
                         </table>
                     </div>
 
-                    <button type="button" wire:click="downloadNew"
-                            class="rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600">
-                        Unduh CSV → CONNECTING ({{ count($result['new']) }} baris, kategori diisi manual)
+                    <button type="button" wire:click="downloadNew" class="vsp-btn-primary">
+                        📥 Unduh CSV → CONNECTING ({{ count($result['new']) }} baris, kategori diisi manual)
                     </button>
                 </x-filament::section>
-
-
             @else
                 <x-filament::section>
-                    <p class="py-2 text-sm text-success-600 dark:text-success-400">
-                        ✓ Semua kombinasi BEV sudah ter-match ke katalog — file aman diimpor
-                        (vehicle-sales:import-csv --require-full-link).
-                    </p>
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 6px 0; color: #10b981;">
+                        <span style="font-size: 20px;">✅</span>
+                        <div style="font-size: 13px; font-weight: 600;">
+                            Semua kombinasi BEV sudah ter-match ke katalog — file aman diimpor (<code>vehicle-sales:import-csv --require-full-link</code>).
+                        </div>
+                    </div>
                 </x-filament::section>
             @endif
 
-                {{-- Simpan mapping eksplisit --}}
-                <x-filament::section>
-                    <x-slot name="heading">
-                        Simpan Mapping Eksplisit
-                    </x-slot>
+            {{-- 4. SIMPAN MAPPING EKSPLISIT --}}
+            <x-filament::section>
+                <x-slot name="heading">
+                    Simpan Mapping Eksplisit
+                </x-slot>
 
-                    <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
-                        Petakan nama mentah → katalog sekali, tersimpan permanen: semua impor berikutnya
-                        otomatis ter-link tanpa tebakan. Katalog tujuan harus sudah ada.
-                    </p>
+                <p style="margin-bottom: 14px; font-size: 12px; color: var(--vsp-text-muted);">
+                    Petakan nama mentah → katalog master sekali, tersimpan permanen: semua impor berikutnya otomatis ter-link tanpa tebakan.
+                    Katalog tujuan harus sudah terdaftar di master brand/model.
+                </p>
 
-                    <div class="grid grid-cols-1 gap-3 md:grid-cols-5">
-                        <label class="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
-                            Raw Brand (laporan)
-                            <input type="text" wire:model="mapRawBrand" placeholder="WULING-DBG"
-                                   class="fi-input rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) 140px; gap: 12px; align-items: flex-end;">
+                    <div>
+                        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--vsp-text-muted);">
+                            Raw Brand (Laporan)
+                            <input type="text" wire:model="mapRawBrand" placeholder="WULING-DBG" class="vsp-input-control" />
                         </label>
-                        <label class="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
-                            Raw Model (laporan)
-                            <input type="text" wire:model="mapRawModel" placeholder="Air EV Baru"
-                                   class="fi-input rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                    </div>
+                    <div>
+                        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--vsp-text-muted);">
+                            Raw Model (Laporan)
+                            <input type="text" wire:model="mapRawModel" placeholder="Air EV Baru" class="vsp-input-control" />
                         </label>
-                        <label class="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
-                            → Brand Katalog
-                            <input type="text" wire:model="mapBrandName" placeholder="Wuling"
-                                   class="fi-input rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                    </div>
+                    <div>
+                        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--vsp-text-muted);">
+                            → Brand Master
+                            <input type="text" wire:model="mapBrandName" placeholder="Wuling" class="vsp-input-control" />
                         </label>
-                        <label class="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
-                            → Model Katalog
-                            <input type="text" wire:model="mapModelName" placeholder="Air EV"
-                                   class="fi-input rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                    </div>
+                    <div>
+                        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--vsp-text-muted);">
+                            → Model Master
+                            <input type="text" wire:model="mapModelName" placeholder="Air EV" class="vsp-input-control" />
                         </label>
-                        <button type="button" wire:click="saveMapping"
-                                class="self-end rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 dark:bg-white dark:text-gray-950">
-                            Simpan Mapping
+                    </div>
+                    <div>
+                        <button type="button" wire:click="saveMapping" class="vsp-btn-dark" style="width: 100%; height: 38px;">
+                            💾 Simpan
                         </button>
                     </div>
+                </div>
 
-                    <label class="mt-3 flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
-                        Catatan (opsional)
-                        <input type="text" wire:model="mapCatatan"
-                               class="fi-input rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                <div style="margin-top: 12px;">
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--vsp-text-muted);">
+                        Catatan Tambahan (Opsional)
+                        <input type="text" wire:model="mapCatatan" placeholder="cth. Varian facelift atau penamaan promosi khusus dealer" class="vsp-input-control" />
                     </label>
+                </div>
 
-                    @if ($mapMessage)
-                        <p class="mt-3 text-sm {{ str_starts_with($mapMessage, '✓') ? 'text-success-500' : 'text-danger-500' }}">
-                            {{ $mapMessage }}
-                        </p>
-                    @endif
-                    @error('mapRawBrand')<p class="mt-1 text-xs text-danger-500">{{ $message }}</p>@enderror
-                    @error('mapRawModel')<p class="mt-1 text-xs text-danger-500">{{ $message }}</p>@enderror
-                    @error('mapBrandName')<p class="mt-1 text-xs text-danger-500">{{ $message }}</p>@enderror
-                    @error('mapModelName')<p class="mt-1 text-xs text-danger-500">{{ $message }}</p>@enderror
-                </x-filament::section>
+                @if ($mapMessage)
+                    <div style="margin-top: 12px; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; background: {{ str_starts_with($mapMessage, '✓') ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }}; color: {{ str_starts_with($mapMessage, '✓') ? '#10b981' : '#ef4444' }}; border: 1px solid {{ str_starts_with($mapMessage, '✓') ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)' }};">
+                        {{ $mapMessage }}
+                    </div>
+                @endif
+                @error('mapRawBrand')<p style="margin-top: 4px; font-size: 12px; color: #ef4444;">{{ $message }}</p>@enderror
+                @error('mapRawModel')<p style="margin-top: 4px; font-size: 12px; color: #ef4444;">{{ $message }}</p>@enderror
+                @error('mapBrandName')<p style="margin-top: 4px; font-size: 12px; color: #ef4444;">{{ $message }}</p>@enderror
+                @error('mapModelName')<p style="margin-top: 4px; font-size: 12px; color: #ef4444;">{{ $message }}</p>@enderror
+            </x-filament::section>
         @endif
     </div>
 </x-filament-panels::page>
