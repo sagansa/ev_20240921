@@ -141,4 +141,37 @@ class VehicleCategoryAssignerTest extends TestCase
         $this->assertNull(VehicleCategories::groupOf(null));
         $this->assertNull(VehicleCategories::groupOf('Ngawur'));
     }
+
+    public function test_aturan_pola_penumpang_varian_panjang(): void
+    {
+        $cases = [
+            ['TOYOTA', 'Avanza 1.5 G MT', 'MPV', 'Small'],
+            ['TOYOTA', 'Kijang Innova Zenix', 'MPV', 'Medium'],
+            ['TOYOTA', 'Alphard 2.5 HEV', 'MPV', 'Large'],
+            ['TOYOTA', 'Hi-Ace Premio', 'Van/Minibus', null],
+            ['SUZUKI', 'Ertiga Hybrid', 'MPV', 'Small'],
+            ['SUZUKI', 'Carry Pick Up', 'Pickup', null],
+            ['HONDA', 'BR-V Prestige', 'SUV', 'Small'],
+            ['MAZDA', 'CX-5 GT', 'SUV', 'Medium'],
+            ['SCANIA', 'K-Series', 'Bus', null],
+            ['UD TRUCKS', 'CDE', 'Truk Berat', null],
+            ['LEXUS', 'ES 250', 'Sedan', 'Large'],
+            ['LEXUS', 'RX 350', 'SUV', 'Medium'],
+            ['BMW', '218i Gran Coupe', 'Sedan', 'Medium'],
+            ['BMW', 'X1 sDrive18i', 'SUV', 'Small'],
+            ['MERCEDES BENZ PC', 'C 200 AVA Line (W206)', 'Sedan', 'Medium'],
+            ['MERCEDES BENZ PC', 'CLA 200 AMG Line (C118)', 'Sedan', 'Medium'],
+            ['MERCEDES BENZ', 'O 500 RSD', 'Bus', null],
+            ['AUDI', 'A6 2.0TFSI AT', 'Sedan', 'Medium'],
+        ];
+
+        foreach ($cases as [$brand, $model, $category, $size]) {
+            $r = $this->assigner->assign($brand, $model);
+            $this->assertSame($category, $r['category'], "$brand $model category");
+            $this->assertSame($size, $r['size'], "$brand $model size");
+        }
+
+        // MINI Cooper Countryman kena kamus (exact), bukan rule.
+        $this->assertSame('SUV', $this->assigner->assign('MINI', 'Cooper Countryman')['category']);
+    }
 }

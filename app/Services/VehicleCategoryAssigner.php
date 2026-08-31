@@ -389,7 +389,266 @@ class VehicleCategoryAssigner
             return ['Truk Berat', null, 'rule'];
         }
 
-        return null;
+        // ---- Mobil penumpang: pola nama per brand (varian panjang GAIKINDO) ----
+        try {
+            $passenger = $this->passengerRule($brand, $model);
+        } catch (\UnhandledMatchError) {
+            // inner match tanpa arm cocok — bukan bagian pola yang dikenal.
+            $passenger = null;
+        }
+
+        return $passenger;
+    }
+
+    /**
+     * Pola kategori utk nama varian panjang penumpang (mis. "218i Gran Coupe",
+     * "Xenia 1.3 R MT") yang tidak tertangkap kamus keluarga.
+     *
+     * @return array{0: string, 1: ?string, 2: string}|null
+     */
+    protected function passengerRule(string $brand, string $model): ?array
+    {
+        $rule = fn (string $category, ?string $size = null) => [$category, $size, 'rule'];
+
+        return match (true) {
+            // TOYOTA
+            in_array($brand, ['TOYOTA', 'TOYOTA GR', 'TOYOTA LAND', 'TOYOTA PRIUS', 'TOYOTA RAIZE', 'TOYOTA RAV', 'TOYOTA VIOS', 'TOYOTA TOYOTA'], true) => match (true) {
+                preg_match('/^(AGYA|C\+POD|C+POD)/', $model) === 1 => $rule('City Car'),
+                preg_match('/^(AVANZA|CALYA|SIENTA|VELOZ|SIGMA)/', $model) === 1 => $rule('MPV', 'Small'),
+                preg_match('/^(INNOVA|KIJANG INNOVA|VOXY|NOAH|ESQUIRE)/', $model) === 1 => $rule('MPV', 'Medium'),
+                preg_match('/^(ALPHARD|VELLFI?RE|GRANVIA)/', $model) === 1 => $rule('MPV', 'Large'),
+                preg_match('/^(VIOS|YARIS SEDAN)/', $model) === 1 => $rule('Sedan', 'Small'),
+                preg_match('/^(CAMRY|COROLLA ALTIS|COROLLA SEDAN)/', $model) === 1 => $rule('Sedan', 'Medium'),
+                preg_match('/^(CROWN)/', $model) === 1 => $rule('Sedan', 'Large'),
+                preg_match('/^(RAIZE|RUSH|YARIS CROSS|COROLLA CROSS|URBAN CRUISER|FRONTLANDER|RAV ?4)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/^(FORTUNER)/', $model) === 1 => $rule('SUV', 'Large'),
+                preg_match('/^(LAND CRUISER)/', $model) === 1 => $rule('Off-Road'),
+                preg_match('/^(HI-?ACE|HIACE|GRANVIA)/', $model) === 1 => $rule('Van/Minibus'),
+                preg_match('/^(HILUX|HILUX)/', $model) === 1 => $rule('Pickup'),
+                preg_match('/^(DYNA)/', $model) === 1 => $rule('Truk Ringan'),
+                preg_match('/^(C-HR)/', $model) === 1 => $rule('Crossover', 'Small'),
+                preg_match('/^(86|SUPRA|GR\b)/', $model) === 1 => $rule('Sport'),
+                preg_match('/^(COROLLA|YARIS)\b/', $model) === 1 => $rule('Hatchback', 'Small'),
+                default => null,
+            },
+
+            // SUZUKI
+            in_array($brand, ['SUZUKI', 'SUZUKI ALL', 'SUZUKI APV', 'SUZUKI S'], true) => match (true) {
+                preg_match('/^(ERTIGA|XL-?7)/', $model) === 1 => $rule('MPV', 'Small'),
+                preg_match('/^(APV|EVERY)/', $model) === 1 => $rule('Van/Minibus'),
+                preg_match('/^(CARRY)/', $model) === 1 => $rule('Pickup'),
+                preg_match('/^(IGNIS|S-PRESSO|CELERIO)/', $model) === 1 => $rule('City Car'),
+                preg_match('/^(BALENO|SWIFT)/', $model) === 1 => $rule('Hatchback', 'Small'),
+                preg_match('/^(FRONX|GRAND VITARA|SX4)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/^(JIMNY)/', $model) === 1 => $rule('Off-Road'),
+                default => null,
+            },
+
+            // HONDA
+            in_array($brand, ['HONDA', 'HONDA CITY', 'HONDA NEW', 'HONDA STEP', 'HONDA WRV'], true) => match (true) {
+                preg_match('/^(BRIO)/', $model) === 1 => $rule('City Car'),
+                preg_match('/^(CITY)\b/', $model) === 1 => $rule('Sedan', 'Small'),
+                preg_match('/^(ACCORD|CIVIC)\b/', $model) === 1 => $rule('Sedan', 'Medium'),
+                preg_match('/^(BR-V|HR-V|WR-V|CR-V|CRV)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/^(MOBILIO)/', $model) === 1 => $rule('MPV', 'Small'),
+                preg_match('/^(ODYSSEY|STEP WGN|STEPWGN)/', $model) === 1 => $rule('MPV', 'Medium'),
+                preg_match('/^(PRELUDE)/', $model) === 1 => $rule('Sport'),
+                preg_match('/^(JAZZ|FIT)/', $model) === 1 => $rule('Hatchback', 'Small'),
+                default => null,
+            },
+
+            // MAZDA
+            $brand === 'MAZDA' => match (true) {
+                preg_match('/^(MX-5|ROADSTER)/', $model) === 1 => $rule('Sport'),
+                preg_match('/^CX-(3|30)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/^CX-(5|60|7)/', $model) === 1 => $rule('SUV', 'Medium'),
+                preg_match('/^CX-(8|9)/', $model) === 1 => $rule('SUV', 'Large'),
+                preg_match('/^MAZDA 2\b|^2\b/', $model) === 1 => $rule(str_contains($model, 'SEDAN') ? 'Sedan' : 'Hatchback', 'Small'),
+                preg_match('/^MAZDA 3\b|^3\b/', $model) === 1 => $rule('Hatchback', 'Medium'),
+                preg_match('/^MAZDA 6\b|^6\b/', $model) === 1 => $rule('Sedan', 'Large'),
+                default => null,
+            },
+
+            // DAIHATSU
+            $brand === 'DAIHATSU' => match (true) {
+                preg_match('/^(AYLA)/', $model) === 1 => $rule('City Car'),
+                preg_match('/^(SIRION)/', $model) === 1 => $rule('Hatchback', 'Small'),
+                preg_match('/^(SIGRA|XENIA)/', $model) === 1 => $rule('MPV', 'Small'),
+                preg_match('/^(GRAN MAX|LUXIO)/', $model) === 1 => $rule('Van/Minibus'),
+                preg_match('/^(ROCKY|TERIOS)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/(PICKUP|CARGO)/', $model) === 1 => $rule('Pickup'),
+                default => null,
+            },
+
+            // MINI
+            in_array($brand, ['MINI', 'MINI JCW'], true) => match (true) {
+                preg_match('/(COUNTRYMAN)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/(CLUBMAN)/', $model) === 1 => $rule('Hatchback', 'Medium'),
+                preg_match('/(JOHN COOPER|JCW|GP\b|CABRIO|CONVERTIBLE|ROADSTER)/', $model) === 1 => $rule('Sport'),
+                preg_match('/(COOPER|HATCH|ONE\b)/', $model) === 1 => $rule('Hatchback', 'Small'),
+                default => null,
+            },
+
+            // SCANIA: K = bus, G/P/R/S = truk berat.
+            $brand === 'SCANIA' => match (true) {
+                preg_match('/^K[-\s]?SERIES|^K\d/', $model) === 1 => $rule('Bus'),
+                default => $rule('Truk Berat'),
+            },
+
+            // UD TRUCKS: seluruh lini adalah truk berat.
+            str_starts_with($brand, 'UD TRUCKS') => $rule('Truk Berat'),
+
+            // LEXUS
+            str_starts_with($brand, 'LEXUS') => match (true) {
+                preg_match('/^(ES|LS)\b/', $model) === 1 => $rule('Sedan', 'Large'),
+                preg_match('/^(LM)\b/', $model) === 1 => $rule('MPV', 'Large'),
+                preg_match('/^(LC|RC)\b/', $model) === 1 => $rule('Sport'),
+                preg_match('/^(LBX|UX|NX|RX|LX|RZ|GX)\b/', $model) === 1 => $rule('SUV', 'Medium'),
+                default => null,
+            },
+
+            // BMW
+            in_array($brand, ['BMW', 'BMW CBU', 'BMW XM'], true) => match (true) {
+                preg_match('/^M[2-8]\b|^M\d\b/', $model) === 1 => $rule('Sport'),
+                preg_match('/^Z\d\b/', $model) === 1 => $rule('Sport'),
+                preg_match('/^X[1-2]\b/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/^X[3-4]\b/', $model) === 1 => $rule('SUV', 'Medium'),
+                preg_match('/^X[5-7]\b/', $model) === 1 => $rule('SUV', 'Large'),
+                preg_match('/^I[457]I?\b/', $model) === 1 => $rule('Sedan', 'Large'),
+                preg_match('/^IX[123]I?\b/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/^IX\b/', $model) === 1 => $rule('SUV', 'Large'),
+                preg_match('/^SERI \d/', $model) === 1 => $rule('Sedan', 'Medium'),
+                preg_match('/^\d{3,4}I?\b/', $model) === 1 => $rule('Sedan', 'Medium'),
+                default => null,
+            },
+
+            // MERCEDES-BENZ (PC & CV)
+            str_contains($brand, 'MERCEDES') => match (true) {
+                preg_match('/^(O\d|OF|OH|OC\b|TOURISMO|CITARO)/', $model) === 1 => $rule('Bus'),
+                preg_match('/^(ACTROS|AROCS|AXOR|ECONIC|ATEGO)/', $model) === 1 => $rule('Truk Berat'),
+                preg_match('/^(G-CLASS|G 63|G500)/', $model) === 1 => $rule('Off-Road'),
+                preg_match('/^(X-CLASS)/', $model) === 1 => $rule('Pickup'),
+                preg_match('/^(V-CLASS|VITO|VIANO|SPRINTER|EQV|CITAN)/', $model) === 1 => $rule('Van/Minibus'),
+                preg_match('/^(AMG|SL\b|SLK|SLC)/', $model) === 1 => $rule('Sport'),
+                preg_match('/^(GLA|GLB|GLC|EQB)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/^(GLE|EQC)/', $model) === 1 => $rule('SUV', 'Large'),
+                preg_match('/^(GLS|EQS SUV)/', $model) === 1 => $rule('SUV', 'Large'),
+                preg_match('/^(EQA)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/^(EQE|EQS)\b/', $model) === 1 => $rule('Sedan', 'Large'),
+                preg_match('/^(CLA|CLE|CLS)\b/', $model) === 1 => $rule('Sedan', 'Medium'),
+                preg_match('/^(A-?CLASS|B-?CLASS)\b/', $model) === 1 => $rule('Hatchback', 'Small'),
+                preg_match('/^(C-?CLASS|E-?CLASS)\b/', $model) === 1 => $rule('Sedan', 'Medium'),
+                preg_match('/^(C|E) ?\d{3}/', $model) === 1 => $rule('Sedan', 'Medium'),
+                preg_match('/^S ?\d{3}/', $model) === 1 => $rule('Sedan', 'Large'),
+                preg_match('/^(S-?CLASS|MAYBACH)\b/', $model) === 1 => $rule('Sedan', 'Large'),
+                default => null,
+            },
+
+            // AUDI
+            $brand === 'AUDI' => match (true) {
+                preg_match('/^(RS|TT|R8)\b/', $model) === 1 => $rule('Sport'),
+                preg_match('/^Q[2-4]\b/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/^Q[5-8]\b/', $model) === 1 => $rule('SUV', 'Large'),
+                preg_match('/^A[1-3]\b/', $model) === 1 => $rule('Hatchback', 'Small'),
+                preg_match('/^A[4-6]\b/', $model) === 1 => $rule('Sedan', 'Medium'),
+                preg_match('/^A[78]\b/', $model) === 1 => $rule('Sedan', 'Large'),
+                default => null,
+            },
+
+            // FORD / ISUZU / NISSAN / JEEP / JETOUR / GWM / KIA / CITROËN / GEELY / MG
+            in_array($brand, ['FORD'], true) => match (true) {
+                preg_match('/^RANGER/', $model) === 1 => $rule('Pickup'),
+                preg_match('/^(EVEREST)/', $model) === 1 => $rule('SUV', 'Large'),
+                preg_match('/^(MUSTANG)/', $model) === 1 => $rule('Sport'),
+                default => null,
+            },
+
+            $brand === 'ISUZU' && $model !== '' => match (true) {
+                preg_match('/^(D-MAX|DMAX)/', $model) === 1 => $rule('Pickup'),
+                preg_match('/^(MU-X|MUX)/', $model) === 1 => $rule('SUV', 'Large'),
+                preg_match('/^(TRAGA|PANTHER)/', $model) === 1 => $rule('Pickup'),
+                default => $rule('Truk Ringan'),
+            },
+
+            $brand === 'NISSAN' && $model !== '' => match (true) {
+                preg_match('/^(LIVINA)/', $model) === 1 => $rule('MPV', 'Small'),
+                preg_match('/^(SERENA)/', $model) === 1 => $rule('MPV', 'Medium'),
+                preg_match('/^(KICKS)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/^(NAVARA)/', $model) === 1 => $rule('Pickup'),
+                preg_match('/^(TERRA)/', $model) === 1 => $rule('SUV', 'Large'),
+                preg_match('/^(X-TRAIL|XTRAIL)/', $model) === 1 => $rule('SUV', 'Medium'),
+                preg_match('/^(LEAF)/', $model) === 1 => $rule('Hatchback', 'Medium'),
+                preg_match('/^(PATROL)/', $model) === 1 => $rule('SUV', 'Large'),
+                default => null,
+            },
+
+            $brand === 'JEEP' && $model !== '' => match (true) {
+                preg_match('/^(WRANGLER)/', $model) === 1 => $rule('Off-Road'),
+                default => $rule('SUV', 'Medium'),
+            },
+
+            $brand === 'JETOUR' && $model !== '' => $rule('SUV', 'Small'),
+
+            in_array($brand, ['GWM', 'GWM HAVAL', 'GWM ORA', 'GWM TANK', 'HAVAL', 'TANK GWM'], true) && $model !== '' => match (true) {
+                preg_match('/^(TANK)/', $model) === 1 => $rule('Off-Road'),
+                preg_match('/(JOLION)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/(H6)/', $model) === 1 => $rule('SUV', 'Medium'),
+                preg_match('/^(ORA)/', $model) === 1 => $rule('Hatchback', 'Small'),
+                default => null,
+            },
+
+            $brand === 'KIA' && $model !== '' => match (true) {
+                preg_match('/^K-?\d{4}|^K-SERIES|^K SERIES|^BONGO/', $model) === 1 => $rule('Truk Ringan'),
+                preg_match('/^(CARENS|CARNIVAL|SEDONA|GRAND SEDONA)/', $model) === 1 => $rule('MPV', 'Large'),
+                preg_match('/^(SELTOS|SONET|STONIC)/', $model) === 1 => $rule('SUV', 'Small'),
+                default => null,
+            },
+
+            in_array($brand, ['CITROEN'], true) && $model !== '' => match (true) {
+                preg_match('/(AIRCROSS|C5X|C4)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/(E-C3|EC3|Ë-C3)/', $model) === 1 => $rule('City Car'),
+                preg_match('/^(C3|C4)/', $model) === 1 => $rule('Hatchback', 'Small'),
+                default => null,
+            },
+
+            $brand === 'GEELY' && $model !== '' => $rule('SUV', 'Medium'),
+
+            in_array($brand, ['MORRIS GARAGE', 'MG'], true) && $model !== '' => match (true) {
+                preg_match('/(HS|ZS|VS|EP)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/(MG4|4 EV|3 EV)/', $model) === 1 => $rule('Hatchback', 'Medium'),
+                preg_match('/(CYBERSTER)/', $model) === 1 => $rule('Sport'),
+                default => null,
+            },
+
+            // SUBARU
+            $brand === 'SUBARU' && $model !== '' => match (true) {
+                preg_match('/^(XV|CROSSTREK|FORESTER)/', $model) === 1 => $rule('SUV', 'Small'),
+                preg_match('/^(OUTBACK)/', $model) === 1 => $rule('SUV', 'Large'),
+                preg_match('/^(WRX|BRZ)/', $model) === 1 => $rule('Sedan', 'Medium'),
+                default => null,
+            },
+
+            // TATA
+            $brand === 'TATA' && $model !== '' => match (true) {
+                preg_match('/^(SUPER ACE|XENON|INTRA)/', $model) === 1 => $rule('Pickup'),
+                default => $rule('Truk Berat'),
+            },
+
+            $brand === 'VOLKSWAGEN' && $model !== '' => match (true) {
+                preg_match('/^(TIGUAN|T-CROSS|TAIGUN)/', $model) === 1 => $rule('SUV', 'Medium'),
+                preg_match('/^(POLO|GOLF)/', $model) === 1 => $rule('Hatchback', 'Small'),
+                preg_match('/^(ID\.?BUZZ|CADDY|TRANSPORTER)/', $model) === 1 => $rule('Van/Minibus'),
+                default => null,
+            },
+
+            // Fallback generik lintas brand.
+            preg_match('/(PICKUP)\b/', $model) === 1 => $rule('Pickup'),
+            preg_match('/\bBUS\b/', $model) === 1 => $rule('Bus'),
+            preg_match('/(CHASSIS|TRACTOR|MIXER|DUMP|LOADER)/', $model) === 1 => $rule('Truk Berat'),
+            preg_match('/\bVAN\b/', $model) === 1 => $rule('Van/Minibus'),
+
+            default => null,
+        };
     }
 
     /**
