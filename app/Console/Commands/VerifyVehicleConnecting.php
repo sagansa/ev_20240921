@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\BrandVehicle;
 use App\Models\ModelVehicle;
 use App\Models\TypeVehicle;
+use App\Services\VehicleSalesMatcher;
 use Illuminate\Console\Command;
 
 /**
@@ -53,6 +54,9 @@ class VerifyVehicleConnecting extends Command
 
         // ---- Muat katalog DB (ternormalisasi, sekali) ----
         $norm = fn (?string $v): string => mb_strtolower(preg_replace('/\s+/', ' ', trim((string) $v)) ?? '');
+        // Brand CSV diresolusi lewat rantai alias matcher — sama seperti impor.
+        $matcher = app(VehicleSalesMatcher::class);
+        $canonical = fn (string $raw): string => $norm($matcher->canonicalBrandName($raw));
 
         $brandsById = BrandVehicle::all()->keyBy('id');
         $brandByKey = []; // norm name => id
@@ -92,7 +96,7 @@ class VerifyVehicleConnecting extends Command
 
             if ($brand === '' || $model === '') continue;
 
-            $bKey = $norm($brand);
+            $bKey = $canonical($brand);
             $mKey = $bKey.'|'.$norm($model);
             $tKey = $mKey.'|'.$norm($type);
             $rowKey = $mKey.'|'.$norm($type).'|'.$pt.'|'.$category.'|'.$size;
