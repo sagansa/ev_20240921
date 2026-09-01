@@ -5,14 +5,18 @@ namespace App\Filament\Pages;
 use App\Services\VehicleConnectingComparer;
 use App\Services\VehicleConnectingSyncService;
 use Filament\Pages\Page;
-use Livewire\Attributes\Url;
 use Livewire\WithFileUploads;
 use RuntimeException;
 
 /**
- * Halaman "Sinkronisasi CONNECTING" — GUI alur update lewat CSV:
- * upload → Verifikasi (dry-run) → Jalankan Sinkronisasi
- * (tabel connecting → katalog → backfill kategori → flush cache pasar).
+ * Alur update katalog lewat CSV — 3 langkah terpisah agar jelas mana
+ * UPDATE dan mana ADD:
+ *  1. Verifikasi    : bandingkan CSV vs katalog (dry-run, tanpa menulis)
+ *  2. Import CSV    : CSV → tabel vehicle_connectings (master mapping,
+ *                     kunci unik raw_gabungan — duplikat tidak mungkin)
+ *  3. Terapkan      : turunkan connecting → brand/model/type katalog
+ *                     (entitas baru dibuat, klasifikasi konsisten diterapkan)
+ * Diakhiri flush cache Pasar EV.
  */
 class VehicleConnectingSync extends Page
 {
@@ -34,8 +38,6 @@ class VehicleConnectingSync extends Page
 
     public ?array $report = null;
 
-    public ?array $syncResult = null;
-
     /** @var list<string> */
     public array $log = [];
 
@@ -55,41 +57,38 @@ class VehicleConnectingSync extends Page
         }
     }
 
-    public function sync(): void
+    /** Langkah 2: CSV → tabel vehicle_connectings (master). */
+    public function importConnecting(): void
     {
         $this->validate(['csvFile' => ['required', 'file', 'mimes:csv,txt', 'max:20480']]);
 
-        $this->error = null;
-        $this->log = [];
-        $path = $this->csvFile->getRealPath();
-        $svc = app(VehicleConnectingSyncService::class);
-
         try {
-            $table = $svc->importConnectingTable($path);
-            $this->log[] = 'Tabel connecting: '.$table['saved'].' baris tersimpan'.
-                (count($table['unresolved']) > 0
-                    ? ', '.count($table['unresolved']).' link katalog belum lengkap'
-                    : ', semua ter-link');
-
-            $catalog = $svc->importCatalog($path);
-            $this->log[] = 'Katalog: '.$catalog['processed'].' baris diproses, +'.
-                $catalog['brands'].' brand, +'.$catalog['models'].' model, +'.$catalog['types'].' type'.
-                (count($catalog['failed']) > 0 ? ', '.count($catalog['failed']).' gagal' : '');
-
-            $backfill = $svc->backfillCategories($path);
-            $this->log[] = 'Kategori model diperbarui: '.$backfill['updated'].
-                ' (tidak ada di katalog: '.count($backfill['notFound']).')';
-
-            $svc->flushMarketCache();
-            $this->log[] = 'Cache Pasar EV di-flush.';
-
-            $this->syncResult = [
-                'table' => $table,
-                'catalog' => $catalog,
-                'backfill' => ['updated' => $backfill['updated']],
-            ];
+            $res = app(VehicleConnectingSyncService::class)->importConnectingTable($this->csvFile->getRealPath());
+            $this->log[] = 'Connecting: '.$res['saved'].' baris tersimpan'.
+                (count($res['unresolved']) > 0
+                    ? ' | link katalog belum lengkap: '.implode('; ', array_slice($res['unresolved'], 0, 5))
+                    : ' | semua ter-link ke katalog');
         } catch (RuntimeException $e) {
-            $this->error = $e->getMessage();
+            $this->log[] = '✗ Gagal: '.$e->getMessage();
+        }
+    }
+
+    /** Langkah 3: turunkan connecting → katalog + flush cache. */
+    public function applyToCatalog(): void
+    {
+        try {
+            $res = app(VehicleConnectingSyncService::class)->applyToCatalog();
+            $this->log[] = 'Katalog diterapkan: +'.$res['brands'].' brand, +'.$res['models'].' model, +'.
+                $res['types'].' type, '.$res['categoriesUpdated'].' klasifikasi diperbarui'.
+                (count($res['conflicts']) > 0
+                    ? ' | '.count($res['conflicts']).' konflik nilai campuran dibiarkan (lihat log)' : '');
+            foreach (array_slice($res['conflicts'], 0, 10) as $c) {
+                $this->log[] = '  ⚠ konflik '.$c['field'].': '.$c['brand'].' / '.$c['model'].' — '.$c['values'];
+            }
+            app(VehicleConnectingSyncService::class)->flushMarketCache();
+            $this->log[] = 'Cache Pasar EV di-flush.';
+        } catch (RuntimeException $e) {
+            $this->log[] = '✗ Gagal: '.$e->getMessage();
         }
     }
 }

@@ -51,6 +51,9 @@ class VehicleConnectingResource extends Resource
                 ->schema([
                     TextInput::make('raw_gabungan')->label('BRAND MODEL TYPE (raw)')->required()->maxLength(255)->columnSpanFull(),
                     TextInput::make('fuel')->label('FUEL')->maxLength(16),
+                    TextInput::make('brand_name')->label('Brand (parsed)')->maxLength(255),
+                    TextInput::make('model_name')->label('Model (parsed)')->maxLength(255),
+                    TextInput::make('type_name')->label('Type (parsed)')->maxLength(255),
                 ]),
             Section::make('Katalog')
                 ->schema([

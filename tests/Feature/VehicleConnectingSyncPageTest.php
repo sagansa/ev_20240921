@@ -54,9 +54,11 @@ class VehicleConnectingSyncPageTest extends TestCase
 
     public function test_sinkronisasi_membuat_model_baru_dan_kategorinya(): void
     {
+        // Alur baru: CSV → tabel Connecting → Terapkan ke Katalog.
         Livewire::test(VehicleConnectingSync::class)
             ->set('csvFile', $this->csv())
-            ->call('sync')
+            ->call('importConnecting')
+            ->call('applyToCatalog')
             ->assertSee('Hasil Sinkronisasi');
 
         $aionV = ModelVehicle::where('name', 'AION V')->first();

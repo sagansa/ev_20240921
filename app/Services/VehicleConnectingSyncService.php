@@ -24,6 +24,122 @@ use Illuminate\Support\Facades\DB;
 class VehicleConnectingSyncService
 {
     /**
+     * TURUNKAN isi tabel connecting → katalog (brand/model/type). Connecting
+     * adalah SUMBER KEBENARAN: entitas baru dibuat dari sini; klasifikasi
+     * model diperbarui hanya bila nilai connecting KONSISTEN (seragam) —
+     * keluarga dengan nilai campuran dilaporkan, tidak ditimpa asal-asalan.
+     *
+     * @return array{brands: int, models: int, types: int, categoriesUpdated: int,
+     *               conflicts: list<array{brand: string, model: string, field: string, values: string}>}
+     */
+    public function applyToCatalog(): array
+    {
+        $norm = fn (?string $v): string => mb_strtolower(preg_replace('/\s+/', ' ', trim((string) $v)) ?? '');
+
+        $rows = VehicleConnecting::whereNotNull('brand_name')->whereNotNull('model_name')->get();
+
+        // Group per keluarga (brand + model).
+        $groups = [];
+        foreach ($rows as $row) {
+            $bKey = $norm($row->brand_name);
+            $mKey = $bKey.'|'.$norm($row->model_name);
+            $g = $groups[$mKey] ??= [
+                'brand_name' => $row->brand_name,
+                'model_name' => $row->model_name,
+                'rows' => [],
+            ];
+            $g['rows'][] = $row;
+            $groups[$mKey] = $g;
+        }
+
+        $brands = BrandVehicle::all()->keyBy(fn (BrandVehicle $b) => $norm($b->name));
+        $models = ModelVehicle::all()->keyBy(fn (ModelVehicle $m) => $norm($m->brandVehicle?->name ?? '').'|'.$norm($m->name));
+
+        $stats = ['brands' => 0, 'models' => 0, 'types' => 0, 'categoriesUpdated' => 0];
+        $conflicts = [];
+
+        foreach ($groups as $g) {
+            $bKey = $norm($g['brand_name']);
+            $mKey = $bKey.'|'.$norm($g['model_name']);
+
+            $brand = $brands[$bKey] ?? null;
+            if ($brand === null) {
+                $brand = BrandVehicle::create(['name' => $g['brand_name']]);
+                $brands[$bKey] = $brand;
+                $stats['brands']++;
+            }
+
+            $model = $models[$mKey] ?? null;
+            if ($model === null) {
+                // Nilai klasifikasi: ambil yang seragam dari connecting.
+                $pt = $this->uniform($g['rows'], 'powertrain');
+                $category = $this->uniform($g['rows'], 'category');
+                $size = $this->uniform($g['rows'], 'size_class');
+
+                $model = ModelVehicle::create([
+                    'name' => $g['model_name'],
+                    'brand_vehicle_id' => $brand->id,
+                    'powertrain' => $pt ?? 'ICE', // kolom NOT NULL default ICE
+                    'category' => $category,
+                    'size_class' => $size,
+                ]);
+                $models[$mKey] = $model;
+                $stats['models']++;
+            } else {
+                // Model existing: terapkan nilai yang SERAGAM; campuran dilaporkan.
+                foreach (['powertrain', 'category', 'size_class'] as $field) {
+                    $values = collect($g['rows'])->map(fn ($r) => $r->$field)
+                        ->filter(fn ($v) => $v !== null && $v !== '')->unique()->values();
+
+                    if ($values->count() === 1 && $values->first() !== $model->$field) {
+                        $model->$field = $values->first();
+                        $stats['categoriesUpdated']++;
+                    } elseif ($values->count() > 1) {
+                        $conflicts[] = [
+                            'brand' => $g['brand_name'], 'model' => $g['model_name'],
+                            'field' => $field, 'values' => $values->implode(' vs '),
+                        ];
+                    }
+                }
+                if ($model->isDirty()) {
+                    $model->save();
+                }
+            }
+
+            // Type: pastikan ada (firstOrCreate by nama, model sama).
+            foreach ($g['rows'] as $row) {
+                if (($row->type_name ?? '') === '') continue;
+                $tKey = $norm($row->type_name);
+                $exists = TypeVehicle::query()
+                    ->where('model_vehicle_id', $model->id)
+                    ->get()
+                    ->first(fn (TypeVehicle $t) => $norm($t->name) === $tKey);
+                if ($exists === null) {
+                    TypeVehicle::create([
+                        'name' => $row->type_name,
+                        'model_vehicle_id' => $model->id,
+                        'type_charger' => [],
+                    ]);
+                    $stats['types']++;
+                }
+            }
+        }
+
+        return $stats + ['conflicts' => $conflicts];
+    }
+
+    /** Nilai seragam dr sekumpulan baris connecting: sama semua → nilai; campuran → null + konflik. */
+    protected function uniform($rows, string $field): ?string
+    {
+        $values = collect($rows)->map(fn ($r) => $r->$field)->filter(fn ($v) => $v !== null && $v !== '')->unique()->values();
+        if ($values->isEmpty()) return null;
+        if ($values->count() > 1) {
+            return null; // campuran — kategori/powertrain keluarga ambigu
+        }
+        return $values->first();
+    }
+
+    /**
      * Impor katalog dari CSV: buat/perbarui brand-model-type + klasifikasi.
      *
      * @return array{processed: int, brands: int, models: int, types: int, failed: list<string>}
@@ -99,7 +215,7 @@ class VehicleConnectingSyncService
      *
      * @return array{saved: int, unresolved: list<string>}
      */
-    public function importConnectingTable(string $csvPath): array
+    public function importConnectingTable(string $csvPath, bool $prune = false): array
     {
         $handle = fopen($csvPath, 'r');
         if ($handle === false) {
@@ -160,6 +276,9 @@ class VehicleConnectingSyncService
                 ['raw_gabungan' => $gabungan],
                 [
                     'fuel' => $fuel !== '' ? $fuel : null,
+                    'brand_name' => $brand,
+                    'model_name' => $model,
+                    'type_name' => $type !== '' ? $type : null,
                     'brand_vehicle_id' => $brandVehicle?->id,
                     'model_vehicle_id' => $modelVehicle?->id,
                     'type_vehicle_id' => $typeVehicle?->id,
@@ -177,7 +296,12 @@ class VehicleConnectingSyncService
         }
         fclose($handle);
 
-        return ['saved' => $saved + count($unresolved), 'unresolved' => array_slice($unresolved, 0, 15)];
+        $pruned = 0;
+        if ($prune) {
+            $pruned = VehicleConnecting::whereNotIn('raw_gabungan', array_keys($seen))->delete();
+        }
+
+        return ['saved' => $saved + count($unresolved), 'unresolved' => array_slice($unresolved, 0, 15), 'pruned' => $pruned];
     }
 
     /**

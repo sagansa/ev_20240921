@@ -19,6 +19,9 @@ class VehicleConnecting extends Model
     protected $fillable = [
         'raw_gabungan',
         'fuel',
+        'brand_name',
+        'model_name',
+        'type_name',
         'brand_vehicle_id',
         'model_vehicle_id',
         'type_vehicle_id',
