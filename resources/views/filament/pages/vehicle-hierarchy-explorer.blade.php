@@ -475,7 +475,7 @@
                             <thead>
                                 <tr style="border-bottom: 1px solid var(--vhe-border); color: var(--vhe-text-muted);">
                                     <th style="padding: 8px 12px; font-weight: 600;">Raw Brand (GAIKINDO)</th>
-                                    <th style="padding: 8px 12px; font-weight: 600;">Jumlah Model Terdeteksi</th>
+                                    <th style="padding: 8px 12px; font-weight: 600;">Raw Model Terdeteksi</th>
                                     <th style="padding: 8px 12px; font-weight: 600; text-align: right;">Volume Penjualan</th>
                                 </tr>
                             </thead>
@@ -483,7 +483,7 @@
                                 @foreach ($report['unlinked'] as $row)
                                     <tr style="border-bottom: 1px solid var(--vhe-border-sub);">
                                         <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: var(--vhe-text-title);">{{ $row['brand'] }}</td>
-                                        <td style="padding: 8px 12px; color: var(--vhe-text-body);">{{ $row['models'] }} model</td>
+                                        <td style="padding: 8px 12px; color: var(--vhe-text-body);">{{ $row['model'] ?? ($row['models'] ?? '—') }}</td>
                                         <td style="padding: 8px 12px; text-align: right; font-family: monospace; font-weight: 800; color: #ef4444;">
                                             {{ number_format($row['units']) }} unit
                                         </td>
