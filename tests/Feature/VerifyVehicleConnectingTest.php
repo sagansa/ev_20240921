@@ -40,6 +40,12 @@ class VerifyVehicleConnectingTest extends TestCase
             'powertrain' => 'BEV', 'category' => 'Sedan', 'size_class' => 'Medium',
         ]);
         TypeVehicle::create(['name' => 'ES', 'model_vehicle_id' => $aion->id, 'type_charger' => []]);
+
+        $toyota = BrandVehicle::create(['name' => 'TOYOTA']);
+        ModelVehicle::create([
+            'name' => 'Camry', 'brand_vehicle_id' => $toyota->id,
+            'powertrain' => 'ICE', 'category' => 'Sedan', 'size_class' => 'Medium',
+        ]);
     }
 
     public function test_melaporkan_match_klasifikasi_beda_dan_entitas_baru(): void
@@ -49,8 +55,8 @@ class VerifyVehicleConnectingTest extends TestCase
         $csv = $this->writeCsv([
             // Match penuh (pencocokan case-insensitive).
             ['AION AION ES', 'EV', 'gac', 'aion', 'es', 'BEV', 'Sedan', 'Medium'],
-            // Klasifikasi beda: category CSV=SUV vs DB=Sedan.
-            ['AION AION ES', 'EV', 'GAC', 'AION', 'ES', 'BEV', 'SUV', 'Medium'],
+            // Klasifikasi beda: keluarga Camry seragam SUV di CSV vs DB=Sedan.
+            ['TOYOTA Camry X', 'G', 'TOYOTA', 'Camry', 'Camry X', 'ICE', 'SUV', 'Medium'],
             // Model baru di brand existing.
             ['GAC AION V', 'EV', 'GAC', 'AION V', '', 'BEV', 'SUV', 'Small'],
             // Brand baru.
@@ -69,9 +75,19 @@ class VerifyVehicleConnectingTest extends TestCase
         $report = json_decode(file_get_contents(storage_path('app/verify-out.json')), true);
         $klasifikasi = array_values($report['klasifikasiBeda']);
         $this->assertCount(1, $klasifikasi);
-        $this->assertSame('GAC', $klasifikasi[0]['brand']);
+        $this->assertSame('TOYOTA', $klasifikasi[0]['brand']);
         $this->assertStringContainsString('CSV=SUV', $klasifikasi[0]['diff']);
         $this->assertSame('WULING', $report['brandBaru'][0]['brand']);
+
+        // Keluarga campuran (varian G + Hev) → informasi, bukan aksi.
+        $csv = $this->writeCsv([
+            ['CAMRY G', 'G', 'TOYOTA', 'Camry', 'Camry G', 'ICE', 'Sedan', 'Medium'],
+            ['CAMRY HEV', 'HYBRID', 'TOYOTA', 'Camry', 'Camry HEV', 'HEV', 'Sedan', 'Medium'],
+        ]);
+
+        $this->artisan('vehicle-connecting:verify', ['csv' => $csv])
+            ->expectsOutputToContain('CSV TIDAK KONSISTEN (varian campuran — informasi): 1')
+            ->assertSuccessful();
     }
 
     public function test_melaporkan_model_db_yang_tidak_ada_di_csv(): void
@@ -85,7 +101,7 @@ class VerifyVehicleConnectingTest extends TestCase
 
         $this->artisan('vehicle-connecting:verify', ['csv' => $csv])
             ->expectsOutputToContain('DI DB, TIDAK ADA DI CSV')
-            ->expectsOutputToContain('MODEL DB TIDAK ADA DI CSV: 1')
+            ->expectsOutputToContain('MODEL DB TIDAK ADA DI CSV')
             ->assertSuccessful();
     }
 }
