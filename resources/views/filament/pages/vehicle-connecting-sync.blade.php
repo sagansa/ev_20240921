@@ -456,25 +456,7 @@
                     </button>
                 </div>
             </div>
-                {{-- STEP 4: PRUNE KATALOG (DESTRUCTIVE) --}}
-                <div class="vcs-glass" style="padding: 16px; border-left: 4px solid #ef4444; background: var(--vcs-step-bg); display: flex; flex-direction: column; justify-content: space-between; gap: 14px;">
-                    <div>
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                            <div class="vcs-step-circle" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">4</div>
-                            <span style="font-size: 13.5px; font-weight: 700; color: var(--vcs-text-title);">Prune Katalog</span>
-                        </div>
-                        <p style="margin: 0; font-size: 12px; color: var(--vcs-text-muted); line-height: 1.4;">
-                            Hapus brand/model katalog yang TIDAK ada di CSV ini. Yang masih dipakai user/stats dipertahankan dan dilaporkan.
-                        </p>
-                    </div>
-                    <button type="button" wire:click="pruneCatalog" wire:loading.attr="disabled" wire:target="pruneCatalog"
-                            wire:confirm="Prune akan MENGHAPUS PERMANEN brand/model katalog yang tidak ada di CSV ini. Lanjutkan?"
-                            class="vcs-btn-step vcs-btn-secondary" style="width: 100%; border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">
-                        <span wire:loading.remove wire:target="pruneCatalog">🗑 Jalankan Prune</span>
-                        <span wire:loading wire:target="pruneCatalog">⏳ Memangkas…</span>
-                    </button>
-                </div>
-            </div>
+                
 
 
 
