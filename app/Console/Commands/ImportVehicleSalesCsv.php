@@ -159,7 +159,7 @@ class ImportVehicleSalesCsv extends Command
                     $typeId = null;
 
                     if ($match['model_vehicle_id'] !== null && $split['type'] !== '') {
-                        $typeId = $this->resolveType($match['model_vehicle_id'], $split['type'], $typesCreated);
+                        $typeId = $this->resolveType($match['model_vehicle_id'], $split['type'], $typesCreated, $split['powertrain']);
                     }
 
                     $base = [
@@ -298,7 +298,7 @@ class ImportVehicleSalesCsv extends Command
      * insensitive); dibuat bila belum ada — type_charger wajib diisi []
      * (kolom JSON NOT NULL di skema existing).
      */
-    protected function resolveType(int $modelId, string $typeName, int &$created): int
+    protected function resolveType(int $modelId, string $typeName, int &$created, ?string $powertrain = null): int
     {
         $typeName = trim($typeName);
 
@@ -308,6 +308,12 @@ class ImportVehicleSalesCsv extends Command
             ->first();
 
         if ($existing !== null) {
+            // Type existing dgn powertrain kosong → isi dari baris laporan.
+            if ($existing->powertrain === null && $powertrain !== null && $powertrain !== '') {
+                $existing->powertrain = $powertrain;
+                $existing->save();
+            }
+
             return $existing->id;
         }
 
@@ -317,6 +323,7 @@ class ImportVehicleSalesCsv extends Command
             'model_vehicle_id' => $modelId,
             'name' => $typeName,
             'type_charger' => [], // kolom json NOT NULL di skema existing
+            'powertrain' => $powertrain !== null && $powertrain !== '' ? $powertrain : null,
         ])->id;
     }
 }

@@ -119,6 +119,7 @@ class VehicleConnectingSyncService
                         'name' => $row->type_name,
                         'model_vehicle_id' => $model->id,
                         'type_charger' => [],
+                        'powertrain' => $row->powertrain,
                     ]);
                     $stats['types']++;
                 }

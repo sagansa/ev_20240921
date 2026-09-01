@@ -119,17 +119,29 @@ class VehicleHierarchyImporter extends Importer
             return null;
         }
 
-        return TypeVehicle::query()
+        $existingType = TypeVehicle::query()
             ->where('model_vehicle_id', $model->getKey())
             ->whereRaw('LOWER(name) = ?', [Str::lower($typeName)])
-            ->first()
-            ?? TypeVehicle::query()->make([
-                'name' => $typeName,
-                'model_vehicle_id' => $model->getKey(),
-                // Kolom json NOT NULL pada skema existing; hanya diisi saat
-                // membuat baris baru (data katalog existing tidak disentuh).
-                'type_charger' => [],
-            ]);
+            ->first();
+
+        if ($existingType !== null) {
+            // Type existing dgn powertrain masih kosong → isi dari CSV.
+            if ($existingType->powertrain === null && $powertrain !== null && $powertrain !== '') {
+                $existingType->powertrain = $powertrain;
+                $existingType->save();
+            }
+
+            return $existingType;
+        }
+
+        return TypeVehicle::query()->make([
+            'name' => $typeName,
+            'model_vehicle_id' => $model->getKey(),
+            // Kolom json NOT NULL pada skema existing; hanya diisi saat
+            // membuat baris baru (data katalog existing tidak disentuh).
+            'type_charger' => [],
+            'powertrain' => $powertrain !== null && $powertrain !== '' ? $powertrain : null,
+        ]);
     }
 
     public function fillRecord(): void

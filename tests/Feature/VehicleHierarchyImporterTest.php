@@ -113,6 +113,19 @@ class VehicleHierarchyImporterTest extends TestCase
         $this->assertSame('BEV', ModelVehicle::query()->where('name', 'AION UT')->value('powertrain'));
     }
 
+    public function test_powertrain_type_terisi_saat_type_baru_dan_diisi_bila_kosong(): void
+    {
+        $this->invokeRow('AION', 'AION UT', 'Premium', 'BEV');
+
+        // Type baru → powertrain type ikut dari CSV.
+        $this->assertSame('BEV', TypeVehicle::query()->where('name', 'Premium')->value('powertrain'));
+
+        // Type existing dgn powertrain kosong → diisi dari CSV.
+        $this->invokeRow('AION', 'AION UT', 'Standard', 'BEV');
+
+        $this->assertSame('BEV', TypeVehicle::query()->where('name', 'Standard')->value('powertrain'));
+    }
+
     public function test_missing_powertrain_falls_back_to_default(): void
     {
         $this->invokeRow('AION', 'AION ES');

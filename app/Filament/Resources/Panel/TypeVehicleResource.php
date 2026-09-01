@@ -88,6 +88,10 @@ class TypeVehicleResource extends Resource
                 ->description('Karakteristik baterai dan kompabilitas port SPKLU.')
                 ->schema([
                     Grid::make(['default' => 1, 'md' => 2])->schema([
+                        TextInput::make('powertrain')
+                            ->label('Powertrain')
+                            ->placeholder('cth. BEV, HEV')
+                            ->maxLength(8),
                         TextInput::make('battery_capacity')
                             ->nullable()
                             ->numeric()
@@ -139,6 +143,17 @@ class TypeVehicleResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
+
+                TextColumn::make('powertrain')
+                    ->label('PT')
+                    ->badge()
+                    ->colors([
+                        'success' => 'BEV',
+                        'info' => 'PHEV',
+                        'primary' => 'HEV',
+                    ])
+                    ->placeholder('—')
+                    ->sortable(),
 
                 TextColumn::make('modelVehicle.powertrain')
                     ->label('Powertrain')

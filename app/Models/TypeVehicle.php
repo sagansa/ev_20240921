@@ -21,6 +21,7 @@ class TypeVehicle extends Model
         'image',
         'type_charger',
         'battery_capacity',
+        'powertrain',
     ];
 
     public function modelVehicle()
