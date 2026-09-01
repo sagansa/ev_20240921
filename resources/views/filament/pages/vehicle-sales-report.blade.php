@@ -291,7 +291,6 @@
                             <th style="padding: 10px 12px; font-weight: 600; width: 40px;">#</th>
                             <th style="padding: 10px 12px; font-weight: 600;">Brand</th>
                             <th style="padding: 10px 12px; font-weight: 600;">Nama Model</th>
-                            <th style="padding: 10px 12px; font-weight: 600;">Powertrain</th>
                             <th style="padding: 10px 12px; font-weight: 600; text-align: right;">Total Unit</th>
                             <th style="padding: 10px 12px; font-weight: 600; text-align: right; width: 100px;">Pangsa Pasar</th>
                             <th style="padding: 10px 12px; font-weight: 600; text-align: right;">Jumlah Type</th>
@@ -302,12 +301,11 @@
                         @forelse ($modelRows as $row)
                             @php
                                 $isUnmatched = $row['model'] === '(tidak ter-match)';
-                                $pt = strtoupper($row['powertrain']);
                                 $barWidth = min(100, max(2, ($row['total_units'] / max(1, $maxModelUnits)) * 100));
                                 $sharePercent = $totalUnits > 0 ? ($row['total_units'] / $totalUnits) * 100 : 0;
                             @endphp
                             <tr style="border-bottom: 1px solid var(--vsr-border-sub);">
-                                <td style="padding: 10px 12px; color: var(--vsr-text-muted); font-size: 12px; font-weight: 600;">
+                                <td style="padding: 10px 12px; color: var(--vhe-text-muted); font-size: 12px; font-weight: 600;">
                                     {{ $isUnmatched ? '—' : $mRank++ }}
                                 </td>
                                 <td style="padding: 10px 12px; font-weight: 600; color: var(--vsr-text-title);">
@@ -318,19 +316,6 @@
                                         <span style="font-style: italic; color: #ef4444; font-weight: 600;">(tidak ter-match)</span>
                                     @else
                                         <span style="font-weight: 700; color: var(--vsr-text-title);">{{ $row['model'] }}</span>
-                                    @endif
-                                </td>
-                                <td style="padding: 10px 12px;">
-                                    @if ($pt === 'BEV')
-                                        <span class="vsr-badge vsr-badge-bev">⚡ BEV</span>
-                                    @elseif ($pt === 'PHEV')
-                                        <span class="vsr-badge vsr-badge-phev">🔌 PHEV</span>
-                                    @elseif ($pt === 'HEV')
-                                        <span class="vsr-badge vsr-badge-hev">🔋 HEV</span>
-                                    @elseif ($pt === 'ICE')
-                                        <span class="vsr-badge vsr-badge-ice">⛽ ICE</span>
-                                    @else
-                                        <span class="vsr-badge vsr-badge-gray">{{ $row['powertrain'] }}</span>
                                     @endif
                                 </td>
                                 <td style="padding: 10px 12px; text-align: right;">
@@ -352,7 +337,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" style="padding: 32px 12px; text-align: center; color: var(--vsr-text-muted);">
+                                <td colspan="6" style="padding: 32px 12px; text-align: center; color: var(--vsr-text-muted);">
                                     Tidak ada data model untuk filter ini.
                                 </td>
                             </tr>

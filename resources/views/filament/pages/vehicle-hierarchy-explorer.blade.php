@@ -246,18 +246,6 @@
                         </select>
                     </label>
 
-                    {{-- Powertrain --}}
-                    <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--vhe-text-muted);">
-                        Powertrain:
-                        <select wire:model.live="powertrain" class="vhe-input-control">
-                            <option value="ALL">Semua</option>
-                            <option value="BEV">⚡ BEV</option>
-                            <option value="PHEV">🔌 PHEV</option>
-                            <option value="HEV">🔋 HEV</option>
-                            <option value="ICE">⛽ ICE</option>
-                        </select>
-                    </label>
-
                     {{-- Kategori --}}
                     <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--vhe-text-muted);">
                         Kategori:
@@ -284,7 +272,7 @@
                         <span>⚠️ {{ $onlyIssues ? 'Hanya Masalah (Aktif)' : 'Filter Masalah' }}</span>
                     </button>
 
-                    @if ($search || $powertrain !== 'ALL' || $category !== 'ALL' || $onlyIssues)
+                    @if ($search || $category !== 'ALL' || $onlyIssues)
                         <button type="button" wire:click="resetFilters" class="vhe-btn" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4);">
                             <span>Reset</span>
                         </button>
@@ -362,7 +350,6 @@
                                     @php
                                         $modelOpen = in_array('m'.$model['id'], $expanded['models'], true);
                                         $modelDelta = $model['units'] - $model['prev_units'];
-                                        $pt = strtoupper($model['powertrain'] ?? 'BEV');
                                     @endphp
 
                                     <div style="border: 1px solid {{ $model['has_issue'] ? 'rgba(245, 158, 11, 0.5)' : 'var(--vhe-border-sub)' }}; border-radius: 8px; background: var(--vhe-bg-card); overflow: hidden;">
@@ -372,17 +359,6 @@
                                                     style="background: none; border: none; display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: left; flex: 1; padding: 0;">
                                                 <span style="font-size: 11px; color: var(--vhe-text-muted); font-family: monospace;">{{ $modelOpen ? '▼' : '▶' }}</span>
                                                 <span style="font-size: 13px; font-weight: 700; color: var(--vhe-text-title);">{{ $model['name'] }}</span>
-
-                                                {{-- Powertrain Badge --}}
-                                                @if ($pt === 'BEV')
-                                                    <span class="vhe-badge vhe-badge-bev">⚡ BEV</span>
-                                                @elseif ($pt === 'PHEV')
-                                                    <span class="vhe-badge vhe-badge-phev">🔌 PHEV</span>
-                                                @elseif ($pt === 'HEV')
-                                                    <span class="vhe-badge vhe-badge-hev">🔋 HEV</span>
-                                                @else
-                                                    <span class="vhe-badge vhe-badge-ice">⛽ ICE</span>
-                                                @endif
 
                                                 {{-- Category Badge --}}
                                                 @if ($model['category'])
@@ -419,10 +395,22 @@
                                         @if ($modelOpen)
                                             <div style="padding: 6px 12px 6px 28px; background: var(--vhe-bg-leaf); border-top: 1px solid var(--vhe-border-sub); display: flex; flex-direction: column; gap: 4px;">
                                                 @forelse ($model['types'] as $type)
+                                                    @php $tpt = strtoupper($type['powertrain'] ?? ''); @endphp
                                                     <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--vhe-text-body);">
                                                         <div style="display: flex; align-items: center; gap: 6px;">
                                                             <span style="color: var(--vhe-text-muted); font-family: monospace;">└─</span>
                                                             <span style="font-weight: 500; color: var(--vhe-text-body);">{{ $type['name'] }}</span>
+                                                            @if ($tpt === 'BEV')
+                                                                <span class="vhe-badge vhe-badge-bev">⚡ BEV</span>
+                                                            @elseif ($tpt === 'PHEV')
+                                                                <span class="vhe-badge vhe-badge-phev">🔌 PHEV</span>
+                                                            @elseif ($tpt === 'HEV')
+                                                                <span class="vhe-badge vhe-badge-hev">🔋 HEV</span>
+                                                            @elseif ($tpt === 'ICE')
+                                                                <span class="vhe-badge vhe-badge-ice">⛽ ICE</span>
+                                                            @elseif ($tpt !== '')
+                                                                <span class="vhe-badge vhe-badge-gray">{{ $tpt }}</span>
+                                                            @endif
                                                         </div>
                                                         <div style="display: flex; align-items: center; gap: 8px;">
                                                             <span style="font-family: monospace; color: var(--vhe-text-muted);">{{ number_format($type['units']) }} unit</span>
