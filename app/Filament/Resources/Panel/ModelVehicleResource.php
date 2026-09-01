@@ -10,6 +10,7 @@ use App\Support\VehicleCategories;
 use Filament\Actions;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -54,6 +55,36 @@ class ModelVehicleResource extends Resource
     public static function getNavigationLabel(): string
     {
         return __('crud.modelVehicles.collectionTitle');
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return $schema->schema([
+            Section::make('Informasi Model')
+                ->schema([
+                    TextEntry::make('brandVehicle.name')->label('Brand')->badge()->color('primary'),
+                    TextEntry::make('name')->label('Nama Model')->weight('bold'),
+                    // Powertrain kini milik TYPE — ditampilkan sebagai gabungan
+                    // dari seluruh type di bawah keluarga ini.
+                    TextEntry::make('powertrains')
+                        ->label('Powertrain (dari type)')
+                        ->badge()
+                        ->state(fn ($record) => $record->typeVehicles()
+                            ->whereNotNull('powertrain')
+                            ->distinct()
+                            ->pluck('powertrain')
+                            ->all()),
+                    TextEntry::make('category')
+                        ->label('Kategori')
+                        ->badge()
+                        ->color('info')
+                        ->placeholder('—'),
+                    TextEntry::make('size_class')
+                        ->label('Ukuran')
+                        ->badge()
+                        ->placeholder('—'),
+                ]),
+        ]);
     }
 
     public static function form(Schema $schema): Schema
