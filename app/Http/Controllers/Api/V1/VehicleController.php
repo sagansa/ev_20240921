@@ -50,7 +50,7 @@ class VehicleController extends Controller
      *
      * Additive (backward compatible): bila ada data penjualan (import GAIKINDO),
      * brands/models mendapat sales_units (unit terjual tahun terbaru) untuk
-     * pengurutan picker popularitas, dan models mendapat powertrain (BEV|PHEV|HEV|ICE).
+     * pengurutan picker popularitas, dan types mendapat powertrain (BEV|PHEV|HEV|ICE).
      */
     public function options(): JsonResponse
     {
