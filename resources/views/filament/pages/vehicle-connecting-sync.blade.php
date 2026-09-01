@@ -116,9 +116,10 @@
             </x-slot>
 
             <p style="margin-top: 2px; margin-bottom: 16px; font-size: 13px; color: var(--vcs-text-muted); line-height: 1.5;">
-                Alur Kerja 2 Langkah:
+                Alur Kerja 3 Langkah:
                 <strong>1. Verifikasi</strong> (Dry-run: memeriksa perubahan entitas & klasifikasi tanpa menulis data) →
-                <strong>2. Jalankan Sinkronisasi</strong> (Mengimpor tabel connecting, mendaftarkan brand/model/type baru, backfill kategori/ukuran, dan me-refresh cache pasar).
+                <strong>2. Simpan ke Connecting</strong> (CSV → tabel master vehicle_connectings) →
+                <strong>3. Terapkan ke Katalog</strong> (turunkan connecting ke brand/model/type, backfill kategori, refresh cache pasar).
                 Semua operasi bersifat <em>idempoten</em> dan aman diulang kapan saja.
             </p>
 
@@ -139,11 +140,20 @@
                 </div>
 
                 <div>
-                    <button type="button" wire:click="sync" wire:loading.attr="disabled" wire:target="sync"
-                            wire:confirm="Sinkronisasi akan MENULIS ke katalog master & tabel connecting. Lanjutkan proses?"
+                    <button type="button" wire:click="importConnecting" wire:loading.attr="disabled" wire:target="importConnecting"
+                            wire:confirm="Simpan CSV ke tabel Connecting (master mapping)?"
+                            class="vcs-btn-secondary" style="border-color: rgba(16, 185, 129, 0.4);">
+                        <span wire:loading.remove wire:target="importConnecting">2 · 💾 Simpan ke Connecting</span>
+                        <span wire:loading wire:target="importConnecting">⏳ Menyimpan…</span>
+                    </button>
+                </div>
+
+                <div>
+                    <button type="button" wire:click="applyToCatalog" wire:loading.attr="disabled" wire:target="applyToCatalog"
+                            wire:confirm="Terapkan Connecting ke Katalog (brand/model/type + klasifikasi) lalu flush cache pasar?"
                             class="vcs-btn-primary">
-                        <span wire:loading.remove wire:target="sync">2 · ⚡ Jalankan Sinkronisasi</span>
-                        <span wire:loading wire:target="sync">⏳ Menyinkronkan Data…</span>
+                        <span wire:loading.remove wire:target="applyToCatalog">3 · ⚡ Terapkan ke Katalog</span>
+                        <span wire:loading wire:target="applyToCatalog">⏳ Menerapkan…</span>
                     </button>
                 </div>
             </div>
