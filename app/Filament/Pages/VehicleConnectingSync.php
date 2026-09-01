@@ -128,12 +128,11 @@ class VehicleConnectingSync extends Page
 
         try {
             $res = app(VehicleConnectingSyncService::class)->pruneCatalog($this->csvFile->getRealPath());
-            $this->log[] = 'Prune katalog: '.$res['deletedModels'].' model kosong dihapus, '.
-                count($res['deletedBrands']).' brand kosong dihapus'.
-                (count($res['deletedBrands']) > 0 ? ' ('.implode(', ', $res['deletedBrands']).')' : '');
-            foreach (array_slice($res['kept'], 0, 10) as $k) {
-                $this->log[] = '  ™ dipertahankan (masih dipakai): '.$k['brand'].' / '.$k['model'].
-                    ' — kendaraan '.$k['vehicles'].', stats '.$k['stats'];
+            $this->log[] = 'Prune: '.$res['modelsDeleted'].' model dihapus, '.$res['typesDeleted'].
+                ' type terkait dihapus, '.$res['statsDetached'].' baris stats dilepas ke raw.';
+            foreach (array_slice($res['modelsExempt'], 0, 10) as $m) {
+                $this->log[] = '  ⚠ dipertahankan (dipakai user): '.$m['brand'].' / '.$m['model'].
+                    ' — '.$m['vehicles'].' kendaraan';
             }
             app(VehicleConnectingSyncService::class)->flushMarketCache();
             $this->log[] = 'Cache Pasar EV di-flush.';

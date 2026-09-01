@@ -386,48 +386,72 @@ class VehicleConnectingSyncService
     {
         $refs = $this->referencedKeys($csvPath);
 
-        $deletedModels = 0;
-        $deletedBrands = [];
-        $kept = [];
+        // ===== 1. TYPE (berjenjang paling bawah) =====
+        // Hapus type yang tidak direferensikan CONNECTING, KECUALI type itu
+        // masih dipakai kendaraan user (vehicle.type_vehicle_id).
+        $typesDeleted = 0;
+        $typesExempt = [];
+        foreach (TypeVehicle::with('modelVehicle.brandVehicle')->get() as $type) {
+            $bName = $type->modelVehicle?->brandVehicle?->name;
+            $mName = $type->modelVehicle?->name;
+            $tKey = $this->normKey($bName).'|'.$this->normKey($mName).'|'.$this->normKey($type->name);
 
-        foreach (ModelVehicle::with('brandVehicle', 'typeVehicles')->get() as $model) {
-            $bKey = $this->normKey($model->brandVehicle?->name);
-            $mKey = $bKey.'|'.$this->normKey($model->name);
+            if (isset($refs['types'][$tKey])) continue;
 
-            if (isset($refs['models'][$mKey])) {
-                continue; // direferensikan CONNECTING — dipertahankan
+            if (Vehicle::where('type_vehicle_id', $type->id)->exists()) {
+                $typesExempt[] = ($bName ?: '?').' / '.($mName ?: '?').' / '.$type->name;
+                continue;
             }
 
-            $vehicles = Vehicle::where('model_vehicle_id', $model->id)->count();
-            $stats = VehicleSalesStat::where('model_vehicle_id', $model->id)->count();
-            $types = $model->typeVehicles()->count();
+            $type->delete();
+            $typesDeleted++;
+        }
 
-            if ($vehicles > 0 || $stats > 0 || $types > 0) {
-                $kept[] = [
+        // ===== 2. MODEL =====
+        // Hapus model yang tidak direferensikan CONNECTING, KECUALI masih
+        // dimiliki user. Stats yang menempel dilepas (raw tetap tersimpan
+        // utk agregat pasar) dan dilaporkan.
+        $modelsDeleted = 0;
+        $modelsExempt = [];
+        $statsDetached = 0;
+        foreach (ModelVehicle::with('brandVehicle')->get() as $model) {
+            $mKey = $this->normKey($model->brandVehicle?->name).'|'.$this->normKey($model->name);
+
+            if (isset($refs['models'][$mKey])) continue;
+
+            $inUse = Vehicle::where('model_vehicle_id', $model->id)->count();
+            if ($inUse > 0) {
+                $modelsExempt[] = [
                     'brand' => $model->brandVehicle?->name ?? '?',
                     'model' => $model->name,
-                    'vehicles' => $vehicles,
-                    'stats' => $stats,
-                    'types' => $types,
+                    'vehicles' => $inUse,
                 ];
                 continue;
             }
 
+            $statsDetached += VehicleSalesStat::where('model_vehicle_id', $model->id)
+                ->update(['model_vehicle_id' => null, 'type_vehicle_id' => null]);
+
+            TypeVehicle::where('model_vehicle_id', $model->id)->delete();
             $model->delete();
-            $deletedModels++;
+            $modelsDeleted++;
         }
 
+        // ===== 3. BRAND =====
+        $brandsDeleted = [];
         foreach (BrandVehicle::doesntHave('modelVehicles')->get() as $brand) {
-            $deletedBrands[] = $brand->name;
+            $brandsDeleted[] = $brand->name;
             $brand->delete();
         }
 
-        return ['deletedModels' => $deletedModels, 'deletedBrands' => $deletedBrands, 'kept' => $kept];
-    }
-
-    protected function normKey(?string $v): string
-    {
-        return preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($v ?? ''));
+        return [
+            'typesDeleted' => $typesDeleted,
+            'typesExempt' => $typesExempt,
+            'modelsDeleted' => $modelsDeleted,
+            'modelsExempt' => $modelsExempt,
+            'statsDetached' => $statsDetached,
+            'brandsDeleted' => $brandsDeleted,
+        ];
     }
 
     /**
@@ -436,6 +460,12 @@ class VehicleConnectingSyncService
      *
      * @return array{models: array<string, true>, types: array<string, true>}
      */
+    /** Kunci squash: huruf+angka saja, uppercase — kebal spasi/kapitalisasi/tanda baca. */
+    protected function normKey(?string $v): string
+    {
+        return preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($v ?? ''));
+    }
+
     public function referencedKeys(string $csvPath): array
     {
         $handle = fopen($csvPath, 'r');
@@ -455,7 +485,6 @@ class VehicleConnectingSyncService
         $iT = array_search('TYPE', $hdr, true) ?? $iM;
 
         $matcher = app(VehicleSalesMatcher::class);
-        $norm = fn (?string $v): string => mb_strtolower(preg_replace('/\s+/', ' ', trim((string) $v)) ?? '');
 
         $models = []; $types = [];
         while (($r = fgetcsv($handle)) !== false) {
@@ -465,11 +494,11 @@ class VehicleConnectingSyncService
             $type = trim((string) $r[$iT]);
             if ($brand === '' || $model === '') continue;
 
-            $bKey = $norm($matcher->canonicalBrandName($brand));
-            $mKey = $bKey.'|'.$norm($model);
+            $bKey = $this->normKey($matcher->canonicalBrandName($brand));
+            $mKey = $bKey.'|'.$this->normKey($model);
             $models[$mKey] = true;
             if ($type !== '') {
-                $types[$mKey.'|'.$norm($type)] = true;
+                $types[$mKey.'|'.$this->normKey($type)] = true;
             }
         }
         fclose($handle);
