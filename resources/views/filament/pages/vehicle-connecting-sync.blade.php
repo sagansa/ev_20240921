@@ -339,11 +339,6 @@
                     @endforeach
                 </div>
 
-                @if (($syncResult['catalog']['failed'] ?? []) !== [])
-                    <div style="margin-top: 12px; padding: 10px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 13px; font-weight: 600;">
-                        ⚠️ Baris gagal: {{ count($syncResult['catalog']['failed']) }} — silakan periksa kelengkapan file laporan.
-                    </div>
-                @endif
             </x-filament::section>
         @endif
     </div>
