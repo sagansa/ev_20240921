@@ -165,22 +165,27 @@ class VehicleHierarchyReport
         usort($brands, fn ($a, $b) => $b['units'] <=> $a['units']);
         array_walk($brands, fn (&$b) => usort($b['models'], fn ($a, $c) => $c['units'] <=> $a['units']));
 
-        // Stats tak ter-link (raw tanpa katalog) — hubungan yang "putus".
-        $unlinked = VehicleSalesStat::query()
+        // Stats tak ter-link — dipisah: BEV yang gagal ter-link = masalah
+        // nyata (harusnya masuk katalog EV); non-BEV = by design tanpa link.
+        $unlinkedQuery = fn () => VehicleSalesStat::query()
             ->latestImports()
             ->whereNull('month')
             ->where('year', $year)
             ->whereNull('model_vehicle_id')
-            ->selectRaw('raw_brand, COUNT(DISTINCT raw_model) models, SUM(units) units')
-            ->groupBy('raw_brand')
-            ->orderByDesc('units')
-            ->get()
+            ->selectRaw('raw_brand, raw_model, powertrain, SUM(units) AS units')
+            ->groupBy('raw_brand', 'raw_model', 'powertrain')
+            ->orderByDesc('units');
+
+        $unlinked = $unlinkedQuery()->get();
+        $unlinkedBev = $unlinked->whereIn('powertrain', ['BEV'])
             ->map(fn ($r) => [
                 'brand' => $r->raw_brand,
-                'models' => (int) $r->models,
+                'model' => $r->raw_model,
                 'units' => (int) $r->units,
-            ])
-            ->all();
+            ])->values();
+        $nonBevUnlinkedCount = $unlinked->whereNotIn('powertrain', ['BEV'])->count();
+        $nonBevUnlinkedUnits = (int) $unlinked->whereNotIn('powertrain', ['BEV'])->sum('units');
+        $unlinked = $unlinkedBev->all();
 
         $orphanTypes = DB::connection((new ModelVehicle)->getConnectionName())
             ->table('type_vehicles')
@@ -193,6 +198,7 @@ class VehicleHierarchyReport
             'year' => $year,
             'brands' => array_values($brands),
             'unlinked' => $unlinked,
+            'nonBevUnlinked' => ['combos' => $nonBevUnlinkedCount, 'units' => $nonBevUnlinkedUnits],
             'orphanTypes' => (int) $orphanTypes,
             'modelsWithoutCategory' => $modelsWithoutCategory,
             'totals' => $totals,
