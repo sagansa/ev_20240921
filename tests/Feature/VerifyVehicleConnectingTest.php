@@ -36,15 +36,13 @@ class VerifyVehicleConnectingTest extends TestCase
     {
         $gac = BrandVehicle::create(['name' => 'GAC']);
         $aion = ModelVehicle::create([
-            'name' => 'AION', 'brand_vehicle_id' => $gac->id,
-            'powertrain' => 'BEV', 'category' => 'Sedan', 'size_class' => 'Medium',
+            'name' => 'AION', 'brand_vehicle_id' => $gac->id, 'category' => 'Sedan', 'size_class' => 'Medium',
         ]);
         TypeVehicle::create(['name' => 'ES', 'model_vehicle_id' => $aion->id, 'type_charger' => []]);
 
         $toyota = BrandVehicle::create(['name' => 'TOYOTA']);
         ModelVehicle::create([
-            'name' => 'Camry', 'brand_vehicle_id' => $toyota->id,
-            'powertrain' => 'ICE', 'category' => 'Sedan', 'size_class' => 'Medium',
+            'name' => 'Camry', 'brand_vehicle_id' => $toyota->id, 'category' => 'Sedan', 'size_class' => 'Medium',
         ]);
     }
 
@@ -79,10 +77,10 @@ class VerifyVehicleConnectingTest extends TestCase
         $this->assertStringContainsString('CSV=SUV', $klasifikasi[0]['diff']);
         $this->assertSame('WULING', $report['brandBaru'][0]['brand']);
 
-        // Keluarga campuran (varian G + Hev) → informasi, bukan aksi.
+        // Keluarga campuran (kategori berbeda) → informasi, bukan aksi.
         $csv = $this->writeCsv([
             ['CAMRY G', 'G', 'TOYOTA', 'Camry', 'Camry G', 'ICE', 'Sedan', 'Medium'],
-            ['CAMRY HEV', 'HYBRID', 'TOYOTA', 'Camry', 'Camry HEV', 'HEV', 'Sedan', 'Medium'],
+            ['CAMRY X', 'G', 'TOYOTA', 'Camry', 'Camry X', 'ICE', 'SUV', 'Medium'],
         ]);
 
         $this->artisan('vehicle-connecting:verify', ['csv' => $csv])

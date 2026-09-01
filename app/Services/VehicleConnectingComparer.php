@@ -146,12 +146,10 @@ class VehicleConnectingComparer
         foreach ($families as $family) {
             $db = $family['db'];
 
-            [$csvPt, $ptConflict] = $this->familyValue(array_column($family['rows'], 'pt'), 'powertrain');
             [$csvCategory, $catConflict] = $this->familyValue(array_column($family['rows'], 'category'), 'category');
             [$csvSize, $sizeConflict] = $this->familyValue(array_column($family['rows'], 'size_class'), 'size');
 
             $diffs = [];
-            if ($csvPt !== null && $db->powertrain !== $csvPt) $diffs[] = "powertrain DB={$db->powertrain} CSV={$csvPt}";
             if ($csvCategory !== null && $db->category !== $csvCategory) $diffs[] = "category DB={$db->category} CSV={$csvCategory}";
             if ($csvSize !== null && $db->size_class !== $csvSize) $diffs[] = "size DB={$db->size_class} CSV={$csvSize}";
 
@@ -161,7 +159,7 @@ class VehicleConnectingComparer
                 ];
             }
 
-            $conflicts = array_filter([$ptConflict, $catConflict, $sizeConflict]);
+            $conflicts = array_filter([$catConflict, $sizeConflict]);
             if ($conflicts !== []) {
                 $report['csvTidakKonsisten'][] = [
                     'brand' => $family['brand'], 'model' => $family['model'],

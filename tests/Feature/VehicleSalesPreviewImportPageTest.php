@@ -27,17 +27,17 @@ class VehicleSalesPreviewImportPageTest extends TestCase
         $this->admin->assignRole('super_admin');
 
         $byd = BrandVehicle::create(['name' => 'BYD']);
-        ModelVehicle::create(['name' => 'Atto 1', 'brand_vehicle_id' => $byd->id, 'powertrain' => 'BEV']);
+        ModelVehicle::create(['name' => 'Atto 1', 'brand_vehicle_id' => $byd->id]);
     }
 
     private function csvContent(): string
     {
         return implode("\n", [
             'BRAND,TYPE MODEL,CC,TRANS,FUEL,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC,TOTAL',
-            'BYD,Atto 1 Dynamic,100,AT,BEV,5,-,,,,,,,,,,,,5',
-            'BYD,Sealion 8,,,BEV,7,-,,,,,,,,,,,,7',
-            'TOYOTA,Agya 1.2 G,1200,AT,G,9,-,,,,,,,,,,,,9',
-            'TOTAL,CUMULATIVE,,,,,,,,,,,,,,,16',
+            'BYD,Atto 1 Dynamic,100,AT,BEV,5,-, , , , , , 5',
+            'BYD,Sealion 8, ,BEV,7,-, , , , , , 7',
+            'TOYOTA,Agya 1.2 G,1200,AT,G,9,-, , , , , , 9',
+            'TOTAL,CUMULATIVE, , , , , , , ,16',
         ]);
     }
 

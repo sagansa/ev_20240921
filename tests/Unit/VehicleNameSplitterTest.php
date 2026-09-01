@@ -37,8 +37,7 @@ class VehicleNameSplitterTest extends TestCase
         // Aturan user: "Agya 1.2 G AT" → MODEL cukup "Agya".
         $this->assertSplit('TOYOTA', 'Agya 1.2 G AT', 'G', [
             'model' => 'Agya',
-            'type' => 'Agya 1.2 G AT',
-            'powertrain' => 'ICE',
+            'type' => 'Agya 1.2 G AT'
         ]);
     }
 
@@ -47,8 +46,7 @@ class VehicleNameSplitterTest extends TestCase
         // Aturan user: "All New Avanza ..." → MODEL "Avanza", awalan jadi bagian TYPE.
         $this->assertSplit('TOYOTA', 'All New Avanza 1.5 G AT', 'G', [
             'model' => 'Avanza',
-            'type' => 'All New Avanza 1.5 G AT',
-            'powertrain' => 'ICE',
+            'type' => 'All New Avanza 1.5 G AT'
         ]);
     }
 
@@ -56,8 +54,7 @@ class VehicleNameSplitterTest extends TestCase
     {
         $this->assertSplit('HYUNDAI', 'Ioniq EV Prime', 'BEV', [
             'model' => 'Ioniq',
-            'type' => 'Ioniq EV Prime',
-            'powertrain' => 'BEV',
+            'type' => 'Ioniq EV Prime'
         ]);
     }
 
@@ -65,20 +62,18 @@ class VehicleNameSplitterTest extends TestCase
     {
         $this->assertSplit('TOYOTA', 'Kijang Innova Zenix Hybrid', 'HYBRID', [
             'model' => 'Kijang Innova Zenix',
-            'type' => 'Kijang Innova Zenix Hybrid',
-            'powertrain' => 'HEV',
+            'type' => 'Kijang Innova Zenix Hybrid'
         ]);
     }
 
     public function test_catalog_model_wins_over_derivation(): void
     {
         $brand = BrandVehicle::create(['name' => 'AION']);
-        ModelVehicle::create(['name' => 'AION UT', 'brand_vehicle_id' => $brand->id, 'powertrain' => 'BEV']);
+        ModelVehicle::create(['name' => 'AION UT', 'brand_vehicle_id' => $brand->id]);
 
         $this->assertSplit('AION', 'AION UT Premium', 'BEV', [
             'model' => 'AION UT',
-            'type' => 'AION UT Premium',
-            'powertrain' => 'BEV',
+            'type' => 'AION UT Premium'
         ]);
     }
 
@@ -87,8 +82,7 @@ class VehicleNameSplitterTest extends TestCase
         // "5 GT Ignite 1.5L" → keluarga "5 GT" (Ignite = trim, 1.5L = spec).
         $this->assertSplit('MORRIS GARAGE', '5 GT Ignite 1.5L', 'G', [
             'model' => '5 GT',
-            'type' => '5 GT Ignite 1.5L',
-            'powertrain' => 'ICE',
+            'type' => '5 GT Ignite 1.5L'
         ]);
     }
 
@@ -97,8 +91,7 @@ class VehicleNameSplitterTest extends TestCase
         // Pola CONNECTING: "AION AION UT Standard" (brand dobel di dalam string).
         $this->assertSplit('AION', 'AION AION UT Standard', 'BEV', [
             'model' => 'AION UT',
-            'type' => 'AION AION UT Standard',
-            'powertrain' => 'BEV',
+            'type' => 'AION AION UT Standard'
         ]);
     }
 
@@ -107,7 +100,6 @@ class VehicleNameSplitterTest extends TestCase
         // Sheet 2026 tanpa FUEL; CC '-' menandakan listrik.
         $this->assertSplit('BMW', 'i7 xDrive60 Limousine RHD AT', null, [
             'model' => 'i7 xDrive60 Limousine',
-            'powertrain' => 'BEV',
             'type' => 'i7 xDrive60 Limousine RHD AT',
         ]);
     }
@@ -116,8 +108,7 @@ class VehicleNameSplitterTest extends TestCase
     {
         $this->assertSplit('AUDI', 'A4 2.0 TFSI AT', 'G', [
             'model' => 'A4',
-            'type' => 'A4 2.0 TFSI AT',
-            'powertrain' => 'ICE',
+            'type' => 'A4 2.0 TFSI AT'
         ]);
 
         $result = $this->splitter->split('BMW', 'CBU i4 eDrive35 Gran Coupe AT', 'BEV');

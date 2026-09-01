@@ -72,14 +72,12 @@ class VehicleConnectingSyncService
             $model = $models[$mKey] ?? null;
             if ($model === null) {
                 // Nilai klasifikasi: ambil yang seragam dari connecting.
-                $pt = $this->uniform($g['rows'], 'powertrain');
                 $category = $this->uniform($g['rows'], 'category');
                 $size = $this->uniform($g['rows'], 'size_class');
 
                 $model = ModelVehicle::create([
                     'name' => $g['model_name'],
                     'brand_vehicle_id' => $brand->id,
-                    'powertrain' => $pt ?? 'ICE', // kolom NOT NULL default ICE
                     'category' => $category,
                     'size_class' => $size,
                 ]);
@@ -87,7 +85,7 @@ class VehicleConnectingSyncService
                 $stats['models']++;
             } else {
                 // Model existing: terapkan nilai yang SERAGAM; campuran dilaporkan.
-                foreach (['powertrain', 'category', 'size_class'] as $field) {
+                foreach (['category', 'size_class'] as $field) {
                     $values = collect($g['rows'])->map(fn ($r) => $r->$field)
                         ->filter(fn ($v) => $v !== null && $v !== '')->unique()->values();
 

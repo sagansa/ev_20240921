@@ -34,17 +34,6 @@ class ModelVehiclesRelationManager extends RelationManager
                     ->label('Nama Model')
                     ->placeholder('cth. Air EV, Seal, Ioniq 5'),
 
-                Select::make('powertrain')
-                    ->options([
-                        'BEV' => '⚡ BEV (Battery EV)',
-                        'PHEV' => '🔌 PHEV (Plug-in Hybrid)',
-                        'HEV' => '🔋 HEV (Hybrid)',
-                        'ICE' => '⛽ ICE (Bensin/Diesel)',
-                    ])
-                    ->default('BEV')
-                    ->required()
-                    ->label('Powertrain'),
-
                 Select::make('category')
                     ->options(array_combine(VehicleCategories::CATEGORIES, VehicleCategories::CATEGORIES))
                     ->searchable()
@@ -70,15 +59,6 @@ class ModelVehiclesRelationManager extends RelationManager
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
-
-                TextColumn::make('powertrain')
-                    ->badge()
-                    ->colors([
-                        'success' => 'BEV',
-                        'info' => 'PHEV',
-                        'primary' => 'HEV',
-                        'gray' => 'ICE',
-                    ]),
 
                 TextColumn::make('category')
                     ->label('Kategori')

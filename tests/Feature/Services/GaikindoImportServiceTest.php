@@ -61,7 +61,6 @@ class GaikindoImportServiceTest extends TestCase
         $atto = ModelVehicle::whereHas('brandVehicle', fn ($q) => $q->where('name', 'BYD'))
             ->where('name', 'Atto 1 Dynamic')->first();
         $this->assertNotNull($atto);
-        $this->assertSame('BEV', $atto->powertrain);
         $type = TypeVehicle::where('model_vehicle_id', $atto->id)->first();
         $this->assertNotNull($type);
         $this->assertEquals(51.8, (float) $type->battery_capacity);
@@ -69,7 +68,6 @@ class GaikindoImportServiceTest extends TestCase
         // BEV tanpa kWh tetap ter-import tanpa type.
         $airEv = ModelVehicle::where('name', 'Air EV')->first();
         $this->assertNotNull($airEv);
-        $this->assertSame('BEV', $airEv->powertrain);
         $this->assertSame(0, TypeVehicle::where('model_vehicle_id', $airEv->id)->count());
 
         // Segment dari section header.

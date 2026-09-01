@@ -26,7 +26,7 @@ class VehicleConnectingImportTest extends TestCase
     public function test_import_resolves_catalog_links_dan_idempoten(): void
     {
         $gac = BrandVehicle::create(['name' => 'GAC']);
-        $aion = ModelVehicle::create(['name' => 'AION', 'brand_vehicle_id' => $gac->id, 'powertrain' => 'BEV']);
+        $aion = ModelVehicle::create(['name' => 'AION', 'brand_vehicle_id' => $gac->id]);
         TypeVehicle::create(['name' => 'ES', 'model_vehicle_id' => $aion->id, 'type_charger' => []]);
 
         $csv = $this->writeCsv([
@@ -51,8 +51,7 @@ class VehicleConnectingImportTest extends TestCase
     public function test_prune_menghapus_baris_yang_tidak_ada_di_csv(): void
     {
         VehicleConnecting::create([
-            'raw_gabungan' => 'OLD ROW', 'brand_vehicle_id' => null,
-            'powertrain' => 'ICE',
+            'raw_gabungan' => 'OLD ROW', 'brand_vehicle_id' => null, 'powertrain' => 'ICE',
         ]);
 
         $csv = $this->writeCsv([

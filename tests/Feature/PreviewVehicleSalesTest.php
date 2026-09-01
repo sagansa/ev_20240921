@@ -59,7 +59,7 @@ class PreviewVehicleSalesTest extends TestCase
     {
         $byd = BrandVehicle::create(['name' => 'BYD']);
         ModelVehicle::create([
-            'name' => 'Atto 1', 'brand_vehicle_id' => $byd->id, 'powertrain' => 'BEV',
+            'name' => 'Atto 1', 'brand_vehicle_id' => $byd->id
         ]);
     }
 
@@ -138,7 +138,7 @@ class PreviewVehicleSalesTest extends TestCase
         $this->seedCatalog();
         // TOYOTA/Agya harus sudah ada di katalog (gerbang menuntut full-link).
         $toyota = BrandVehicle::create(['name' => 'TOYOTA']);
-        ModelVehicle::create(['name' => 'Agya', 'brand_vehicle_id' => $toyota->id, 'powertrain' => 'ICE']);
+        ModelVehicle::create(['name' => 'Agya', 'brand_vehicle_id' => $toyota->id]);
 
         $csv = $this->writeCsv([
             ['BYD', 'Atto 1 Dynamic', '100', 'AT', 'BEV', '5', '-', '', '', '', '', '', '', '', '', '', '', '5'],

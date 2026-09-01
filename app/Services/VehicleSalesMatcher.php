@@ -111,9 +111,6 @@ class VehicleSalesMatcher
     protected int $createdModels = 0;
     protected int $createdTypes = 0;
 
-    /** @var array<int> model_vehicle_id yang diklasifikasi BEV pada import ini */
-    protected array $bevModelIds = [];
-
     /**
      * @return array{brand_vehicle_id: int|null, model_vehicle_id: int|null,
      *               brand_created: bool, model_created: bool, battery_kwh: float|null}
@@ -245,38 +242,12 @@ class VehicleSalesMatcher
         return $this->mappingCache[$cacheKey];
     }
 
-    /** Catat model sebagai BEV (untuk upgrade powertrain ICE → BEV di akhir import). */
-    public function markBevModel(?int $modelId): void
-    {
-        if ($modelId !== null) {
-            $this->bevModelIds[$modelId] = $modelId;
-        }
-    }
-
-    /**
-     * Upgrade powertrain model yang terdeteksi BEV. Tidak pernah downgrade
-     * (BEV tidak pernah diubah balik jadi ICE oleh import).
-     */
-    public function applyPowertrainUpgrade(): int
-    {
-        if ($this->bevModelIds === []) {
-            return 0;
-        }
-
-        return ModelVehicle::whereIn('id', array_values($this->bevModelIds))
-            ->where(function ($q) {
-                $q->whereNull('powertrain')->orWhere('powertrain', '!=', 'BEV');
-            })
-            ->update(['powertrain' => 'BEV']);
-    }
-
     public function summary(): array
     {
         return [
             'created_brands' => $this->createdBrands,
             'created_models' => $this->createdModels,
             'created_types' => $this->createdTypes,
-            'bev_models' => count($this->bevModelIds),
         ];
     }
 
@@ -453,7 +424,6 @@ class VehicleSalesMatcher
         $model = ModelVehicle::create([
             'brand_vehicle_id' => $brandId,
             'name' => $this->prettyName($rawModel),
-            'powertrain' => 'ICE', // dikoreksi oleh applyPowertrainUpgrade bila BEV
         ]);
         $this->modelCacheByBrand[$brandId][] = [
             'model' => $model,

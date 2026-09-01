@@ -39,7 +39,6 @@ class VehicleHierarchyReport
 
         $models = ModelVehicle::query()
             ->with('brandVehicle:id,name')
-            ->when($powertrain !== 'ALL', fn ($q) => $q->where('powertrain', $powertrain))
             ->when($category !== null, fn ($q) => $q->where('category', $category))
             ->orderBy('name')
             ->get();
@@ -64,7 +63,6 @@ class VehicleHierarchyReport
                 'category' => $model->category,
                 'category_group' => VehicleCategories::groupOf($model->category),
                 'size' => $model->size_class,
-                'powertrain' => $model->powertrain,
                 'units' => $unitsByModel[$model->id] ?? 0,
                 'prev_units' => $prevUnitsByModel[$model->id] ?? 0,
                 'type_count' => (int) ($typeCounts[$model->id] ?? 0),
@@ -79,12 +77,13 @@ class VehicleHierarchyReport
             ->table('type_vehicles')
             ->whereIn('model_vehicle_id', array_keys($modelsById))
             ->orderBy('name')
-            ->get(['id', 'name', 'model_vehicle_id']);
+            ->get(['id', 'name', 'powertrain', 'model_vehicle_id']);
 
         foreach ($typeRows as $type) {
             $modelsById[$type->model_vehicle_id]['types'][] = [
                 'id' => $type->id,
                 'name' => $type->name,
+                'powertrain' => $type->powertrain,
                 'units' => $unitsByType[$type->id] ?? 0,
             ];
         }
@@ -141,10 +140,10 @@ class VehicleHierarchyReport
 
                 foreach ($brandData['models'] as $m) {
                     $modelMatches = str_contains(strtolower($m['name']), $searchLower)
-                        || ($m['category'] && str_contains(strtolower($m['category']), $searchLower))
-                        || ($m['powertrain'] && str_contains(strtolower($m['powertrain']), $searchLower));
+                        || ($m['category'] && str_contains(strtolower($m['category']), $searchLower));
 
-                    $matchedTypes = array_filter($m['types'], fn ($t) => str_contains(strtolower($t['name']), $searchLower));
+                    $matchedTypes = array_filter($m['types'], fn ($t) => str_contains(strtolower($t['name']), $searchLower)
+                        || ($t['powertrain'] && str_contains(strtolower($t['powertrain']), $searchLower)));
 
                     if ($brandMatches || $modelMatches || count($matchedTypes) > 0) {
                         $matchedModels[] = $m;

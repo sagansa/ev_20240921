@@ -19,8 +19,8 @@ class VehicleMarketTest extends TestCase
 
         $byd = BrandVehicle::create(['name' => 'BYD']);
         $wuling = BrandVehicle::create(['name' => 'Wuling']);
-        $atto = ModelVehicle::create(['brand_vehicle_id' => $byd->id, 'name' => 'Atto 1', 'powertrain' => 'BEV']);
-        $binguo = ModelVehicle::create(['brand_vehicle_id' => $wuling->id, 'name' => 'Binguo', 'powertrain' => 'BEV']);
+        $atto = ModelVehicle::create(['brand_vehicle_id' => $byd->id, 'name' => 'Atto 1']);
+        $binguo = ModelVehicle::create(['brand_vehicle_id' => $wuling->id, 'name' => 'Binguo']);
 
         // 2025: tahun penuh (12 bulan berisi).
         $import2025 = SalesImport::create([
@@ -31,8 +31,7 @@ class VehicleMarketTest extends TestCase
         foreach (range(1, 12) as $m) {
             VehicleSalesStat::create([
                 'sales_import_id' => $import2025->id, 'raw_brand' => 'BYD', 'raw_model' => 'Atto 1',
-                'brand_vehicle_id' => $byd->id, 'model_vehicle_id' => $atto->id, 'segment' => 'Sedan',
-                'powertrain' => 'BEV', 'year' => 2025, 'month' => $m, 'units' => 1000,
+                'brand_vehicle_id' => $byd->id, 'model_vehicle_id' => $atto->id, 'segment' => 'Sedan', 'powertrain' => 'BEV', 'year' => 2025, 'month' => $m, 'units' => 1000,
             ]);
         }
         VehicleSalesStat::create([
@@ -41,8 +40,7 @@ class VehicleMarketTest extends TestCase
         ]);
         VehicleSalesStat::create([
             'sales_import_id' => $import2025->id, 'raw_brand' => 'BYD', 'raw_model' => 'Atto 1',
-            'brand_vehicle_id' => $byd->id, 'model_vehicle_id' => $atto->id, 'segment' => 'Sedan',
-            'powertrain' => 'BEV', 'year' => 2025, 'month' => null, 'units' => 12000,
+            'brand_vehicle_id' => $byd->id, 'model_vehicle_id' => $atto->id, 'segment' => 'Sedan', 'powertrain' => 'BEV', 'year' => 2025, 'month' => null, 'units' => 12000,
         ]);
         VehicleSalesStat::create([
             'sales_import_id' => $import2025->id, 'raw_brand' => 'LAIN', 'raw_model' => 'Lain-lain',
@@ -61,14 +59,12 @@ class VehicleMarketTest extends TestCase
         foreach (range(1, 3) as $m) {
             VehicleSalesStat::create([
                 'sales_import_id' => $import2026->id, 'raw_brand' => 'WULING', 'raw_model' => 'Binguo',
-                'brand_vehicle_id' => $wuling->id, 'model_vehicle_id' => $binguo->id, 'segment' => 'LCGC',
-                'powertrain' => 'BEV', 'year' => 2026, 'month' => $m, 'units' => 2000,
+                'brand_vehicle_id' => $wuling->id, 'model_vehicle_id' => $binguo->id, 'segment' => 'LCGC', 'powertrain' => 'BEV', 'year' => 2026, 'month' => $m, 'units' => 2000,
             ]);
         }
         VehicleSalesStat::create([
             'sales_import_id' => $import2026->id, 'raw_brand' => 'WULING', 'raw_model' => 'Binguo',
-            'brand_vehicle_id' => $wuling->id, 'model_vehicle_id' => $binguo->id, 'segment' => 'LCGC',
-            'powertrain' => 'BEV', 'year' => 2026, 'month' => null, 'units' => 6000,
+            'brand_vehicle_id' => $wuling->id, 'model_vehicle_id' => $binguo->id, 'segment' => 'LCGC', 'powertrain' => 'BEV', 'year' => 2026, 'month' => null, 'units' => 6000,
         ]);
         VehicleSalesStat::create([
             'sales_import_id' => $import2026->id, 'raw_brand' => 'TOYOTA', 'raw_model' => 'Avanza',
@@ -126,8 +122,7 @@ class VehicleMarketTest extends TestCase
         ]);
         VehicleSalesStat::create([
             'sales_import_id' => $reimport->id, 'raw_brand' => 'BYD', 'raw_model' => 'Atto 1',
-            'brand_vehicle_id' => null, 'model_vehicle_id' => null, 'segment' => 'Sedan',
-            'powertrain' => 'BEV', 'year' => 2025, 'month' => null, 'units' => 47100,
+            'brand_vehicle_id' => null, 'model_vehicle_id' => null, 'segment' => 'Sedan', 'powertrain' => 'BEV', 'year' => 2025, 'month' => null, 'units' => 47100,
         ]);
 
         // Hanya angka dari import terbaru yang dihitung — 12.000 (import lama)

@@ -17,7 +17,7 @@ class VehicleNameMappingTest extends TestCase
     private function seedCatalog(): void
     {
         $wuling = BrandVehicle::create(['name' => 'Wuling']);
-        ModelVehicle::create(['name' => 'Air EV', 'brand_vehicle_id' => $wuling->id, 'powertrain' => 'BEV']);
+        ModelVehicle::create(['name' => 'Air EV', 'brand_vehicle_id' => $wuling->id]);
     }
 
     private function writeCsv(array $rows): string
@@ -81,8 +81,7 @@ class VehicleNameMappingTest extends TestCase
             'file_name' => '2026-01.csv', 'source' => 'gaikindo', 'year' => 2026, 'status' => 'processed',
         ]);
         $stat = VehicleSalesStat::create([
-            'sales_import_id' => $import->id, 'raw_brand' => 'Wuling-dbg', 'raw_model' => 'AIR EV BARU',
-            'powertrain' => 'BEV', 'year' => 2026, 'month' => 1, 'units' => 3,
+            'sales_import_id' => $import->id, 'raw_brand' => 'Wuling-dbg', 'raw_model' => 'AIR EV BARU', 'powertrain' => 'BEV', 'year' => 2026, 'month' => 1, 'units' => 3,
         ]);
 
         $this->artisan('vehicle-mapping', ['action' => 'relink'])
@@ -104,7 +103,7 @@ class VehicleNameMappingTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test(\App\Filament\Pages\VehicleSalesPreviewImport::class)
-            ->set('csvFile', \Illuminate\Http\UploadedFile::fake()->createWithContent('l.csv', "BRAND,TYPE MODEL,CC,TRANS,FUEL,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC,TOTAL\nWULING-DBG,Air EV Baru,,,BEV,3,-,,,,,,,,,,,,3\n"))
+            ->set('csvFile', \Illuminate\Http\UploadedFile::fake()->createWithContent('l.csv', "BRAND,TYPE MODEL,CC,TRANS,FUEL,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC,TOTAL\nWULING-DBG,Air EV Baru, ,BEV,3,-, , , , , , 3\n"))
             ->call('analyze')
             ->set('mapRawBrand', 'WULING-DBG')
             ->set('mapRawModel', 'Air EV Baru')

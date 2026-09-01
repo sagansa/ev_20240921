@@ -95,8 +95,8 @@ class VehicleHierarchyImporter extends Importer
 
         // Klasifikasi level model — CSV adalah sumber kebenaran: hanya
         // atribut yang disediakan CSV yang dibuat/diperbarui.
+        // powertrain kini di level type_vehicles, bukan model_vehicles.
         $modelAttributes = [
-            ...($powertrain !== null ? ['powertrain' => $powertrain] : []),
             ...($category !== null ? ['category' => $category] : []),
             ...($sizeClass !== null ? ['size_class' => $sizeClass] : []),
         ];
@@ -105,8 +105,6 @@ class VehicleHierarchyImporter extends Importer
             $model = ModelVehicle::query()->create([
                 'name' => $modelName,
                 'brand_vehicle_id' => $brand->getKey(),
-                // Kolom powertrain varchar(8) NOT NULL default 'ICE' — biarkan
-                // default DB bila CSV tidak menyediakan nilainya.
                 ...$modelAttributes,
             ]);
         } elseif ($modelAttributes !== []) {

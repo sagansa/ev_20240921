@@ -18,9 +18,9 @@ class VehicleOptionsTest extends TestCase
     {
         $byd = BrandVehicle::create(['name' => 'BYD']);
         $honda = BrandVehicle::create(['name' => 'Honda']);
-        $atto = ModelVehicle::create(['brand_vehicle_id' => $byd->id, 'name' => 'Atto 1', 'powertrain' => 'BEV']);
-        $brio = ModelVehicle::create(['brand_vehicle_id' => $honda->id, 'name' => 'Brio Satya', 'powertrain' => 'ICE']);
-        TypeVehicle::create(['model_vehicle_id' => $atto->id, 'name' => 'Standar', 'type_charger' => [], 'battery_capacity' => 51.8]);
+        $atto = ModelVehicle::create(['brand_vehicle_id' => $byd->id, 'name' => 'Atto 1']);
+        $brio = ModelVehicle::create(['brand_vehicle_id' => $honda->id, 'name' => 'Brio Satya']);
+        TypeVehicle::create(['model_vehicle_id' => $atto->id, 'name' => 'Standar', 'powertrain' => 'BEV', 'type_charger' => [], 'battery_capacity' => 51.8]);
 
         $import = SalesImport::create([
             'file_name' => 'x.xlsx', 'source' => 'gaikindo', 'year' => 2026,
@@ -28,8 +28,7 @@ class VehicleOptionsTest extends TestCase
         ]);
         VehicleSalesStat::create([
             'sales_import_id' => $import->id, 'raw_brand' => 'BYD', 'raw_model' => 'Atto 1 Dynamic',
-            'brand_vehicle_id' => $byd->id, 'model_vehicle_id' => $atto->id, 'segment' => 'Sedan',
-            'powertrain' => 'BEV', 'year' => 2026, 'month' => null, 'units' => 14300,
+            'brand_vehicle_id' => $byd->id, 'model_vehicle_id' => $atto->id, 'segment' => 'Sedan', 'powertrain' => 'BEV', 'year' => 2026, 'month' => null, 'units' => 14300,
         ]);
 
         $this->actingAs(\App\Models\User::factory()->create(), 'sanctum');
@@ -43,14 +42,14 @@ class VehicleOptionsTest extends TestCase
 
         $models = collect($res->json('data.models'))->keyBy('name');
         $this->assertEquals(14300, $models['Atto 1']['sales_units']);
-        $this->assertSame('BEV', $models['Atto 1']['powertrain']);
-        $this->assertSame('ICE', $models['Brio Satya']['powertrain']);
+        $this->assertArrayNotHasKey('powertrain', $models['Atto 1']);
         $this->assertEquals(0, $models['Brio Satya']['sales_units']);
 
-        // Type tetap terkirim (auto-fill baterai mobile).
+        // Type tetap terkirim (auto-fill baterai mobile) dan kini membawa powertrain.
         $types = collect($res->json('data.types'));
         $this->assertCount(1, $types);
         $this->assertEquals(51.8, (float) $types->first()['battery_capacity']);
+        $this->assertSame('BEV', $types->first()['powertrain']);
     }
 
     public function test_options_tanpa_data_penjualan_tetap_berfungsi(): void

@@ -140,7 +140,7 @@ class VehicleSalesReport extends Page
      * Agregat per model (katalog) + satu baris "(tidak ter-match)" untuk
      * model_vehicle_id IS NULL. Urut total unit desc, dibatasi 100 baris.
      *
-     * @return list<array{brand: string, model: string, powertrain: string, total_units: int, type_count: int}>
+     * @return list<array{brand: string, model: string, total_units: int, type_count: int}>
      */
     public static function modelRows(?int $year, ?string $powertrain): array
     {
@@ -151,7 +151,7 @@ class VehicleSalesReport extends Page
             ->join('model_vehicles', 'model_vehicles.id', '=', 'vehicle_sales_stats.model_vehicle_id')
             ->join('brand_vehicles', 'brand_vehicles.id', '=', 'model_vehicles.brand_vehicle_id')
             ->whereNotNull('vehicle_sales_stats.model_vehicle_id')
-            ->groupBy('vehicle_sales_stats.model_vehicle_id', 'brand_vehicles.name', 'model_vehicles.name', 'model_vehicles.powertrain')
+            ->groupBy('vehicle_sales_stats.model_vehicle_id', 'brand_vehicles.name', 'model_vehicles.name')
             ->orderByDesc('total_units')
             ->orderBy('brand_vehicles.name')
             ->orderBy('model_vehicles.name')
@@ -159,7 +159,6 @@ class VehicleSalesReport extends Page
             ->get([
                 'brand_vehicles.name as brand',
                 'model_vehicles.name as model',
-                DB::raw('coalesce(model_vehicles.powertrain, \'—\') as powertrain'),
                 DB::raw('sum(vehicle_sales_stats.units) as total_units'),
                 DB::raw('count(distinct vehicle_sales_stats.type_vehicle_id) as type_count'),
             ])
@@ -167,7 +166,6 @@ class VehicleSalesReport extends Page
             ->map(fn ($row) => [
                 'brand' => (string) $row->brand,
                 'model' => (string) $row->model,
-                'powertrain' => (string) $row->powertrain,
                 'total_units' => (int) $row->total_units,
                 'type_count' => (int) $row->type_count,
             ])
@@ -185,7 +183,6 @@ class VehicleSalesReport extends Page
             $matched[] = [
                 'brand' => '—',
                 'model' => '(tidak ter-match)',
-                'powertrain' => '—',
                 'total_units' => (int) $unmatched->total_units,
                 'type_count' => (int) $unmatched->type_count,
             ];

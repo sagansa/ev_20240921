@@ -18,14 +18,12 @@ class ModelVehicle extends Model
     protected $fillable = [
         'image',
         'name',
-        'powertrain',
         'category',
         'size_class',
         'brand_vehicle_id',
     ];
 
     protected $casts = [
-        'powertrain' => 'string',
         'category' => 'string',
         'size_class' => 'string',
     ];

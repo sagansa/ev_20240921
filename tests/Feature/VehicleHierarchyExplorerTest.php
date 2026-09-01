@@ -32,12 +32,10 @@ class VehicleHierarchyExplorerTest extends TestCase
 
         $this->wuling = BrandVehicle::create(['name' => 'Wuling']);
         $air = ModelVehicle::create([
-            'name' => 'Air EV', 'brand_vehicle_id' => $this->wuling->id,
-            'powertrain' => 'BEV', 'category' => 'City Car',
+            'name' => 'Air EV', 'brand_vehicle_id' => $this->wuling->id, 'category' => 'City Car',
         ]);
         $cortez = ModelVehicle::create([
-            'name' => 'Cortez', 'brand_vehicle_id' => $this->wuling->id,
-            'powertrain' => 'BEV', 'category' => null, // tanpa kategori = issue
+            'name' => 'Cortez', 'brand_vehicle_id' => $this->wuling->id, 'category' => null, // tanpa kategori = issue
         ]);
         TypeVehicle::create(['name' => 'Air EV Standard', 'model_vehicle_id' => $air->id, 'type_charger' => []]);
         TypeVehicle::create(['name' => 'Cortez 1.5', 'model_vehicle_id' => $cortez->id, 'type_charger' => []]);
@@ -47,12 +45,10 @@ class VehicleHierarchyExplorerTest extends TestCase
         ]);
         VehicleSalesStat::create([
             'sales_import_id' => $import->id, 'raw_brand' => 'WULING', 'raw_model' => 'Air EV',
-            'brand_vehicle_id' => $this->wuling->id, 'model_vehicle_id' => $air->id,
-            'powertrain' => 'BEV', 'year' => 2025, 'month' => null, 'units' => 8000,
+            'brand_vehicle_id' => $this->wuling->id, 'model_vehicle_id' => $air->id, 'powertrain' => 'BEV', 'year' => 2025, 'month' => null, 'units' => 8000,
         ]);
         VehicleSalesStat::create([
-            'sales_import_id' => $import->id, 'raw_brand' => 'Mystery', 'raw_model' => 'Ghost',
-            'powertrain' => 'BEV', 'year' => 2025, 'month' => null, 'units' => 500,
+            'sales_import_id' => $import->id, 'raw_brand' => 'Mystery', 'raw_model' => 'Ghost', 'powertrain' => 'BEV', 'year' => 2025, 'month' => null, 'units' => 500,
         ]);
     }
 

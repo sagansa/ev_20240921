@@ -39,13 +39,11 @@ class VehicleSalesReportTest extends TestCase
         $this->brand = BrandVehicle::create(['name' => 'Toyota']);
         $this->avanza = ModelVehicle::create([
             'name' => 'Avanza',
-            'brand_vehicle_id' => $this->brand->id,
-            'powertrain' => 'ICE',
+            'brand_vehicle_id' => $this->brand->id
         ]);
         $this->bz4x = ModelVehicle::create([
             'name' => 'bZ4X',
-            'brand_vehicle_id' => $this->brand->id,
-            'powertrain' => 'BEV',
+            'brand_vehicle_id' => $this->brand->id
         ]);
         $this->type = TypeVehicle::create([
             'name' => 'Avanza 1.5 G',
@@ -168,13 +166,11 @@ class VehicleSalesReportTest extends TestCase
 
         $this->assertSame('Avanza', $rows[0]['model']);
         $this->assertSame(120, $rows[0]['total_units']);
-        $this->assertSame('ICE', $rows[0]['powertrain']);
         $this->assertSame('Toyota', $rows[0]['brand']);
         $this->assertSame(1, $rows[0]['type_count']);
 
         $this->assertSame('bZ4X', $rows[1]['model']);
         $this->assertSame(50, $rows[1]['total_units']);
-        $this->assertSame('BEV', $rows[1]['powertrain']);
         $this->assertSame(0, $rows[1]['type_count']);
 
         $last = end($rows);
@@ -209,7 +205,6 @@ class VehicleSalesReportTest extends TestCase
             $model = ModelVehicle::create([
                 'name' => "Model Padat $i",
                 'brand_vehicle_id' => $this->brand->id,
-                'powertrain' => 'ICE',
             ]);
             VehicleSalesStat::create([
                 'sales_import_id' => $import->id,

@@ -96,7 +96,7 @@ class VehicleNameSplitter
             return $this->result(
                 $catalogModel->name,
                 $typeModel,
-                $this->resolvePowertrain($fuel, $catalogModel->powertrain, $typeModel, $confidence),
+                $this->resolvePowertrain($fuel, null, $typeModel, $confidence),
                 'high',
                 null,
                 'catalog',

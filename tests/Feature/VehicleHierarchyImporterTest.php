@@ -106,13 +106,6 @@ class VehicleHierarchyImporterTest extends TestCase
         $this->assertSame('Premium', TypeVehicle::query()->value('name'));
     }
 
-    public function test_powertrain_is_set_on_new_model(): void
-    {
-        $this->invokeRow('AION', 'AION UT', 'Premium', 'BEV');
-
-        $this->assertSame('BEV', ModelVehicle::query()->where('name', 'AION UT')->value('powertrain'));
-    }
-
     public function test_powertrain_type_terisi_saat_type_baru_dan_diisi_bila_kosong(): void
     {
         $this->invokeRow('AION', 'AION UT', 'Premium', 'BEV');
@@ -124,29 +117,6 @@ class VehicleHierarchyImporterTest extends TestCase
         $this->invokeRow('AION', 'AION UT', 'Standard', 'BEV');
 
         $this->assertSame('BEV', TypeVehicle::query()->where('name', 'Standard')->value('powertrain'));
-    }
-
-    public function test_missing_powertrain_falls_back_to_default(): void
-    {
-        $this->invokeRow('AION', 'AION ES');
-
-        $this->assertSame('ICE', ModelVehicle::query()->value('powertrain'));
-    }
-
-    public function test_powertrain_overwrites_existing_model_classification(): void
-    {
-        $this->invokeRow('AION', 'AION UT', 'Premium', 'ICE');
-        $this->invokeRow('AION', 'AION UT', 'Premium', 'BEV');
-
-        $this->assertSame(1, ModelVehicle::count());
-        $this->assertSame('BEV', ModelVehicle::query()->value('powertrain'));
-    }
-
-    public function test_lowercase_powertrain_is_normalized(): void
-    {
-        $this->invokeRow('BYD', 'Sealion 7', 'Premium', 'bev');
-
-        $this->assertSame('BEV', ModelVehicle::query()->value('powertrain'));
     }
 
     public function test_invalid_powertrain_fails_the_row(): void

@@ -88,18 +88,7 @@ class ModelVehicleResource extends Resource
             Section::make('Klasifikasi & Taksonomi Kendaraan')
                 ->description('Karakteristik teknis yang digunakan untuk katalog, segmentasi pasar EV, dan integrasi GAIKINDO.')
                 ->schema([
-                    Grid::make(['default' => 1, 'md' => 3])->schema([
-                        Select::make('powertrain')
-                            ->options([
-                                'BEV' => '⚡ BEV (Battery Electric Vehicle)',
-                                'PHEV' => '🔌 PHEV (Plug-in Hybrid)',
-                                'HEV' => '🔋 HEV (Hybrid Electric)',
-                                'ICE' => '⛽ ICE (Internal Combustion Engine)',
-                            ])
-                            ->default('BEV')
-                            ->required()
-                            ->label('Powertrain / Sistem Penggerak'),
-
+                    Grid::make(['default' => 1, 'md' => 2])->schema([
                         Select::make('category')
                             ->options(array_combine(VehicleCategories::CATEGORIES, VehicleCategories::CATEGORIES))
                             ->searchable()
@@ -143,17 +132,6 @@ class ModelVehicleResource extends Resource
                     ->color(fn ($state) => $state > 0 ? 'success' : 'gray')
                     ->sortable(),
 
-                TextColumn::make('powertrain')
-                    ->label('Powertrain')
-                    ->badge()
-                    ->colors([
-                        'success' => 'BEV',
-                        'info' => 'PHEV',
-                        'primary' => 'HEV',
-                        'gray' => 'ICE',
-                    ])
-                    ->sortable(),
-
                 TextColumn::make('category')
                     ->label('Kategori')
                     ->badge()
@@ -180,15 +158,6 @@ class ModelVehicleResource extends Resource
                     ->searchable()
                     ->preload()
                     ->label('Brand'),
-
-                SelectFilter::make('powertrain')
-                    ->options([
-                        'BEV' => '⚡ BEV (Murni)',
-                        'PHEV' => '🔌 PHEV (Plug-in)',
-                        'HEV' => '🔋 HEV (Hybrid)',
-                        'ICE' => '⛽ ICE (Bensin/Diesel)',
-                    ])
-                    ->label('Powertrain'),
 
                 SelectFilter::make('category')
                     ->options(array_combine(VehicleCategories::CATEGORIES, VehicleCategories::CATEGORIES))

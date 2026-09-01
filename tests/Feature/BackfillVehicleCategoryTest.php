@@ -28,8 +28,8 @@ class BackfillVehicleCategoryTest extends TestCase
     public function test_backfills_category_and_size_by_case_insensitive_match(): void
     {
         $toyota = BrandVehicle::create(['name' => 'TOYOTA']);
-        ModelVehicle::create(['name' => 'Avanza', 'brand_vehicle_id' => $toyota->id, 'powertrain' => 'ICE']);
-        ModelVehicle::create(['name' => 'AVANZA', 'brand_vehicle_id' => $toyota->id, 'powertrain' => 'ICE']);
+        ModelVehicle::create(['name' => 'Avanza', 'brand_vehicle_id' => $toyota->id]);
+        ModelVehicle::create(['name' => 'AVANZA', 'brand_vehicle_id' => $toyota->id]);
 
         $csv = $this->writeCsv(
             storage_path('app/backfill-test.csv'),
@@ -50,7 +50,7 @@ class BackfillVehicleCategoryTest extends TestCase
     {
         $byd = BrandVehicle::create(['name' => 'BYD']);
         $model = ModelVehicle::create([
-            'name' => 'Seal', 'brand_vehicle_id' => $byd->id, 'powertrain' => 'BEV',
+            'name' => 'Seal', 'brand_vehicle_id' => $byd->id,
             'category' => 'Hatchback',
         ]);
 
@@ -68,7 +68,7 @@ class BackfillVehicleCategoryTest extends TestCase
     public function test_rows_without_category_are_skipped_and_missing_models_reported(): void
     {
         $byd = BrandVehicle::create(['name' => 'BYD']);
-        ModelVehicle::create(['name' => 'Seal', 'brand_vehicle_id' => $byd->id, 'powertrain' => 'BEV']);
+        ModelVehicle::create(['name' => 'Seal', 'brand_vehicle_id' => $byd->id]);
 
         $csv = $this->writeCsv(storage_path('app/backfill-test-3.csv'), [
             ['HINO', '115LD', '', 'ICE', '', ''],

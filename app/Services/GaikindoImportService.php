@@ -209,7 +209,6 @@ class GaikindoImportService
             ]);
 
             $statCount = $this->persistStats($import->id, $parsedRows);
-            $this->matcher->applyPowertrainUpgrade();
 
             $meta = $import->meta;
             $meta['matcher'] = $this->matcher->summary();
@@ -799,10 +798,6 @@ class GaikindoImportService
                 $matchCache[$key] = $this->matcher->match($row['brand'], $row['model'], $row['kwh']);
             }
             $match = $matchCache[$key];
-
-            if ($row['powertrain'] === 'BEV') {
-                $this->matcher->markBevModel($match['model_vehicle_id']);
-            }
 
             $base = [
                 'sales_import_id' => $importId,

@@ -25,7 +25,7 @@ class VehicleConnectingSyncPageTest extends TestCase
         $this->actingAs($admin);
 
         $gac = BrandVehicle::create(['name' => 'GAC']);
-        ModelVehicle::create(['name' => 'AION', 'brand_vehicle_id' => $gac->id, 'powertrain' => 'BEV', 'category' => 'Sedan']);
+        ModelVehicle::create(['name' => 'AION', 'brand_vehicle_id' => $gac->id, 'category' => 'Sedan']);
     }
 
     private function csv(): UploadedFile

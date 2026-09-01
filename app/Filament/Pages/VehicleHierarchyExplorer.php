@@ -30,9 +30,6 @@ class VehicleHierarchyExplorer extends Page
     public ?int $year = null;
 
     #[Url]
-    public string $powertrain = 'ALL';
-
-    #[Url]
     public string $category = 'ALL';
 
     #[Url]
@@ -69,7 +66,7 @@ class VehicleHierarchyExplorer extends Page
     {
         $report = app(VehicleHierarchyReport::class)->build(
             $this->year,
-            $this->powertrain,
+            'ALL',
             $this->category === 'ALL' ? null : $this->category,
             $this->search,
             $this->onlyIssues
@@ -92,7 +89,6 @@ class VehicleHierarchyExplorer extends Page
     public function resetFilters(): void
     {
         $this->search = '';
-        $this->powertrain = 'ALL';
         $this->category = 'ALL';
         $this->onlyIssues = false;
     }
@@ -109,7 +105,7 @@ class VehicleHierarchyExplorer extends Page
     {
         $report = app(VehicleHierarchyReport::class)->build(
             $this->year,
-            $this->powertrain,
+            'ALL',
             $this->category === 'ALL' ? null : $this->category,
             $this->search,
             $this->onlyIssues

@@ -55,8 +55,8 @@ class VehicleController extends Controller
     public function options(): JsonResponse
     {
         $brands = BrandVehicle::select('id', 'name', 'image')->orderBy('name')->get();
-        $models = ModelVehicle::select('id', 'brand_vehicle_id', 'name', 'image', 'powertrain', 'category', 'size_class')->orderBy('name')->get();
-        $types = TypeVehicle::select('id', 'model_vehicle_id', 'name', 'battery_capacity')->orderBy('name')->get();
+        $models = ModelVehicle::select('id', 'brand_vehicle_id', 'name', 'image', 'category', 'size_class')->orderBy('name')->get();
+        $types = TypeVehicle::select('id', 'model_vehicle_id', 'name', 'powertrain', 'battery_capacity')->orderBy('name')->get();
 
         [$brandSales, $modelSales] = $this->latestYearSales();
 
@@ -74,7 +74,6 @@ class VehicleController extends Controller
                     'brand_vehicle_id' => $m->brand_vehicle_id,
                     'name' => $m->name,
                     'image' => $m->image,
-                    'powertrain' => $m->powertrain,
                     'category' => $m->category,
                     'size_class' => $m->size_class,
                     'sales_units' => (int) ($modelSales[$m->id] ?? 0),

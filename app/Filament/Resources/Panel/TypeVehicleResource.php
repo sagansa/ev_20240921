@@ -65,7 +65,7 @@ class TypeVehicleResource extends Resource
                         Select::make('model_vehicle_id')
                             ->required()
                             ->relationship('modelVehicle', 'name')
-                            ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->brandVehicle?->name} — {$record->name} (".($record->powertrain ?? 'BEV').")")
+                            ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->brandVehicle?->name} — {$record->name}")
                             ->searchable()
                             ->preload()
                             ->label('Model Kendaraan Induk'),
@@ -153,17 +153,6 @@ class TypeVehicleResource extends Resource
                         'primary' => 'HEV',
                     ])
                     ->placeholder('—')
-                    ->sortable(),
-
-                TextColumn::make('modelVehicle.powertrain')
-                    ->label('Powertrain')
-                    ->badge()
-                    ->colors([
-                        'success' => 'BEV',
-                        'info' => 'PHEV',
-                        'primary' => 'HEV',
-                        'gray' => 'ICE',
-                    ])
                     ->sortable(),
 
                 TextColumn::make('battery_capacity')
