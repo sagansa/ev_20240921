@@ -98,7 +98,7 @@ class ImportVehicleSalesCsv extends Command
             foreach ($rows as $row) {
                 $split = $splitter->split($row['brand'], $row['type_model'], $row['fuel']);
 
-                if ($split['flag'] === 'junk' || $split['model'] === '' || $split['powertrain'] !== 'BEV') {
+                if ($split['flag'] === 'junk' || $split['model'] === '') {
                     continue;
                 }
 
@@ -151,20 +151,14 @@ class ImportVehicleSalesCsv extends Command
                         continue;
                     }
 
-                    // ATURAN BEV-ONLY: katalog (brand/model/type) hanya untuk
-                    // kendaraan BEV — mobile app khusus EV. Baris non-BEV
-                    // tetap masuk statistik (konteks pasar) dengan link
-                    // katalog NULL; raw_brand/raw_model tetap tersimpan.
-                    $isBev = $split['powertrain'] === 'BEV';
-
+                    // SEMUA powertrain ter-link ke katalog (BEV/HEV/PHEV/ICE) —
+                    // hierarki brand-model-type mencakup seluruh pasar.
                     // Match di level KELUARGA (hasil splitter), bukan varian penuh.
-                    $match = $isBev
-                        ? $matcher->match($row['brand'], $split['model'], null, $row['type_model'])
-                        : ['brand_vehicle_id' => null, 'model_vehicle_id' => null, 'brand_created' => false, 'model_created' => false, 'battery_kwh' => null];
+                    $match = $matcher->match($row['brand'], $split['model'], null, $row['type_model']);
 
                     $typeId = null;
 
-                    if ($isBev && $match['model_vehicle_id'] !== null && $split['type'] !== '') {
+                    if ($match['model_vehicle_id'] !== null && $split['type'] !== '') {
                         $typeId = $this->resolveType($match['model_vehicle_id'], $split['type'], $typesCreated);
                     }
 

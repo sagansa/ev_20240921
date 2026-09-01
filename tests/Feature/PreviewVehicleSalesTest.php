@@ -133,9 +133,12 @@ class PreviewVehicleSalesTest extends TestCase
         $this->assertSame(0, VehicleSalesStat::count());
     }
 
-    public function test_require_full_link_lulus_bila_semua_bev_termatch(): void
+    public function test_require_full_link_lulus_bila_semua_termatch(): void
     {
         $this->seedCatalog();
+        // TOYOTA/Agya harus sudah ada di katalog (gerbang menuntut full-link).
+        $toyota = BrandVehicle::create(['name' => 'TOYOTA']);
+        ModelVehicle::create(['name' => 'Agya', 'brand_vehicle_id' => $toyota->id, 'powertrain' => 'ICE']);
 
         $csv = $this->writeCsv([
             ['BYD', 'Atto 1 Dynamic', '100', 'AT', 'BEV', '5', '-', '', '', '', '', '', '', '', '', '', '', '5'],
@@ -146,9 +149,10 @@ class PreviewVehicleSalesTest extends TestCase
             'file' => $csv, '--year' => '2026', '--require-full-link' => true,
         ])->assertSuccessful();
 
-        // BEV ter-link, non-BEV masuk stats dengan link NULL (by design).
-        $this->assertSame(1, ModelVehicle::count());
-        $this->assertSame(2, VehicleSalesStat::whereNotNull('model_vehicle_id')->count());
+        // Semua baris ter-link (ICE termasuk).
+        $this->assertSame(2, ModelVehicle::count());
+        // 2 baris (BYD + TOYOTA) × (bulan + agregat) — semuanya ter-link.
+        $this->assertSame(4, VehicleSalesStat::whereNotNull('model_vehicle_id')->count());
     }
 
 

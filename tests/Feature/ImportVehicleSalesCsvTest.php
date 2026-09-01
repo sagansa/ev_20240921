@@ -75,10 +75,10 @@ class ImportVehicleSalesCsvTest extends TestCase
         $this->assertSame('TOYOTA', $jan->raw_brand);
         $this->assertSame('Agya 1.2 G AT', $jan->raw_model);
         $this->assertSame(2022, (int) $jan->year);
-        // ATURAN BEV-ONLY: baris ICE tidak membuat/menaut katalog.
-        $this->assertNull($jan->brand_vehicle_id);
-        $this->assertNull($jan->model_vehicle_id);
-        $this->assertNull($jan->type_vehicle_id);
+        // SEMUA powertrain ter-link ke katalog (ICE termasuk — auto-create).
+        $this->assertNotNull($jan->brand_vehicle_id);
+        $this->assertNotNull($jan->model_vehicle_id);
+        $this->assertNotNull($jan->type_vehicle_id);
         $this->assertSame('ICE', $jan->powertrain);
 
         $sep = VehicleSalesStat::query()->where('month', 9)->firstOrFail();
@@ -97,9 +97,9 @@ class ImportVehicleSalesCsvTest extends TestCase
             ->all();
         $this->assertSame([4, 13], $annualUnits);
 
-        // Type hanya dibuat untuk baris BEV.
-        $this->assertSame(0, TypeVehicle::query()->where('name', 'Agya 1.2 G AT')->count());
-        $this->assertSame(1, TypeVehicle::count());
+        // Type dibuat utk semua baris yang ter-match (ICE termasuk).
+        $this->assertSame(1, TypeVehicle::query()->where('name', 'Agya 1.2 G AT')->count());
+        $this->assertSame(2, TypeVehicle::count());
 
         $ioniqType = TypeVehicle::query()->where('name', 'Ioniq EV Prime')->firstOrFail();
         $this->assertSame('Ioniq', $ioniqType->modelVehicle->name);

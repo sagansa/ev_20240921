@@ -62,7 +62,6 @@ class PreviewVehicleSales extends Command
                 ['Periode', $month === null ? 'tahunan' : "bulan {$month}"],
                 ['Baris dibaca', $s['rows']],
                 ['Baris dilewati (junk/kosong)', $s['skipped']],
-                ['Baris non-BEV (tidak ter-link katalog, by design)', $s['nonBev']],
                 ['Kombinasi BEV ter-match ke katalog', $s['matched']],
                 ['Kombinasi BARU (perlu keputusan)', $s['new']],
             ]

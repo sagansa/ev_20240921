@@ -186,15 +186,6 @@
                     <div style="margin-top: 4px; font-size: 11px; color: var(--vsp-text-muted);">Header / subtotal</div>
                 </div>
 
-                {{-- Non-BEV --}}
-                <div class="vsp-card">
-                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--vsp-text-muted);">Non-BEV</div>
-                    <div style="margin-top: 8px; font-size: 22px; font-weight: 800; font-family: monospace; color: var(--vsp-text-title);">
-                        {{ number_format($s['nonBev']) }}
-                    </div>
-                    <div style="margin-top: 4px; font-size: 11px; color: var(--vsp-text-muted);">Tanpa link (by design)</div>
-                </div>
-
                 {{-- Ter-match Katalog --}}
                 <div class="vsp-card" style="border-color: rgba(16, 185, 129, 0.4);">
                     <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #10b981;">Ter-match Katalog</div>

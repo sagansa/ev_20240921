@@ -32,7 +32,6 @@ class VehicleSalesPreviewService
 
         $new = [];
         $matched = 0;
-        $nonBev = 0;
         $skipped = $junkSkipped;
 
         foreach ($rows as $row) {
@@ -44,13 +43,7 @@ class VehicleSalesPreviewService
                 continue;
             }
 
-            // Katalog base khusus BEV (aturan sama dgn import).
-            if ($split['powertrain'] !== 'BEV') {
-                $nonBev++;
-
-                continue;
-            }
-
+            // Semua powertrain dicek terhadap katalog (BEV/HEV/PHEV/ICE).
             $preview = $this->matcher->preview($row['brand'], $split['model'], $row['type_model']);
 
             if (! $preview['brand_new'] && ! $preview['model_new']) {
@@ -82,7 +75,6 @@ class VehicleSalesPreviewService
             'summary' => [
                 'rows' => count($rows),
                 'skipped' => $skipped,
-                'nonBev' => $nonBev,
                 'matched' => $matched,
                 'new' => count($new),
             ],
