@@ -18,6 +18,30 @@ class VehicleConnectingComparer
     public const REQUIRED_COLUMNS = ['BRAND', 'MODEL', 'TYPE', 'POWERTRAIN', 'CATEGORY', 'SIZE'];
 
     /**
+     * Nilai seragam dari daftar (hanya yang terisi): sama semua → nilainya;
+     * ada yang beda/kosong → null (tidak bisa diputuskan per keluarga).
+     *
+     * @param list<string> $values
+     */
+    protected function uniformValue(array $values): ?string
+    {
+        $values = array_values(array_filter($values, fn ($v) => $v !== '' && $v !== null));
+
+        if ($values === []) {
+            return null;
+        }
+
+        $first = $values[0];
+        foreach ($values as $v) {
+            if ($v !== $first) {
+                return null;
+            }
+        }
+
+        return $first;
+    }
+
+    /**
      * Bandingkan CSV vs katalog.
      *
      * @return array{match: int, brandBaru: list<array>, modelBaru: list<array>,
@@ -66,13 +90,15 @@ class VehicleConnectingComparer
 
         $report = [
             'match' => [], 'brandBaru' => [], 'modelBaru' => [],
-            'typeBaru' => [], 'klasifikasiBeda' => [],
+            'typeBaru' => [], 'klasifikasiBeda' => [], 'csvTidakKonsisten' => [],
             'dbBrandTanpaCsv' => [], 'dbModelTanpaCsv' => [],
         ];
         $csvBrandRefs = [];
         $csvModelRefs = [];
         $seen = [];
 
+        // Pass 1: kumpulkan baris per keluarga (brand+model) + entitas baru.
+        $families = [];
         while (($r = fgetcsv($handle)) !== false) {
             if (count($r) < 6 && trim(implode('', $r)) === '') continue;
             $brand = trim((string) $r[$idx('BRAND')]);
@@ -107,26 +133,50 @@ class VehicleConnectingComparer
                 continue;
             }
 
-            $dbType = $typesByKey[$dbModel->id.'|'.$norm($type)] ?? null;
-            if ($type !== '' && $dbType === null) {
-                $report['typeBaru'][] = ['brand' => $brand, 'model' => $model, 'type' => $type];
-            }
-
-            $diffs = [];
-            if ($pt !== '' && $dbModel->powertrain !== $pt) $diffs[] = "powertrain DB={$dbModel->powertrain} CSV={$pt}";
-            if ($category !== '' && $dbModel->category !== $category) $diffs[] = "category DB={$dbModel->category} CSV={$category}";
-            if ($size !== '' && $dbModel->size_class !== $size) $diffs[] = "size DB={$dbModel->size_class} CSV={$size}";
-
-            if ($diffs !== []) {
-                $dKey = $mKey.'|'.implode(';', $diffs);
-                $report['klasifikasiBeda'][$dKey] ??= [
-                    'brand' => $brand, 'model' => $model, 'diff' => implode('; ', $diffs),
-                ];
-            } elseif ($dbType !== null || $type === '') {
-                $report['match'][] = ['brand' => $brand, 'model' => $model, 'type' => $type];
-            }
+            $families[$mKey]['brand'] = $brand;
+            $families[$mKey]['model'] = $model;
+            $families[$mKey]['db'] = $dbModel;
+            $families[$mKey]['rows'][] = ['type' => $type, 'pt' => $pt, 'category' => $category, 'size' => $size];
         }
         fclose($handle);
+
+        // Pass 2: evaluasi per keluarga — nilai CSV yang SERAGAM dibandingkan
+        // dgn DB; keluarga campuran (mis. varian G dan Hev) dilaporkan sbg
+        // informasi, bukan aksi, supaya laporan stabil setelah sinkronisasi.
+        foreach ($families as $family) {
+            $db = $family['db'];
+            $csvPt = $this->uniformValue(array_column($family['rows'], 'pt'));
+            $csvCategory = $this->uniformValue(array_column($family['rows'], 'category'));
+            $csvSize = $this->uniformValue(array_column($family['rows'], 'size'));
+
+            $diffs = [];
+            if ($csvPt !== null && $db->powertrain !== $csvPt) $diffs[] = "powertrain DB={$db->powertrain} CSV={$csvPt}";
+            if ($csvCategory !== null && $db->category !== $csvCategory) $diffs[] = "category DB={$db->category} CSV={$csvCategory}";
+            if ($csvSize !== null && $db->size_class !== $csvSize) $diffs[] = "size DB={$db->size_class} CSV={$csvSize}";
+
+            if ($diffs !== []) {
+                $report['klasifikasiBeda'][] = [
+                    'brand' => $family['brand'], 'model' => $family['model'], 'diff' => implode('; ', $diffs),
+                ];
+            } elseif ($csvPt === null || $csvCategory === null || $csvSize === null) {
+                $report['csvTidakKonsisten'][] = [
+                    'brand' => $family['brand'], 'model' => $family['model'],
+                    'detail' => 'varian CSV tidak seragam (perlu dirapikan di CSV)',
+                ];
+            } else {
+                $report['match'][] = ['brand' => $family['brand'], 'model' => $family['model']];
+            }
+
+            foreach ($family['rows'] as $row) {
+                if ($row['type'] === '') continue;
+                $dbType = $typesByKey[$db->id.'|'.$norm($row['type'])] ?? null;
+                if ($dbType === null) {
+                    $report['typeBaru'][] = [
+                        'brand' => $family['brand'], 'model' => $family['model'], 'type' => $row['type'],
+                    ];
+                }
+            }
+        }
 
         foreach ($brandByKey as $bKey => $bId) {
             if (! isset($csvBrandRefs[$bKey])) {

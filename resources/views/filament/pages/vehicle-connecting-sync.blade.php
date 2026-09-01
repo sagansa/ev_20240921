@@ -301,6 +301,26 @@
                     </div>
                 @endif
             </x-filament::section>
+
+            {{-- CSV tidak konsisten (informasi) --}}
+            @if (count($report['csvTidakKonsisten']) > 0)
+                <div class="mt-3 rounded-lg border border-gray-200 p-3 dark:border-white/10">
+                    <p class="mb-2 text-xs font-bold uppercase text-gray-400">CSV tidak konsisten (informasi — varian campuran, bukan aksi)</p>
+                    <div class="max-h-40 overflow-y-auto">
+                        <table class="w-full text-sm">
+                            <tbody>
+                            @foreach ($report['csvTidakKonsisten'] as $row)
+                                <tr class="border-b border-gray-100 last:border-0 dark:border-white/5">
+                                    <td class="py-1 font-mono text-xs">{{ $row['brand'] }}</td>
+                                    <td class="py-1">{{ $row['model'] }}</td>
+                                    <td class="py-1 text-xs text-gray-500">{{ $row['detail'] }}</td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
         @endif
 
         {{-- 3. LOG HASIL SINKRONISASI --}}
