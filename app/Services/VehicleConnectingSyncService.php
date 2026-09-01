@@ -6,6 +6,7 @@ use App\Filament\Imports\VehicleHierarchyImporter;
 use App\Models\BrandVehicle;
 use App\Models\ModelVehicle;
 use App\Models\TypeVehicle;
+use App\Models\Vehicle;
 use App\Models\VehicleConnecting;
 use App\Models\VehicleSalesStat;
 use Filament\Actions\Imports\Models\Import;
@@ -368,5 +369,111 @@ class VehicleConnectingSyncService
     public function flushMarketCache(): void
     {
         app(\App\Services\VehicleMarketService::class)->flush();
+    }
+
+    /**
+     * PRUNE KATALOG — hapus brand/model/type yang TIDAK direferensikan
+     * CONNECTING (kasus: duplikat hasil auto-create impor lama, mis.
+     * "MITSUBISHI FUSO" sebelum alias dipasang).
+     *
+     * Pengaman: model hanya dihapus bila TIDAK dipakai user kendaraan,
+     * TIDAK punya stats penjualan, dan TIDAK punya type — sisanya dilaporkan
+     * agar dibereskan lewat jalur lain (alias/mapping + re-import).
+     *
+     * @return array{deletedModels: int, deletedBrands: list<string>, kept: list<array{brand: string, model: string, vehicles: int, stats: int, types: int}>}
+     */
+    public function pruneCatalog(string $csvPath): array
+    {
+        $refs = $this->referencedKeys($csvPath);
+
+        $deletedModels = 0;
+        $deletedBrands = [];
+        $kept = [];
+
+        foreach (ModelVehicle::with('brandVehicle', 'typeVehicles')->get() as $model) {
+            $bKey = $this->normKey($model->brandVehicle?->name);
+            $mKey = $bKey.'|'.$this->normKey($model->name);
+
+            if (isset($refs['models'][$mKey])) {
+                continue; // direferensikan CONNECTING — dipertahankan
+            }
+
+            $vehicles = Vehicle::where('model_vehicle_id', $model->id)->count();
+            $stats = VehicleSalesStat::where('model_vehicle_id', $model->id)->count();
+            $types = $model->typeVehicles()->count();
+
+            if ($vehicles > 0 || $stats > 0 || $types > 0) {
+                $kept[] = [
+                    'brand' => $model->brandVehicle?->name ?? '?',
+                    'model' => $model->name,
+                    'vehicles' => $vehicles,
+                    'stats' => $stats,
+                    'types' => $types,
+                ];
+                continue;
+            }
+
+            $model->delete();
+            $deletedModels++;
+        }
+
+        foreach (BrandVehicle::doesntHave('modelVehicles')->get() as $brand) {
+            $deletedBrands[] = $brand->name;
+            $brand->delete();
+        }
+
+        return ['deletedModels' => $deletedModels, 'deletedBrands' => $deletedBrands, 'kept' => $kept];
+    }
+
+    protected function normKey(?string $v): string
+    {
+        return preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($v ?? ''));
+    }
+
+    /**
+     * Kumpulan kunci referensi dari CSV: models[(canon brand|norm model)]
+     * dan types[(model key)|norm type].
+     *
+     * @return array{models: array<string, true>, types: array<string, true>}
+     */
+    public function referencedKeys(string $csvPath): array
+    {
+        $handle = fopen($csvPath, 'r');
+        if ($handle === false) {
+            throw new \RuntimeException("File tidak bisa dibuka: {$csvPath}");
+        }
+
+        $hdr = array_map(fn ($c) => strtoupper(trim((string) $c)), fgetcsv($handle) ?: []);
+        foreach (['BRAND', 'MODEL'] as $need) {
+            if (! in_array($need, $hdr, true)) {
+                fclose($handle);
+                throw new \RuntimeException("Header wajib memuat kolom: {$need}");
+            }
+        }
+        $iB = array_search('BRAND', $hdr, true);
+        $iM = array_search('MODEL', $hdr, true);
+        $iT = array_search('TYPE', $hdr, true) ?? $iM;
+
+        $matcher = app(VehicleSalesMatcher::class);
+        $norm = fn (?string $v): string => mb_strtolower(preg_replace('/\s+/', ' ', trim((string) $v)) ?? '');
+
+        $models = []; $types = [];
+        while (($r = fgetcsv($handle)) !== false) {
+            if (count($r) < 6 && trim(implode('', $r)) === '') continue;
+            $brand = trim((string) $r[$iB]);
+            $model = trim((string) $r[$iM]);
+            $type = trim((string) $r[$iT]);
+            if ($brand === '' || $model === '') continue;
+
+            $bKey = $norm($matcher->canonicalBrandName($brand));
+            $mKey = $bKey.'|'.$norm($model);
+            $models[$mKey] = true;
+            if ($type !== '') {
+                $types[$mKey.'|'.$norm($type)] = true;
+            }
+        }
+        fclose($handle);
+
+        return ['models' => $models, 'types' => $types];
     }
 }

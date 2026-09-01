@@ -121,6 +121,27 @@ class VehicleConnectingSync extends Page
         }
     }
 
+    /** Prune: hapus brand/model katalog yang tidak direferensikan CONNECTING. */
+    public function pruneCatalog(): void
+    {
+        $this->validate(['csvFile' => ['required', 'file', 'mimes:csv,txt', 'max:20480']]);
+
+        try {
+            $res = app(VehicleConnectingSyncService::class)->pruneCatalog($this->csvFile->getRealPath());
+            $this->log[] = 'Prune katalog: '.$res['deletedModels'].' model kosong dihapus, '.
+                count($res['deletedBrands']).' brand kosong dihapus'.
+                (count($res['deletedBrands']) > 0 ? ' ('.implode(', ', $res['deletedBrands']).')' : '');
+            foreach (array_slice($res['kept'], 0, 10) as $k) {
+                $this->log[] = '  ™ dipertahankan (masih dipakai): '.$k['brand'].' / '.$k['model'].
+                    ' — kendaraan '.$k['vehicles'].', stats '.$k['stats'];
+            }
+            app(VehicleConnectingSyncService::class)->flushMarketCache();
+            $this->log[] = 'Cache Pasar EV di-flush.';
+        } catch (RuntimeException $e) {
+            $this->log[] = '✗ Gagal: '.$e->getMessage();
+        }
+    }
+
     /** Langkah 3: turunkan connecting → katalog + flush cache. */
     public function applyToCatalog(): void
     {
