@@ -18,27 +18,27 @@ class VehicleConnectingComparer
     public const REQUIRED_COLUMNS = ['BRAND', 'MODEL', 'TYPE', 'POWERTRAIN', 'CATEGORY', 'SIZE'];
 
     /**
-     * Nilai seragam dari daftar (hanya yang terisi): sama semua → nilainya;
-     * ada yang beda/kosong → null (tidak bisa diputuskan per keluarga).
+     * Nilai keluarga dari daftar sel CSV: hanya nilai non-kosong yang
+     * dihitung. Kosong = "tidak diset" (sah, mis. size utk City Car).
      *
-     * @param list<string> $values
+     * @return array{0: ?string, 1: ?string} [nilai kanonis, deskripsi konflik]
      */
-    protected function uniformValue(array $values): ?string
+    protected function familyValue(array $values, string $field): array
     {
         $values = array_values(array_filter($values, fn ($v) => $v !== '' && $v !== null));
 
         if ($values === []) {
-            return null;
+            return [null, null];
         }
 
-        $first = $values[0];
-        foreach ($values as $v) {
-            if ($v !== $first) {
-                return null;
-            }
+        $unique = array_values(array_unique($values));
+
+        if (count($unique) === 1) {
+            return [$unique[0], null];
         }
 
-        return $first;
+        // Beberapa nilai berbeda — tidak bisa diputuskan otomatis.
+        return [null, "CSV {$field} tidak seragam: ".implode(' vs ', $unique)];
     }
 
     /**
@@ -141,13 +141,14 @@ class VehicleConnectingComparer
         fclose($handle);
 
         // Pass 2: evaluasi per keluarga — nilai CSV yang SERAGAM dibandingkan
-        // dgn DB; keluarga campuran (mis. varian G dan Hev) dilaporkan sbg
-        // informasi, bukan aksi, supaya laporan stabil setelah sinkronisasi.
+        // dgn DB. Konflik (dua nilai berbeda yang keduanya terisi) dilaporkan
+        // sbg informasi; nilai kosong = "tidak diset di CSV" → bukan konflik.
         foreach ($families as $family) {
             $db = $family['db'];
-            $csvPt = $this->uniformValue(array_column($family['rows'], 'pt'));
-            $csvCategory = $this->uniformValue(array_column($family['rows'], 'category'));
-            $csvSize = $this->uniformValue(array_column($family['rows'], 'size'));
+
+            [$csvPt, $ptConflict] = $this->familyValue(array_column($family['rows'], 'pt'), 'powertrain');
+            [$csvCategory, $catConflict] = $this->familyValue(array_column($family['rows'], 'category'), 'category');
+            [$csvSize, $sizeConflict] = $this->familyValue(array_column($family['rows'], 'size_class'), 'size');
 
             $diffs = [];
             if ($csvPt !== null && $db->powertrain !== $csvPt) $diffs[] = "powertrain DB={$db->powertrain} CSV={$csvPt}";
@@ -158,12 +159,15 @@ class VehicleConnectingComparer
                 $report['klasifikasiBeda'][] = [
                     'brand' => $family['brand'], 'model' => $family['model'], 'diff' => implode('; ', $diffs),
                 ];
-            } elseif ($csvPt === null || $csvCategory === null || $csvSize === null) {
+            }
+
+            $conflicts = array_filter([$ptConflict, $catConflict, $sizeConflict]);
+            if ($conflicts !== []) {
                 $report['csvTidakKonsisten'][] = [
                     'brand' => $family['brand'], 'model' => $family['model'],
-                    'detail' => 'varian CSV tidak seragam (perlu dirapikan di CSV)',
+                    'detail' => implode('; ', $conflicts),
                 ];
-            } else {
+            } elseif ($diffs === []) {
                 $report['match'][] = ['brand' => $family['brand'], 'model' => $family['model']];
             }
 

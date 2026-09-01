@@ -88,6 +88,15 @@ class VerifyVehicleConnectingTest extends TestCase
         $this->artisan('vehicle-connecting:verify', ['csv' => $csv])
             ->expectsOutputToContain('CSV TIDAK KONSISTEN (varian campuran — informasi): 1')
             ->assertSuccessful();
+
+        // SIZE kosong pada kategori non-ukuran BUKAN konflik (sah).
+        $csv = $this->writeCsv([
+            ['AION AION ES', 'EV', 'GAC', 'AION', 'ES', 'BEV', 'Sedan', ''],
+        ]);
+
+        $this->artisan('vehicle-connecting:verify', ['csv' => $csv])
+            ->expectsOutputToContain('✓ Sama: 1')
+            ->assertSuccessful();
     }
 
     public function test_melaporkan_model_db_yang_tidak_ada_di_csv(): void
