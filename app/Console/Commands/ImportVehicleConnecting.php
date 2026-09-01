@@ -75,8 +75,10 @@ class ImportVehicleConnecting extends Command
 
             if ($gabungan === '') $gabungan = trim("$brand $model $type");
             if ($gabungan === '') continue;
-            if (isset($seen[$gabungan])) continue;
-            $seen[$gabungan] = 1;
+            // Identitas squash: huruf+angka saja — kebal spasi/kapitalisasi.
+            $key = preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($gabungan));
+            if (isset($seen[$key])) continue;
+            $seen[$key] = 1;
 
             $brandVehicle = $brandsByKey[$matcher->normalize($matcher->canonicalBrandName($brand))] ?? null;
             $modelVehicle = $brandVehicle !== null
@@ -88,8 +90,9 @@ class ImportVehicleConnecting extends Command
                 : null;
 
             VehicleConnecting::updateOrCreate(
-                ['raw_gabungan' => $gabungan],
+                ['raw_gabungan_key' => $key],
                 [
+                    'raw_gabungan' => $gabungan,
                     'fuel' => ($f = trim((string) $r[$iF])) !== '' ? strtoupper($f) : null,
                     'brand_vehicle_id' => $brandVehicle?->id,
                     'model_vehicle_id' => $modelVehicle?->id,
@@ -109,7 +112,11 @@ class ImportVehicleConnecting extends Command
         fclose($handle);
 
         if ($this->option('prune')) {
-            $pruned = VehicleConnecting::whereNotIn('raw_gabungan', array_keys($seen))->delete();
+            // Bandingkan via kunci squash — konsisten dgn identitas impor.
+            $pruned = VehicleConnecting::query()
+                ->where(fn ($q) => $q->whereNull('raw_gabungan_key')
+                    ->orWhereNotIn('raw_gabungan_key', array_keys($seen)))
+                ->delete();
         }
 
         $this->info("Baris tersimpan: ".($saved + count($unresolved))." (link katalog lengkap: $saved)");
