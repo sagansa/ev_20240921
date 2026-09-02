@@ -88,7 +88,7 @@ class VehicleSalesMatcher
     protected const CANONICAL_DISPLAY = [
         'HYUNDAI' => 'Hyundai',
         'MG' => 'MG',
-        'MERCEDES BENZ' => 'Mercedes-Benz',
+        'MERCEDES BENZ' => 'Mercedes Benz',
         'MITSUBISHI' => 'Mitsubishi',
         'MITSUBISHI FUSO' => 'Mitsubishi Fuso',
         'SUZUKI' => 'Suzuki',
