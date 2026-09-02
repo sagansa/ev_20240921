@@ -26,6 +26,7 @@ class VehicleCompositionTest extends TestCase
 
         $brand = BrandVehicle::create(['name' => 'Daihatsu']);
         $suv = ModelVehicle::create(['name' => 'Terano', 'brand_vehicle_id' => $brand->id, 'category' => 'SUV']);
+        $suv2 = ModelVehicle::create(['name' => 'Rocky', 'brand_vehicle_id' => $brand->id, 'category' => 'SUV']);
         $mpv = ModelVehicle::create(['name' => 'Xenia', 'brand_vehicle_id' => $brand->id, 'category' => 'MPV']);
         $pickup = ModelVehicle::create(['name' => 'Gran Max Pu', 'brand_vehicle_id' => $brand->id, 'category' => 'Pickup']);
         $mist = ModelVehicle::create(['name' => 'Mistery', 'brand_vehicle_id' => $brand->id, 'category' => null]);
@@ -47,6 +48,10 @@ class VehicleCompositionTest extends TestCase
         VehicleSalesStat::create($annual([
             'raw_brand' => 'Daihatsu', 'raw_model' => 'Terano',
             'model_vehicle_id' => $suv->id, 'powertrain' => 'BEV', 'units' => 400,
+        ]));
+        VehicleSalesStat::create($annual([
+            'raw_brand' => 'Daihatsu', 'raw_model' => 'Rocky',
+            'model_vehicle_id' => $suv2->id, 'powertrain' => 'BEV', 'units' => 50,
         ]));
         VehicleSalesStat::create($annual([
             'raw_brand' => 'Daihatsu', 'raw_model' => 'Xenia',
@@ -86,16 +91,19 @@ class VehicleCompositionTest extends TestCase
 
         $this->assertSame(2026, $data['year']);
         $this->assertSame('BEV', $data['powertrain']);
-        $this->assertSame(650, $data['total_units']);
+        $this->assertSame(700, $data['total_units']);
         $this->assertSame(100, $data['uncategorized_units']);
 
         $cats = collect($data['categories'])->keyBy('category');
-        $this->assertSame(400, $cats['SUV']['units']);
-        $this->assertSame(0.6154, $cats['SUV']['share']);
+        $this->assertSame(450, $cats['SUV']['units']);
+        $this->assertSame(2, $cats['SUV']['models']);
+        $this->assertSame(0.6429, $cats['SUV']['share']);
         $this->assertSame('Penumpang', $cats['SUV']['group']);
         $this->assertSame(100, $cats['MPV']['units']);
-        $this->assertSame(0.1538, $cats['MPV']['share']);
+        $this->assertSame(1, $cats['MPV']['models']);
+        $this->assertSame(0.1429, $cats['MPV']['share']);
         $this->assertSame('Komersial', $cats['Pickup']['group']);
+        $this->assertSame(1, $cats['Pickup']['models']);
         // Urut units desc: SUV > MPV > Pickup.
         $this->assertSame(['SUV', 'MPV', 'Pickup'], array_column($data['categories'], 'category'));
     }
@@ -107,11 +115,12 @@ class VehicleCompositionTest extends TestCase
         $res->assertOk();
         $data = $res->json('data');
         $this->assertNull($data['year']);
-        $this->assertSame(750, $data['total_units']); // 650 + 100
+        $this->assertSame(800, $data['total_units']); // 700 + 100
 
         $cats = collect($data['categories'])->keyBy('category');
-        $this->assertSame(500, $cats['SUV']['units']);
-        $this->assertSame(0.6667, $cats['SUV']['share']);
+        $this->assertSame(550, $cats['SUV']['units']);
+        $this->assertSame(2, $cats['SUV']['models']);
+        $this->assertSame(0.6875, $cats['SUV']['share']);
     }
 
     public function test_komposisi_powertrain_all_menyertakan_hev(): void
@@ -120,10 +129,10 @@ class VehicleCompositionTest extends TestCase
 
         $res->assertOk();
         $data = $res->json('data');
-        $this->assertSame(700, $data['total_units']); // 650 + HEV 50
+        $this->assertSame(750, $data['total_units']); // 700 + HEV 50
 
         $cats = collect($data['categories'])->keyBy('category');
-        $this->assertSame(450, $cats['SUV']['units']); // 400 + 50
+        $this->assertSame(500, $cats['SUV']['units']); // 450 + 50
     }
 
     public function test_powertrain_tak_dikenal_ditolak_validasi(): void

@@ -19,19 +19,39 @@ class BrandGroupSeeder extends Seeder
     /**
      * Mapping grup industri → brand anggota (nama bebas huruf besar/kecil;
      * dicocokkan ke brand_vehicles secara case-insensitive + trim).
+     *
+     * Sumber riset (Sep 2026): situs resmi grup + Wikipedia — termasuk
+     * detail Volvo (VOLVO katalog = Volvo CARS → Geely; sedangkan UD
+     * Trucks = truk yang dijual Volvo Group ke Isuzu Motors pada 2021),
+     * Scania via TRATON SE (mayoritas milik Volkswagen Group), dan
+     * Seres Group (eks Sokon) yang memayungi DFSK & SERES.
      */
     public const GROUPS = [
-        'SAIC' => ['MG', 'Wuling', 'Maxus'],
-        'BYD Group' => ['BYD', 'Denza'],
-        'Toyota Group' => ['Toyota', 'Lexus', 'Daihatsu', 'Hino'],
-        'Hyundai Motor Group' => ['Hyundai', 'Kia', 'Genesis'],
+        // Eropa
+        'Volkswagen Group' => ['Volkswagen', 'Audi', 'Porsche', 'Scania'],
         'Stellantis' => ['Peugeot', 'Citroen', 'Jeep', 'DS'],
         'Renault-Nissan-Mitsubishi' => ['Nissan', 'Mitsubishi', 'Renault', 'Datsun'],
-        'GAC' => ['GAC', 'AION'],
-        'Chery Group' => ['Chery', 'Omoda', 'Jaecoo', 'Jetour'],
-        'Geely' => ['Geely', 'Zeekr'],
-        'Volkswagen Group' => ['Volkswagen', 'Audi', 'Porsche'],
         'BMW Group' => ['BMW', 'MINI'],
+        // Jepang
+        'Toyota Group' => ['Toyota', 'Lexus', 'Daihatsu', 'Hino'],
+        'Isuzu' => ['Isuzu', 'UD Trucks'],
+        // Tiongkok
+        'Geely' => ['Geely', 'Zeekr', 'Volvo', 'Farizon', 'Polestar', 'Proton', 'Lotus'],
+        'Chery Group' => ['Chery', 'Omoda', 'Jaecoo', 'Jetour'],
+        'Changan Group' => ['Changan', 'Deepal'],
+        'Seres Group' => ['DFSK', 'Seres'],
+        'GAC' => ['GAC', 'Aion'],
+        'SAIC' => ['MG', 'Wuling', 'Maxus'],
+        'BYD Group' => ['BYD', 'Denza'],
+        'Hyundai Motor Group' => ['Hyundai', 'Kia', 'Genesis'],
+        'Hozon Auto' => ['Neta'],
+        'Vingroup' => ['VinFast'],
+        'Tata Group' => ['Tata'],
+        'FAW Group' => ['FAW'],
+        'BAIC Group' => ['BAIC'],
+        // Brand lain sengaja mandiri (induknya identik dgn brandnya sendiri
+        // atau tidak punya saudara di katalog): Honda, Suzuki, Mazda, Subaru,
+        // Ford, Mercedes Benz, XPeng, GWM, Polytron, Aletra.
     ];
 
     public function run(): void

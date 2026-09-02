@@ -617,7 +617,7 @@ class VehicleMarketService
         }
         $powertrain = strtoupper($powertrain ?? 'ALL');
         $cacheYear = $isAll ? 'all' : $year;
-        $key = "composition:v1:{$cacheYear}:{$powertrain}";
+        $key = "composition:v2:{$cacheYear}:{$powertrain}";
 
         return $this->cached($key, function () use ($year, $isAll, $powertrain) {
             $base = VehicleSalesStat::query()
@@ -630,10 +630,12 @@ class VehicleMarketService
 
             $totalUnits = (int) (clone $base)->sum('units');
 
-            // LEFT JOIN kategori level model; NULL = tak ter-link / tanpa kategori.
+            // LEFT JOIN kategori level model; NULL = tak ter-link / tanpa
+            // kategori. COUNT DISTINCT hanya menghitung baris ter-link —
+            // pasangan kategori↔jumlah model.
             $rows = (clone $base)
                 ->leftJoin('model_vehicles', 'model_vehicles.id', '=', 'vehicle_sales_stats.model_vehicle_id')
-                ->selectRaw('model_vehicles.category as category, SUM(vehicle_sales_stats.units) as units')
+                ->selectRaw('model_vehicles.category as category, SUM(vehicle_sales_stats.units) as units, COUNT(DISTINCT vehicle_sales_stats.model_vehicle_id) as models')
                 ->groupBy('model_vehicles.category')
                 ->get();
 
@@ -648,6 +650,7 @@ class VehicleMarketService
                     'category' => $row->category,
                     'group' => \App\Support\VehicleCategories::groupOf($row->category),
                     'units' => (int) $row->units,
+                    'models' => (int) $row->models,
                     'share' => $totalUnits > 0 ? round(((int) $row->units) / $totalUnits, 4) : 0.0,
                 ];
             }

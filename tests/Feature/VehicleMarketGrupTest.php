@@ -121,7 +121,7 @@ class VehicleMarketGrupTest extends TestCase
         $this->seed(\Database\Seeders\BrandGroupSeeder::class);
         $this->seed(\Database\Seeders\BrandGroupSeeder::class);
 
-        $this->assertSame(11, BrandGroup::count());
+        $this->assertSame(19, BrandGroup::count());
         $saic = BrandGroup::where('name', 'SAIC')->first();
         $memberNames = $saic->brandVehicles()->pluck('name')->all();
         $this->assertEqualsCanonicalizing(['MG', 'Wuling'], $memberNames);

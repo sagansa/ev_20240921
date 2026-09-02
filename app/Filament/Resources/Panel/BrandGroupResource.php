@@ -42,8 +42,7 @@ class BrandGroupResource extends Resource
         return $schema->schema([
             Section::make('Grup Induk Perusahaan')
                 ->description('Klaster industri lintas brand (mis. SAIC = MG + Wuling + Maxus). '
-                    . 'Anggota dikelola dari form masing-masing brand. Angka leaderboard grup '
-                    . 'di aplikasi otomatis segar setelah penyimpanan.')
+                    . 'Angka leaderboard grup di aplikasi otomatis segar setelah penyimpanan.')
                 ->schema([
                     TextInput::make('name')
                         ->required()
@@ -53,6 +52,16 @@ class BrandGroupResource extends Resource
                         ->label('Nama Grup')
                         ->placeholder('cth. SAIC, Toyota Group, BYD Group')
                         ->autofocus(),
+
+                    // HasMany inverse: menyimpan = set brand_group_id pada brand
+                    // yang dipilih + melepas (NULL-kan) yang dicopot.
+                    Select::make('brandVehicles')
+                        ->relationship('brandVehicles', 'name')
+                        ->multiple()
+                        ->searchable()
+                        ->preload()
+                        ->label('Brand Anggota')
+                        ->helperText('Brand yang tergabung dalam grup ini — kosongkan semua untuk membubarkan grup.'),
                 ]),
         ]);
     }
