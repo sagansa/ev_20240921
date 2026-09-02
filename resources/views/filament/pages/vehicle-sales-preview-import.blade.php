@@ -216,8 +216,15 @@
 
                     <p style="margin-bottom: 12px; font-size: 12px; color: var(--vsp-text-muted);">
                         Kombinasi model di bawah ini terdeteksi pada file laporan tetapi belum terdaftar dalam master katalog.
-                        Unduh file CSV untuk digabungkan ke <code>CONNECTING</code>, atau simpan mapping eksplisit di bawah.
+                        Isi <strong>Kategori</strong> (+ Size bila MPV/Sedan/SUV/Hatchback) lalu klik <strong>＋ CONNECTING</strong> per baris —
+                        tanpa perlu unduh CSV. Verifikasi dulu: baris bertanda <em>typo/varian 0 unit</em> boleh diabaikan.
                     </p>
+
+                    @if ($newRowMessage)
+                        <div style="margin-bottom: 12px; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; background: {{ str_starts_with($newRowMessage, '✓') ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }}; color: {{ str_starts_with($newRowMessage, '✓') ? '#10b981' : '#ef4444' }}; border: 1px solid {{ str_starts_with($newRowMessage, '✓') ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)' }};">
+                            {{ $newRowMessage }}
+                        </div>
+                    @endif
 
                     <div style="overflow-x: auto; margin-bottom: 16px;">
                         <table style="width: 100%; font-size: 13px; text-align: left; border-collapse: collapse;">
@@ -226,34 +233,64 @@
                                     <th style="padding: 8px 12px; font-weight: 600;">Brand (Laporan)</th>
                                     <th style="padding: 8px 12px; font-weight: 600;">Model</th>
                                     <th style="padding: 8px 12px; font-weight: 600;">Type</th>
-                                    <th style="padding: 8px 12px; font-weight: 600;">Powertrain</th>
-                                    <th style="padding: 8px 12px; font-weight: 600; text-align: right;">Unit</th>
+                                    <th style="padding: 8px 12px; text-align: right;">Unit</th>
                                     <th style="padding: 8px 12px; font-weight: 600;">Status Katalog</th>
+                                    <th style="padding: 8px 12px; font-weight: 600;">Powertrain</th>
+                                    <th style="padding: 8px 12px; font-weight: 600;">Kategori *</th>
+                                    <th style="padding: 8px 12px; font-weight: 600;">Size</th>
+                                    <th style="padding: 8px 12px;"></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($result['new'] as $row)
-                                    <tr style="border-bottom: 1px solid var(--vsp-border-sub);">
+                                @foreach ($result['new'] as $i => $row)
+                                    @php
+                                        $saved = isset($newRowSaved[$i]);
+                                        $form = $newRowForms[$i] ?? [];
+                                    @endphp
+                                    <tr style="border-bottom: 1px solid var(--vsp-border-sub); {{ $saved ? 'opacity: 0.55;' : '' }} background: {{ str_starts_with($row['powertrain'], 'BEV') ? 'transparent' : 'rgba(156, 163, 175, 0.05)' }};">
                                         <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: var(--vsp-text-title);">{{ $row['brand'] }}</td>
                                         <td style="padding: 8px 12px; font-weight: 600; color: var(--vsp-text-title);">{{ $row['model'] }}</td>
                                         <td style="padding: 8px 12px; color: var(--vsp-text-muted);">{{ $row['type'] ?: '—' }}</td>
-                                        <td style="padding: 8px 12px;">
-                                            <span class="vsp-badge {{ $row['powertrain'] === 'BEV' ? 'vsp-badge-success' : 'vsp-badge-gray' }}">
-                                                {{ $row['powertrain'] }}
-                                            </span>
-                                        </td>
                                         <td style="padding: 8px 12px; text-align: right; font-family: monospace; font-weight: 700; color: var(--vsp-text-title);">
                                             {{ number_format($row['units']) }}
                                         </td>
                                         <td style="padding: 8px 12px;">
                                             @if ($row['brand_name'])
-                                                <span class="vsp-badge vsp-badge-warn">
-                                                    model baru di {{ $row['brand_name'] }}
-                                                </span>
+                                                <span class="vsp-badge vsp-badge-warn">model baru di {{ $row['brand_name'] }}</span>
                                             @else
-                                                <span class="vsp-badge vsp-badge-danger">
-                                                    brand baru
-                                                </span>
+                                                <span class="vsp-badge vsp-badge-danger">brand baru</span>
+                                            @endif
+                                        </td>
+                                        <td style="padding: 8px 12px;">
+                                            <select wire:model="newRowForms.{{ $i }}.powertrain" class="vsp-input-control" style="padding: 4px 8px; min-width: 90px;">
+                                                @foreach (['BEV', 'HEV', 'PHEV', 'ICE'] as $pt)
+                                                    <option value="{{ $pt }}" @selected(($form['powertrain'] ?? $row['powertrain']) === $pt)>{{ $pt }}</option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td style="padding: 8px 12px;">
+                                            <select wire:model="newRowForms.{{ $i }}.category" class="vsp-input-control" style="padding: 4px 8px; min-width: 120px;">
+                                                <option value="">— pilih —</option>
+                                                @foreach (\App\Filament\Pages\VehicleSalesPreviewImport::categoryOptions() as $cat)
+                                                    <option value="{{ $cat }}" @selected(($form['category'] ?? '') === $cat)>{{ $cat }}</option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td style="padding: 8px 12px;">
+                                            <select wire:model="newRowForms.{{ $i }}.size" class="vsp-input-control" style="padding: 4px 8px; min-width: 95px;">
+                                                <option value="">—</option>
+                                                @foreach (\App\Support\VehicleCategories::SIZES as $sz)
+                                                    <option value="{{ $sz }}" @selected(($form['size'] ?? '') === $sz)>{{ $sz }}</option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td style="padding: 8px 12px; white-space: nowrap;">
+                                            @if ($saved)
+                                                <span class="vsp-badge vsp-badge-success">✓ masuk CONNECTING</span>
+                                            @else
+                                                <button type="button" wire:click="addToConnecting({{ $i }})" wire:loading.attr="disabled" wire:target="addToConnecting({{ $i }})" class="vsp-btn-primary" style="padding: 5px 12px; font-size: 12px;">
+                                                    ＋ CONNECTING
+                                                </button>
                                             @endif
                                         </td>
                                     </tr>
@@ -262,8 +299,14 @@
                         </table>
                     </div>
 
-                    <button type="button" wire:click="downloadNew" class="vsp-btn-primary">
-                        📥 Unduh CSV → CONNECTING ({{ count($result['new']) }} baris, kategori diisi manual)
+                    <p style="margin-bottom: 12px; font-size: 11px; color: var(--vsp-text-muted);">
+                        * Kategori wajib; Size hanya berlaku untuk MPV/Sedan/SUV/Hatchback (otomatis diabaikan untuk kategori lain).
+                        Setelah selesai: buka <strong>Sync CONNECTING</strong> → <strong>Terapkan ke Katalog</strong>, lalu ulangi analisis/impor file ini —
+                        baris yang sudah masuk akan berpindah ke "Ter-match Katalog".
+                    </p>
+
+                    <button type="button" wire:click="downloadNew" class="vsp-btn-dark">
+                        📥 Unduh CSV → CONNECTING (alternatif isi manual)
                     </button>
                 </x-filament::section>
             @else

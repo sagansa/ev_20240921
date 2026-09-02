@@ -56,6 +56,86 @@ class VehicleSalesPreviewImport extends Page
 
     public ?string $mapMessage = null;
 
+    /** Form inline per baris kombinasi baru: category/size/powertrain. */
+    public array $newRowForms = [];
+
+    /** Indeks baris yang sudah masuk CONNECTING. */
+    public array $newRowSaved = [];
+
+    public ?string $newRowMessage = null;
+
+    /** @return list<string> */
+    public static function categoryOptions(): array
+    {
+        return \App\Support\VehicleCategories::CATEGORIES;
+    }
+
+    /** Tambahkan satu kombinasi baru langsung ke tabel CONNECTING. */
+    public function addToConnecting(int $index): void
+    {
+        $row = $this->result['new'][$index] ?? null;
+
+        if ($row === null) {
+            return;
+        }
+
+        $form = $this->newRowForms[$index] ?? [];
+        $powertrain = strtoupper(trim((string) ($form['powertrain'] ?? ''))) ?: $row['powertrain'];
+        $category = \App\Support\VehicleCategories::normalizeCategory($form['category'] ?? null);
+        $size = \App\Support\VehicleCategories::normalizeSize($form['size'] ?? null);
+
+        if ($category === null) {
+            $this->newRowMessage = "✗ '{$row['brand']} {$row['model']}': pilih kategori dulu.";
+
+            return;
+        }
+
+        if (! in_array($category, \App\Support\VehicleCategories::SIZABLE, true)) {
+            $size = null; // size hanya untuk kategori ber-ukuran
+        }
+
+        $brand = trim((string) $row['brand']);
+        $model = trim((string) $row['model']);
+        $type = trim((string) $row['type']);
+        $gabungan = trim(preg_replace('/\s+/', ' ', "$brand $model $type"));
+        $key = preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($gabungan));
+
+        // Link ke katalog bila sudah ada (brand/model baru dibuat nanti oleh
+        // "Terapkan ke Katalog" di halaman Sync CONNECTING).
+        $matcher = app(\App\Services\VehicleSalesMatcher::class);
+        $brandVehicle = \App\Models\BrandVehicle::query()->get()
+            ->first(fn ($b) => $matcher->normalize($matcher->canonicalBrandName($b->name))
+                === $matcher->normalize($matcher->canonicalBrandName($brand)));
+        $modelVehicle = $brandVehicle !== null
+            ? \App\Models\ModelVehicle::where('brand_vehicle_id', $brandVehicle->id)->get()
+                ->first(fn ($m) => $matcher->normalize($m->name) === $matcher->normalize($model))
+            : null;
+        $typeVehicle = ($modelVehicle !== null && $type !== '')
+            ? \App\Models\TypeVehicle::where('model_vehicle_id', $modelVehicle->id)
+                ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($type)])->first()
+            : null;
+
+        \App\Models\VehicleConnecting::updateOrCreate(
+            ['raw_gabungan_key' => $key],
+            [
+                'raw_gabungan' => $gabungan,
+                'brand_name' => $brand,
+                'model_name' => $model,
+                'type_name' => $type !== '' ? $type : null,
+                'brand_vehicle_id' => $brandVehicle?->id,
+                'model_vehicle_id' => $modelVehicle?->id,
+                'type_vehicle_id' => $typeVehicle?->id,
+                'powertrain' => $powertrain !== '' ? $powertrain : null,
+                'category' => $category,
+                'size_class' => $size,
+            ],
+        );
+
+        $this->newRowSaved[$index] = true;
+        $this->newRowMessage = "✓ '{$gabungan}' masuk CONNECTING ({$category}".($size !== null ? " / {$size}" : '').').'.
+            ' Lanjutkan: halaman Sync CONNECTING → Terapkan ke Katalog → Import Penjualan.';
+    }
+
     public function saveMapping(): void
     {
         $this->validate([
@@ -112,6 +192,9 @@ class VehicleSalesPreviewImport extends Page
 
         $this->error = null;
         $this->exportPath = null;
+        $this->newRowForms = [];
+        $this->newRowSaved = [];
+        $this->newRowMessage = null;
 
         try {
             $this->result = app(VehicleSalesPreviewService::class)->analyze(
