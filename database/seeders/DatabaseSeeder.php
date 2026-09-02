@@ -26,6 +26,8 @@ class DatabaseSeeder extends Seeder
         $this->call(BrandVehicleSeeder::class);
         $this->call(ModelVehicleSeeder::class);
         $this->call(TypeVehicleSeeder::class);
+        // Grup/induk perusahaan — setelah katalog brand terisi (link by name).
+        $this->call(BrandGroupSeeder::class);
         $this->call(VehicleSeeder::class);
         $this->call(ChargerSeeder::class);
         $this->call(PowerChargerSeeder::class);

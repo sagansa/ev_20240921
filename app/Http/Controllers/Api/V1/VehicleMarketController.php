@@ -25,11 +25,11 @@ class VehicleMarketController extends Controller
         ]);
     }
 
-    /** GET /vehicle-market/trend?year=&brand=&model= — unit bulanan per powertrain. */
+    /** GET /vehicle-market/trend?year=&brand=&model= — unit bulanan per powertrain; year=all → pola musiman. */
     public function trend(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'year' => ['nullable', 'integer', 'min:2000', 'max:2100'],
+            'year' => ['nullable', 'string', 'max:10'],
             'brand' => ['nullable', 'string', 'max:100'],
             'model' => ['nullable', 'string', 'max:100'],
         ]);
@@ -37,9 +37,26 @@ class VehicleMarketController extends Controller
         return response()->json([
             'success' => true,
             'data' => $this->market->trend(
-                $validated['year'] ?? null,
+                $this->normalizeYear($validated['year'] ?? null),
                 $validated['brand'] ?? null,
                 $validated['model'] ?? null,
+            ),
+        ]);
+    }
+
+    /** GET /vehicle-market/composition?year=&powertrain= — komposisi per kategori kendaraan. */
+    public function composition(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'year' => ['nullable', 'string', 'max:10'],
+            'powertrain' => ['nullable', 'string', 'in:BEV,PHEV,HEV,ICE,ALL,EV'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->market->categoryComposition(
+                $this->normalizeYear($validated['year'] ?? null),
+                $validated['powertrain'] ?? 'ALL',
             ),
         ]);
     }

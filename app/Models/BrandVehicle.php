@@ -18,7 +18,14 @@ class BrandVehicle extends Model
     protected $fillable = [
         'image',
         'name',
+        'brand_group_id',
     ];
+
+    /** Induk perusahaan / grup industri (nullable — brand bisa mandiri). */
+    public function brandGroup()
+    {
+        return $this->belongsTo(BrandGroup::class, 'brand_group_id');
+    }
 
     public function modelVehicles()
     {
