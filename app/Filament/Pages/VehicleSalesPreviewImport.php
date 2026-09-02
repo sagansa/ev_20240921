@@ -67,6 +67,23 @@ class VehicleSalesPreviewImport extends Page
     /** Toggle tampil/sembunyi detail baris yang dilewati (junk). */
     public bool $showSkipped = false;
 
+    /** Salinan persist file CSV (Livewire temp hilang antar request). */
+    public ?string $csvPath = null;
+
+    /** Tahun periode utk impor permanen. */
+    public string $importYear = '';
+
+    /** Pesan hasil impor permanen. */
+    public ?string $importMessage = null;
+
+    /** Analisis bersih = tidak ada kombinasi baru & tidak ada yang dilewati. */
+    public function isClean(): bool
+    {
+        return $this->result !== null
+            && ($this->result['summary']['new'] ?? 1) === 0
+            && ($this->result['summary']['skipped'] ?? 1) === 0;
+    }
+
     public function toggleSkipped(): void
     {
         $this->showSkipped = ! $this->showSkipped;
@@ -213,7 +230,71 @@ class VehicleSalesPreviewImport extends Page
         } catch (RuntimeException $e) {
             $this->result = null;
             $this->error = $e->getMessage();
+
+            return;
         }
+
+        // Salin ke storage lokal — file temp Livewire hilang antar request.
+        $this->csvPath = $this->csvFile->store('gaikindo-csv', 'local');
+        $this->importMessage = null;
+
+        if ($this->importYear === '' && preg_match('/(20\d{2})/', $this->csvFile->getClientOriginalName(), $m) === 1) {
+            $this->importYear = $m[1];
+        }
+    }
+
+    /**
+     * Impor permanen — HANYA bila analisis bersih (0 kombinasi baru,
+     * 0 dilewati). Selalu menjalankan --require-full-link sebagai jaring
+     * kedua di sisi command.
+     */
+    public function importSales(): void
+    {
+        if ($this->csvPath === null || $this->result === null) {
+            $this->importMessage = '✗ Jalankan analisis terlebih dahulu.';
+
+            return;
+        }
+
+        if (! $this->isClean()) {
+            $s = $this->result['summary'];
+            $this->importMessage = "✗ Import ditolak: masih ada {$s['new']} kombinasi baru dan {$s['skipped']} baris dilewati. Bereskan dulu lewat tabel di atas, lalu analisis ulang.";
+
+            return;
+        }
+
+        $year = (int) $this->importYear;
+
+        if ($year < 2015 || $year > 2100) {
+            $this->importMessage = '✗ Isi tahun periode (2015-2100) terlebih dahulu.';
+
+            return;
+        }
+
+        try {
+            $exit = \Artisan::call('vehicle-sales:import-csv', [
+                'file' => \Illuminate\Support\Facades\Storage::disk('local')->path($this->csvPath),
+                '--year' => (string) $year,
+                '--require-full-link' => true,
+                ...($this->month ? ['--month' => (string) $this->month] : []),
+            ]);
+            $output = \Artisan::output();
+        } catch (\Throwable $e) {
+            $this->importMessage = '✗ Import gagal: '.$e->getMessage();
+
+            return;
+        }
+
+        $tail = implode(' | ', array_slice(explode('\n', trim($output)), -3));
+
+        if ($exit !== 0) {
+            $this->importMessage = '✗ Import ditolak command: '.$tail;
+
+            return;
+        }
+
+        app(\App\Services\VehicleConnectingSyncService::class)->flushMarketCache();
+        $this->importMessage = '✓ Import berhasil — stats periode '.$year.($this->month ? ' bulan '.$this->month : '').' sudah diganti (data lama periode sama tergantikan). Cache Pasar EV segar. '.$tail;
     }
 
     /** Unduh kombinasi baru sebagai CSV siap gabung ke CONNECTING. */

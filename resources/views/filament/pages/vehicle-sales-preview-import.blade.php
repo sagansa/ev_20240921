@@ -369,6 +369,53 @@
                 </x-filament::section>
             @endif
 
+            {{-- 3B. IMPOR PERMANEN (hanya bila analisis bersih) --}}
+            <x-filament::section>
+                <x-slot name="heading">
+                    @if ($isClean())
+                        <span style="color: #10b981;">✅ Siap Impor Permanen</span>
+                    @else
+                        Impor Permanen
+                    @endif
+                </x-slot>
+
+                <p style="margin-bottom: 12px; font-size: 12px; color: var(--vsp-text-muted); line-height: 1.5;">
+                    Import menulis angka penjualan ke database dan <strong>mengganti seluruh stats periode yang sama</strong> (re-upload aman, tidak menumpuk).
+                    Syarat: analisis harus bersih — <strong>0 kombinasi baru</strong> dan <strong>0 baris dilewati</strong>.
+                </p>
+
+                @if ($result !== null && ! $isClean())
+                    <div style="margin-bottom: 12px; padding: 10px 14px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35); color: #d97706; font-size: 13px; font-weight: 600;">
+                        ⚠️ Import terkunci: masih ada <strong>{{ number_format($result['summary']['new']) }} kombinasi baru</strong>
+                        dan <strong>{{ number_format($result['summary']['skipped']) }} baris dilewati</strong>.
+                        Tambahkan kombinasi baru ke CONNECTING (＋ di tabel atas) → Sync CONNECTING → Terapkan ke Katalog → analisis ulang.
+                    </div>
+                @endif
+
+                <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+                    <div style="min-width: 160px;">
+                        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--vsp-text-muted);">
+                            Tahun Periode:
+                            <input type="number" min="2015" max="2100" wire:model="importYear" class="vsp-input-control" placeholder="cth. 2022" />
+                        </label>
+                    </div>
+                    <div>
+                        <button type="button" wire:click="importSales" wire:loading.attr="disabled" wire:target="importSales"
+                                @if ($result === null || ! $isClean()) disabled @endif
+                                class="vsp-btn-primary" @if ($result === null || ! $isClean()) style="opacity: 0.5; cursor: not-allowed;" @endif>
+                            <span wire:loading.remove wire:target="importSales">🚀 Impor Sekarang</span>
+                            <span wire:loading wire:target="importSales">⏳ Mengimpor…</span>
+                        </button>
+                    </div>
+                </div>
+
+                @if ($importMessage)
+                    <div style="margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; background: {{ str_starts_with($importMessage, '✓') ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }}; color: {{ str_starts_with($importMessage, '✓') ? '#10b981' : '#ef4444' }}; border: 1px solid {{ str_starts_with($importMessage, '✓') ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)' }};">
+                        {{ $importMessage }}
+                    </div>
+                @endif
+            </x-filament::section>
+
             {{-- 4. SIMPAN MAPPING EKSPLISIT --}}
             <x-filament::section>
                 <x-slot name="heading">
