@@ -45,6 +45,18 @@
             gap: 14px;
         }
 
+        .vcs-grid-5 {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        @media (max-width: 1280px) {
+            .vcs-grid-5 {
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            }
+        }
+
         .vcs-grid-6 {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -384,8 +396,8 @@
                     @endif
                 </div>
 
-                {{-- Action Cards Grid --}}
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+                {{-- Action Cards Grid (5 sebaris) --}}
+                <div class="vcs-grid-5">
                     {{-- LANGKAH 1: VERIFIKASI (DRY-RUN) --}}
                     <div class="vcs-step-box" style="border-top: 3px solid #06b6d4;">
                         <div>
