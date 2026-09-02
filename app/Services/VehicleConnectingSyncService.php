@@ -235,18 +235,7 @@ class VehicleConnectingSyncService
             $i('TYPE'), $i('POWERTRAIN'), $i('CATEGORY'), $i('SIZE'),
         ];
 
-        // Pulihkan raw_gabungan_key baris lama yang masih kosong (diimpor
-        // sebelum kolom ini ada / lewat jalur yang tidak mengisinya) —
-        // tanpa ini, pencocokan berbasis key meleset total.
-        VehicleConnecting::query()->whereNull('raw_gabungan_key')
-            ->chunkById(500, function ($rows) {
-                foreach ($rows as $r) {
-                    $k = preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper((string) $r->raw_gabungan));
-                    if ($k !== '' && $k !== null) {
-                        $r->forceFill(['raw_gabungan_key' => $k])->save();
-                    }
-                }
-            });
+        $this->backfillKeys();
 
         $matcher = app(VehicleSalesMatcher::class);
         $brandsByKey = BrandVehicle::all()->keyBy(
@@ -378,6 +367,41 @@ class VehicleConnectingSyncService
         fclose($handle);
 
         return ['updated' => $updated, 'notFound' => $notFound];
+    }
+
+    /**
+     * Pulihkan raw_gabungan_key baris yang masih kosong (diimpor sebelum
+     * kolom ini ada / lewat jalur lama yang tidak mengisinya) — tanpa ini,
+     * pencocokan berbasis key meleset.
+     *
+     * @return int jumlah baris yang diisi
+     */
+    public function backfillKeys(): int
+    {
+        $filled = 0;
+
+        VehicleConnecting::query()->whereNull('raw_gabungan_key')
+            ->chunkById(500, function ($rows) use (&$filled) {
+                foreach ($rows as $r) {
+                    $k = preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper((string) $r->raw_gabungan));
+
+                    if ($k === '' || $k === null) {
+                        continue;
+                    }
+
+                    // Nama berbeda bisa squash ke key sama ("X-55 II" vs
+                    // "X55 II") — unique index menolak. Lewati; baris itu
+                    // tetap tercocokkan lewat fallback raw teks di matcher.
+                    if (VehicleConnecting::where('raw_gabungan_key', $k)->whereKeyNot($r->getKey())->exists()) {
+                        continue;
+                    }
+
+                    $r->forceFill(['raw_gabungan_key' => $k])->save();
+                    $filled++;
+                }
+            });
+
+        return $filled;
     }
 
     public function flushMarketCache(): void

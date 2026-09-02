@@ -121,6 +121,17 @@ class VehicleConnectingSync extends Page
         }
     }
 
+    /** Pemeliharaan: isi raw_gabungan_key baris yang masih kosong. */
+    public function backfillKeys(): void
+    {
+        $filled = app(VehicleConnectingSyncService::class)->backfillKeys();
+        $time = now()->format('H:i:s');
+
+        $this->log[] = $filled > 0
+            ? "[{$time}] 🔑 Key dipulihkan: {$filled} baris vehicle_connectings mendapat raw_gabungan_key."
+            : "[{$time}] 🔑 Semua baris vehicle_connectings sudah punya raw_gabungan_key.";
+    }
+
     /** Prune: hapus brand/model katalog yang tidak direferensikan CONNECTING. */
     public function pruneCatalog(): void
     {

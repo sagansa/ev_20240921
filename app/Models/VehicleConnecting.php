@@ -51,4 +51,19 @@ class VehicleConnecting extends Model
     {
         return $this->belongsTo(TypeVehicle::class);
     }
+
+    protected static function booted(): void
+    {
+        // raw_gabungan_key selalu diturunkan dari raw_gabungan (squash:
+        // huruf+angka saja) di jalur penyimpanan mana pun — CLI, GUI import,
+        // CRUD admin, maupun edit manual — supaya pencocokan berbasis key
+        // tidak pernah kehilangan baris.
+        static::saving(function (self $row): void {
+            $gabungan = trim((string) $row->raw_gabungan);
+
+            if ($gabungan !== '') {
+                $row->raw_gabungan_key = preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($gabungan));
+            }
+        });
+    }
 }

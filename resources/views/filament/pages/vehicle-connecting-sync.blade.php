@@ -455,6 +455,23 @@
                         <span wire:loading wire:target="pruneCatalog">⏳ Memangkas…</span>
                     </button>
                 </div>
+                {{-- MAINTENANCE: backfill raw_gabungan_key --}}
+                <div class="vcs-glass" style="padding: 16px; border-left: 4px solid rgba(6, 182, 212, 0.5); background: var(--vcs-step-bg); display: flex; flex-direction: column; justify-content: space-between; gap: 14px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                            <div class="vcs-step-circle" style="background: rgba(6, 182, 212, 0.15); color: #0891b2;">🔧</div>
+                            <span style="font-size: 13.5px; font-weight: 700; color: var(--vcs-text-title);">Pulihkan Key Connecting</span>
+                        </div>
+                        <p style="margin: 0; font-size: 12px; color: var(--vcs-text-muted); line-height: 1.4;">
+                            Isi <code>raw_gabungan_key</code> baris master yang masih kosong — wajib sekali jalan setelah upgrade agar pencocokan nama laporan ke master tidak meleset.
+                        </p>
+                    </div>
+                    <button type="button" wire:click="backfillKeys" wire:loading.attr="disabled" wire:target="backfillKeys"
+                            class="vcs-btn-step vcs-btn-secondary" style="width: 100%; border-color: rgba(6, 182, 212, 0.4); color: #0891b2;">
+                        <span wire:loading.remove wire:target="backfillKeys">🔑 Pulihkan Key</span>
+                        <span wire:loading wire:target="backfillKeys">⏳ Memulihkan…</span>
+                    </button>
+                </div>
             </div>
                 
 
