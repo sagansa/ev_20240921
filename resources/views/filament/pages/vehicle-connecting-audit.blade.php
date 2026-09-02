@@ -96,7 +96,17 @@
             <div style="flex: 1; min-width: 220px;">
                 <input type="text" class="vau-input" style="width: 100%;" placeholder="Cari nama (raw / brand / model / type)…" wire:model.live.debounce.400ms="search" />
             </div>
+            <button type="button" wire:click="download" wire:loading.attr="disabled" wire:target="download"
+                    class="vau-chip vau-chip-active" style="text-decoration: none;"
+                    title="Unduh hasil audit sesuai filter aktif (CSV format CONNECTING)">
+                <span wire:loading.remove wire:target="download">⬇ Unduh CSV</span>
+                <span wire:loading wire:target="download">⏳ Menyiapkan…</span>
+            </button>
         </div>
+
+        <p style="margin: -6px 0 0; font-size: 11.5px; color: #9ca3af;">
+            Unduhan mengikuti filter & pencarian aktif. Kolom 8 pertama sesuai format file CONNECTING (aman untuk diperbaiki lalu di-upload ulang ke Sinkronisasi CONNECTING); kolom tambahan (RAW KEY, link katalog, MASALAH) hanya untuk audit.
+        </p>
 
         {{-- TABEL --}}
         <div class="vau-card" style="padding: 0; overflow-x: auto; max-height: 70vh; overflow-y: auto;">

@@ -8,13 +8,14 @@ use App\Models\TypeVehicle;
 use App\Models\VehicleConnecting;
 use Filament\Pages\Page;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Livewire\WithPagination;
 
 /**
  * Halaman "Audit Raw Connecting" — tampilan tabel vehicle_connectings
  * sesuai format file GAIKINDO CONNECTING (BRAND MODEL TYPE, BRAND, MODEL,
  * TYPE, POWERTRAIN, CATEGORY, SIZE) plus status link katalog, untuk
- * melihat di mana masalah data berada. Read-only.
+ * melihat di mana masalah data berada. Read-only + unduh CSV.
  */
 class VehicleConnectingAudit extends Page
 {
@@ -35,6 +36,8 @@ class VehicleConnectingAudit extends Page
     public string $filter = 'all';
 
     public string $search = '';
+
+    public array $summary = [];
 
     /** @var array<string, string> label filter masalah */
     public const FILTERS = [
@@ -59,7 +62,13 @@ class VehicleConnectingAudit extends Page
         $this->resetPage();
     }
 
-    protected function rows(): LengthAwarePaginator
+    /**
+     * Kumpulan baris ter-dekorasi sesuai filter aktif (tanpa paginasi) —
+     * dipakai bersama oleh tampilan (dinotasikan) dan unduhan CSV.
+     *
+     * @return Collection<int, VehicleConnecting>
+     */
+    protected function buildRows(): Collection
     {
         $query = VehicleConnecting::query()->orderBy('raw_gabungan');
 
@@ -141,18 +150,22 @@ class VehicleConnectingAudit extends Page
             'no_powertrain' => $decorated->filter(fn ($r) => trim((string) $r->powertrain) === '')->count(),
         ];
 
-        $filtered = match ($this->filter) {
-            'problem' => $decorated->filter(fn ($r) => $r->audit_problems !== []),
-            'no_key' => $decorated->filter(fn ($r) => $r->raw_gabungan_key === null),
-            'dup' => $decorated->filter(fn ($r) => $r->raw_gabungan_key !== null && $dupKeys->has($r->raw_gabungan_key)),
-            'unlinked_brand' => $decorated->filter(fn ($r) => $r->brand_vehicle_id === null),
-            'unlinked_model' => $decorated->filter(fn ($r) => $r->model_vehicle_id === null),
-            'unlinked_type' => $decorated->filter(fn ($r) => trim((string) $r->type_name) !== '' && $r->type_vehicle_id === null),
-            'no_category' => $decorated->filter(fn ($r) => trim((string) $r->category) === ''),
-            'no_powertrain' => $decorated->filter(fn ($r) => trim((string) $r->powertrain) === ''),
-            default => $decorated,
+        return match ($this->filter) {
+            'problem' => $decorated->filter(fn ($r) => $r->audit_problems !== [])->values(),
+            'no_key' => $decorated->filter(fn ($r) => $r->raw_gabungan_key === null)->values(),
+            'dup' => $decorated->filter(fn ($r) => $r->raw_gabungan_key !== null && $dupKeys->has($r->raw_gabungan_key))->values(),
+            'unlinked_brand' => $decorated->filter(fn ($r) => $r->brand_vehicle_id === null)->values(),
+            'unlinked_model' => $decorated->filter(fn ($r) => $r->model_vehicle_id === null)->values(),
+            'unlinked_type' => $decorated->filter(fn ($r) => trim((string) $r->type_name) !== '' && $r->type_vehicle_id === null)->values(),
+            'no_category' => $decorated->filter(fn ($r) => trim((string) $r->category) === '')->values(),
+            'no_powertrain' => $decorated->filter(fn ($r) => trim((string) $r->powertrain) === '')->values(),
+            default => $decorated->values(),
         };
+    }
 
+    protected function rows(): LengthAwarePaginator
+    {
+        $filtered = $this->buildRows();
         $page = LengthAwarePaginator::resolveCurrentPage();
         $perPage = 50;
 
@@ -165,7 +178,44 @@ class VehicleConnectingAudit extends Page
         );
     }
 
-    public array $summary = [];
+    /** Unduh hasil audit (sesuai filter aktif) sebagai CSV format CONNECTING. */
+    public function download(): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $rows = $this->buildRows();
+        $filename = 'audit-connecting-'.($this->filter !== 'all' ? $this->filter.'-' : '').now()->format('Ymd-His').'.csv';
+
+        return response()->streamDownload(function () use ($rows) {
+            $out = fopen('php://output', 'w');
+            // BOM agar Excel membaca UTF-8 dengan benar.
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, [
+                'BRAND MODEL TYPE', 'FUEL', 'BRAND', 'MODEL', 'TYPE',
+                'POWERTRAIN', 'CATEGORY', 'SIZE',
+                'RAW KEY', 'BRAND KATALOG', 'MODEL KATALOG', 'TYPE KATALOG', 'MASALAH',
+            ]);
+
+            /** @var VehicleConnecting $r */
+            foreach ($rows as $r) {
+                fputcsv($out, [
+                    $r->raw_gabungan,
+                    $r->fuel,
+                    $r->brand_name,
+                    $r->model_name,
+                    $r->type_name,
+                    $r->powertrain,
+                    $r->category,
+                    $r->size_class,
+                    $r->raw_gabungan_key,
+                    $r->audit_brand_catalog,
+                    $r->audit_model_catalog,
+                    $r->audit_type_catalog,
+                    implode('; ', $r->audit_problems ?: []),
+                ]);
+            }
+
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
 
     protected function getViewData(): array
     {
