@@ -37,6 +37,10 @@ class VehicleConnectingAudit extends Page
 
     public string $search = '';
 
+    public string $powertrainFilter = 'all';
+
+    public int $perPage = 50;
+
     public array $summary = [];
 
     /** @var array<string, string> label filter masalah */
@@ -59,6 +63,24 @@ class VehicleConnectingAudit extends Page
 
     public function updatedFilter(): void
     {
+        $this->resetPage();
+    }
+
+    public function updatedPowertrainFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedPerPage(): void
+    {
+        $this->resetPage();
+    }
+
+    public function resetFilters(): void
+    {
+        $this->filter = 'all';
+        $this->search = '';
+        $this->powertrainFilter = 'all';
         $this->resetPage();
     }
 
@@ -127,16 +149,23 @@ class VehicleConnectingAudit extends Page
 
         $decorated = $all->map(function (VehicleConnecting $r) use ($problemOf, $brandNames, $modelNames, $typeNames) {
             $r->audit_problems = $problemOf($r);
-            $r->audit_brand_catalog = $brandNames[$r->brand_vehicle_id] ?? null;
-            $r->audit_model_catalog = $modelNames[$r->model_vehicle_id] ?? null;
-            $r->audit_type_catalog = $typeNames[$r->type_vehicle_id] ?? null;
+            $r->audit_brand_catalog = $r->brand_vehicle_id !== null ? ($brandNames[$r->brand_vehicle_id] ?? null) : null;
+            $r->audit_model_catalog = $r->model_vehicle_id !== null ? ($modelNames[$r->model_vehicle_id] ?? null) : null;
+            $r->audit_type_catalog = $r->type_vehicle_id !== null ? ($typeNames[$r->type_vehicle_id] ?? null) : null;
 
             return $r;
         });
 
+        $totalCount = $decorated->count();
+        $problemCount = $decorated->filter(fn ($r) => $r->audit_problems !== [])->count();
+        $cleanCount = max(0, $totalCount - $problemCount);
+        $healthRate = $totalCount > 0 ? round(($cleanCount / $totalCount) * 100, 1) : 100.0;
+
         $this->summary = [
-            'total' => $decorated->count(),
-            'problem' => $decorated->filter(fn ($r) => $r->audit_problems !== [])->count(),
+            'total' => $totalCount,
+            'clean' => $cleanCount,
+            'health_rate' => $healthRate,
+            'problem' => $problemCount,
             'no_key' => $decorated->filter(fn ($r) => $r->raw_gabungan_key === null)->count(),
             'dup' => $decorated->filter(fn ($r) => $r->raw_gabungan_key !== null && $dupKeys->has($r->raw_gabungan_key))->count(),
             'unlinked_brand' => $decorated->filter(fn ($r) => $r->brand_vehicle_id === null)->count(),
@@ -146,7 +175,7 @@ class VehicleConnectingAudit extends Page
             'no_powertrain' => $decorated->filter(fn ($r) => trim((string) $r->powertrain) === '')->count(),
         ];
 
-        return match ($this->filter) {
+        $filtered = match ($this->filter) {
             'problem' => $decorated->filter(fn ($r) => $r->audit_problems !== [])->values(),
             'no_key' => $decorated->filter(fn ($r) => $r->raw_gabungan_key === null)->values(),
             'dup' => $decorated->filter(fn ($r) => $r->raw_gabungan_key !== null && $dupKeys->has($r->raw_gabungan_key))->values(),
@@ -157,13 +186,21 @@ class VehicleConnectingAudit extends Page
             'no_powertrain' => $decorated->filter(fn ($r) => trim((string) $r->powertrain) === '')->values(),
             default => $decorated->values(),
         };
+
+        if ($this->powertrainFilter !== 'all') {
+            $filtered = $filtered->filter(function (VehicleConnecting $r) {
+                return strtoupper(trim((string) $r->powertrain)) === $this->powertrainFilter;
+            })->values();
+        }
+
+        return $filtered;
     }
 
     protected function rows(): LengthAwarePaginator
     {
         $filtered = $this->buildRows();
         $page = LengthAwarePaginator::resolveCurrentPage();
-        $perPage = 50;
+        $perPage = max(10, min(200, $this->perPage));
 
         return new LengthAwarePaginator(
             $filtered->forPage($page, $perPage)->values(),
@@ -178,7 +215,9 @@ class VehicleConnectingAudit extends Page
     public function download(): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $rows = $this->buildRows();
-        $filename = 'audit-connecting-'.($this->filter !== 'all' ? $this->filter.'-' : '').now()->format('Ymd-His').'.csv';
+        $filterPart = $this->filter !== 'all' ? $this->filter.'-' : '';
+        $ptPart = $this->powertrainFilter !== 'all' ? strtolower($this->powertrainFilter).'-' : '';
+        $filename = 'audit-connecting-'.$filterPart.$ptPart.now()->format('Ymd-His').'.csv';
 
         return response()->streamDownload(function () use ($rows) {
             $out = fopen('php://output', 'w');
