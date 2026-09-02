@@ -32,7 +32,7 @@ class VehicleSalesCsvReader
     ];
 
     /**
-     * @return array{0: list<array{brand: string, type_model: string, fuel: ?string, cells: array<int, int>, units: ?int}>, 1: int}
+     * @return array{0: list<array{brand: string, type_model: string, fuel: ?string, cells: array<int, int>, units: ?int}>, 1: int, 2: list<array{brand: string, type_model: string, reason: string}>}
      *
      * @throws RuntimeException bila header tidak memenuhi kebutuhan periode.
      */
@@ -83,6 +83,8 @@ class VehicleSalesCsvReader
 
         $rows = [];
         $junkSkipped = 0;
+        /** @var list<array{brand: string, type_model: string, reason: string}> $junkRows */
+        $junkRows = [];
 
         while (($row = fgetcsv($handle)) !== false) {
             if ($combinedI !== null && ($brandI === null || $typeModelI === null)) {
@@ -95,6 +97,13 @@ class VehicleSalesCsvReader
             $fuel = ($fuelRaw === null || $fuelRaw === '' || $fuelRaw === '-') ? null : $fuelRaw;
 
             if ($brand === '' && $typeModel === '') {
+                $junkSkipped++;
+                $junkRows[] = [
+                    'brand' => '',
+                    'type_model' => '',
+                    'reason' => 'Baris kosong',
+                ];
+
                 continue; // baris kosong
             }
 
@@ -104,6 +113,11 @@ class VehicleSalesCsvReader
             if (in_array($normBrand, ['TOTAL', 'CUMULATIVE'], true)
                 || in_array($normTypeModel, ['TOTAL', 'CUMULATIVE'], true)) {
                 $junkSkipped++;
+                $junkRows[] = [
+                    'brand' => $brand,
+                    'type_model' => $typeModel,
+                    'reason' => 'Baris TOTAL/subtotal',
+                ];
 
                 continue;
             }
@@ -124,7 +138,7 @@ class VehicleSalesCsvReader
 
         fclose($handle);
 
-        return [$rows, $junkSkipped];
+        return [$rows, $junkSkipped, $junkRows];
     }
 
     /** Sel bulan CSV: integer, atau "-"/kosong = nol. Tolerir pemisah ribuan. */

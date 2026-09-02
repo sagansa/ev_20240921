@@ -25,7 +25,7 @@ class VehicleSalesPreviewService
     public function analyze(string $csvPath, ?int $month = null): array
     {
         try {
-            [$rows, $junkSkipped] = $this->reader->read($csvPath, $month);
+            [$rows, $junkSkipped, $junkRows] = $this->reader->read($csvPath, $month);
         } catch (\RuntimeException $e) {
             throw new \RuntimeException($e->getMessage());
         }
@@ -33,12 +33,21 @@ class VehicleSalesPreviewService
         $new = [];
         $matched = 0;
         $skipped = $junkSkipped;
+        /** @var list<array{brand: string, type_model: string, reason: string}> $skippedRows */
+        $skippedRows = $junkRows;
 
         foreach ($rows as $row) {
             $split = $this->splitter->split($row['brand'], $row['type_model'], $row['fuel']);
 
             if ($split['flag'] === 'junk' || $split['model'] === '') {
                 $skipped++;
+                $skippedRows[] = [
+                    'brand' => $row['brand'],
+                    'type_model' => $row['type_model'],
+                    'reason' => $split['flag'] === 'junk'
+                        ? 'Terbaca junk oleh pemecah nama'
+                        : 'Nama model tidak terbaca (hanya kata spesifikasi)',
+                ];
 
                 continue;
             }
@@ -79,6 +88,7 @@ class VehicleSalesPreviewService
                 'new' => count($new),
             ],
             'new' => array_values($new),
+            'skipped_rows' => $skippedRows,
         ];
     }
 

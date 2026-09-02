@@ -64,6 +64,14 @@ class VehicleSalesPreviewImport extends Page
 
     public ?string $newRowMessage = null;
 
+    /** Toggle tampil/sembunyi detail baris yang dilewati (junk). */
+    public bool $showSkipped = false;
+
+    public function toggleSkipped(): void
+    {
+        $this->showSkipped = ! $this->showSkipped;
+    }
+
     /** @return list<string> */
     public static function categoryOptions(): array
     {
@@ -195,6 +203,7 @@ class VehicleSalesPreviewImport extends Page
         $this->newRowForms = [];
         $this->newRowSaved = [];
         $this->newRowMessage = null;
+        $this->showSkipped = false;
 
         try {
             $this->result = app(VehicleSalesPreviewService::class)->analyze(

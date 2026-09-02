@@ -178,12 +178,19 @@
                 </div>
 
                 {{-- Dilewati --}}
-                <div class="vsp-card">
-                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--vsp-text-muted);">Dilewati (Junk)</div>
+                <div class="vsp-card" style="cursor: pointer; {{ $s['skipped'] > 0 ? 'border-color: rgba(245, 158, 11, 0.4);' : '' }}" wire:click="toggleSkipped" @if($s['skipped'] > 0) title="Klik untuk lihat detail baris yang dilewati" @endif>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: {{ $s['skipped'] > 0 ? '#f59e0b' : 'var(--vsp-text-muted)' }};">
+                        <span>Dilewati (Junk)</span>
+                        @if ($s['skipped'] > 0)
+                            <span style="font-size: 13px; text-transform: none; letter-spacing: 0;">{{ $showSkipped ? '▲' : '▼' }}</span>
+                        @endif
+                    </div>
                     <div style="margin-top: 8px; font-size: 22px; font-weight: 800; font-family: monospace; color: var(--vsp-text-title);">
                         {{ number_format($s['skipped']) }}
                     </div>
-                    <div style="margin-top: 4px; font-size: 11px; color: var(--vsp-text-muted);">Header / subtotal</div>
+                    <div style="margin-top: 4px; font-size: 11px; color: {{ $s['skipped'] > 0 ? '#d97706' : 'var(--vsp-text-muted)' }}; font-weight: 600;">
+                        {{ $s['skipped'] > 0 ? ($showSkipped ? 'klik untuk tutup' : 'klik untuk lihat detail') : 'Header / subtotal' }}
+                    </div>
                 </div>
 
                 {{-- Ter-match Katalog --}}
@@ -206,6 +213,43 @@
                     </div>
                 </div>
             </div>
+
+            {{-- 3A. DETAIL BARIS DILEWATI --}}
+            @if ($showSkipped && $s['skipped'] > 0)
+                @php $skippedRows = $result['skipped_rows'] ?? []; $shown = array_slice($skippedRows, 0, 100); @endphp
+                <x-filament::section>
+                    <x-slot name="heading">
+                        🔎 Detail Baris Dilewati ({{ count($skippedRows) }})
+                    </x-slot>
+
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; font-size: 13px; text-align: left; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--vsp-border); color: var(--vsp-text-muted);">
+                                    <th style="padding: 8px 12px; font-weight: 600;">Brand</th>
+                                    <th style="padding: 8px 12px; font-weight: 600;">Type / Model (raw)</th>
+                                    <th style="padding: 8px 12px; font-weight: 600;">Alasan Dilewati</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($shown as $row)
+                                    <tr style="border-bottom: 1px solid var(--vsp-border-sub);">
+                                        <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: var(--vsp-text-title);">{{ $row['brand'] ?: '—' }}</td>
+                                        <td style="padding: 8px 12px; color: var(--vsp-text-title);">{{ $row['type_model'] ?: '—' }}</td>
+                                        <td style="padding: 8px 12px;">
+                                            <span class="vsp-badge vsp-badge-gray">{{ $row['reason'] }}</span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (count($skippedRows) > 100)
+                        <p style="margin-top: 10px; font-size: 12px; color: var(--vsp-text-muted);">Menampilkan 100 dari {{ count($skippedRows) }} baris.</p>
+                    @endif
+                </x-filament::section>
+            @endif
 
             {{-- 3. TABEL KOMBINASI BARU --}}
             @if ($s['new'] > 0)
