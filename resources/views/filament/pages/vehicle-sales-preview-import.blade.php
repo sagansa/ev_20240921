@@ -372,7 +372,7 @@
             {{-- 3B. IMPOR PERMANEN (hanya bila analisis bersih) --}}
             <x-filament::section>
                 <x-slot name="heading">
-                    @if ($isClean())
+                    @if ($this->isClean())
                         <span style="color: #10b981;">✅ Siap Impor Permanen</span>
                     @else
                         Impor Permanen
@@ -384,7 +384,7 @@
                     Syarat: analisis harus bersih — <strong>0 kombinasi baru</strong> dan <strong>0 baris dilewati</strong>.
                 </p>
 
-                @if ($result !== null && ! $isClean())
+                @if ($result !== null && ! $this->isClean())
                     <div style="margin-bottom: 12px; padding: 10px 14px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35); color: #d97706; font-size: 13px; font-weight: 600;">
                         ⚠️ Import terkunci: masih ada <strong>{{ number_format($result['summary']['new']) }} kombinasi baru</strong>
                         dan <strong>{{ number_format($result['summary']['skipped']) }} baris dilewati</strong>.
@@ -401,8 +401,8 @@
                     </div>
                     <div>
                         <button type="button" wire:click="importSales" wire:loading.attr="disabled" wire:target="importSales"
-                                @if ($result === null || ! $isClean()) disabled @endif
-                                class="vsp-btn-primary" @if ($result === null || ! $isClean()) style="opacity: 0.5; cursor: not-allowed;" @endif>
+                                @if ($result === null || ! $this->isClean()) disabled @endif
+                                class="vsp-btn-primary" @if ($result === null || ! $this->isClean()) style="opacity: 0.5; cursor: not-allowed;" @endif>
                             <span wire:loading.remove wire:target="importSales">🚀 Impor Sekarang</span>
                             <span wire:loading wire:target="importSales">⏳ Mengimpor…</span>
                         </button>
