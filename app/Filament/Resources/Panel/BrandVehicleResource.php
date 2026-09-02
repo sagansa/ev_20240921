@@ -140,6 +140,12 @@ class BrandVehicleResource extends Resource
         return [RelationManagers\ModelVehiclesRelationManager::class];
     }
 
+    /** Katalog hanya lahir dari CONNECTING — create manual ditutup. */
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
     public static function getPages(): array
     {
         return [

@@ -98,7 +98,7 @@ class TypeVehiclesRelationManager extends RelationManager
                     }),
             ])
             ->filters([])
-            ->headerActions([Actions\CreateAction::make()])
+            ->headerActions([])
             ->recordActions([
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make(),

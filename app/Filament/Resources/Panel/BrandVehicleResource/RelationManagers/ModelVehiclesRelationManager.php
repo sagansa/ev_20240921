@@ -78,7 +78,7 @@ class ModelVehiclesRelationManager extends RelationManager
                     ->color('primary'),
             ])
             ->filters([])
-            ->headerActions([Actions\CreateAction::make()])
+            ->headerActions([])
             ->recordActions([
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make(),
