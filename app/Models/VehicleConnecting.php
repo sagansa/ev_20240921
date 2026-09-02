@@ -59,6 +59,16 @@ class VehicleConnecting extends Model
         // CRUD admin, maupun edit manual — supaya pencocokan berbasis key
         // tidak pernah kehilangan baris.
         static::saving(function (self $row): void {
+            // Raw kosong (baris buatan kode lama) direkonstruksi dari nama
+            // BRAND + MODEL + TYPE yang tersimpan.
+            if (trim((string) $row->raw_gabungan) === '') {
+                $row->raw_gabungan = trim(preg_replace('/\s+/', ' ',
+                    trim((string) $row->brand_name).' '.
+                    trim((string) $row->model_name).' '.
+                    trim((string) $row->type_name),
+                ));
+            }
+
             $gabungan = trim((string) $row->raw_gabungan);
 
             if ($gabungan !== '') {

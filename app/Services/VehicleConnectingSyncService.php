@@ -380,24 +380,79 @@ class VehicleConnectingSyncService
     {
         $filled = 0;
 
-        VehicleConnecting::query()->whereNull('raw_gabungan_key')
+        // Baris kode lama bisa kosong di raw_gabungan DAN key — raw
+        // direkonstruksi dari brand_name+model_name+type_name (hook model
+        // menurunkan key saat simpan).
+        VehicleConnecting::query()
+            ->where(fn ($q) => $q
+                ->whereNull('raw_gabungan_key')
+                ->orWhereNull('raw_gabungan')
+                ->orWhere('raw_gabungan', ''))
             ->chunkById(500, function ($rows) use (&$filled) {
                 foreach ($rows as $r) {
-                    $k = preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper((string) $r->raw_gabungan));
+                    if (trim((string) $r->raw_gabungan) !== '') {
+                        try {
+                            $r->save();
+                            $filled++;
+                        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                            $r->raw_gabungan_key = null;
+                            VehicleConnecting::withoutEvents(fn () => $r->save());
+                        }
 
-                    if ($k === '' || $k === null) {
                         continue;
                     }
 
-                    // Nama berbeda bisa squash ke key sama ("X-55 II" vs
-                    // "X55 II") — unique index menolak. Lewati; baris itu
-                    // tetap tercocokkan lewat fallback raw teks di matcher.
-                    if (VehicleConnecting::where('raw_gabungan_key', $k)->whereKeyNot($r->getKey())->exists()) {
+                    // Raw kosong (baris kode lama): coba beberapa bentuk
+                    // gabungan sesuai konvensi file CONNECTING — brand+type,
+                    // brand+model+type, brand+model — pakai yang pertama
+                    // dengan key bebas (tidak bentrok unique index).
+                    $brand = trim((string) $r->brand_name);
+                    $model = trim((string) $r->model_name);
+                    $type = trim((string) $r->type_name);
+
+                    $candidates = array_values(array_unique(array_filter([
+                        trim($brand.' '.$type),
+                        trim($brand.' '.$model.' '.$type),
+                        trim($brand.' '.$model),
+                    ], fn ($c) => $c !== '')));
+
+                    if ($candidates === []) {
                         continue;
                     }
 
-                    $r->forceFill(['raw_gabungan_key' => $k])->save();
-                    $filled++;
+                    $chosen = $candidates[0];
+                    $keyFree = false;
+
+                    foreach ($candidates as $candidate) {
+                        $k = preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($candidate));
+                        $taken = $k === '' || $k === null
+                            || VehicleConnecting::where('raw_gabungan_key', $k)->whereKeyNot($r->getKey())->exists()
+                            || VehicleConnecting::where('raw_gabungan', $candidate)->whereKeyNot($r->getKey())->exists();
+
+                        if (! $taken) {
+                            $chosen = $candidate;
+                            $keyFree = true;
+                            break;
+                        }
+                    }
+
+                    $r->raw_gabungan = $chosen;
+
+                    if (! $keyFree) {
+                        // Semua bentuk bentrok — simpan raw tanpa key; matcher
+                        // mencocokkan lewat fallback raw teks.
+                        VehicleConnecting::withoutEvents(fn () => $r->save());
+
+                        continue;
+                    }
+
+                    try {
+                        $r->save();
+                        $filled++;
+                    } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                        $r->raw_gabungan_key = null;
+                        VehicleConnecting::withoutEvents(fn () => $r->save());
+                    }
                 }
             });
 
