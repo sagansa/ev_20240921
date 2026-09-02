@@ -99,10 +99,6 @@ class VehicleConnectingAudit extends Page
                 $problems[] = 'tanpa raw key';
             }
 
-            if ($r->raw_gabungan_key !== null && $dupKeys->has($r->raw_gabungan_key)) {
-                $problems[] = 'key duplikat';
-            }
-
             if ($r->brand_vehicle_id === null) {
                 $problems[] = 'brand tak ter-link';
             }
