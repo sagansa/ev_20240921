@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\BrandVehicle;
 use App\Models\ModelVehicle;
 use App\Models\TypeVehicle;
+use App\Models\VehicleConnecting;
 use App\Models\VehicleNameMapping;
 
 /**
@@ -112,11 +113,72 @@ class VehicleSalesMatcher
     protected int $createdTypes = 0;
 
     /**
+     * LAPISAN 0 — lookup langsung ke tabel CONNECTING (master "BRAND MODEL
+     * TYPE"): identitas squash dari teks mentah utuh (brand + type model).
+     * Ini sumber kebenaran utama; splitter/fuzzy hanya fallback utk baris
+     * yang belum terdaftar di CONNECTING.
+     *
+     * @return array{brand_vehicle_id: int, model_vehicle_id: int, type_vehicle_id: int|null,
+     *               type_name: ?string, powertrain: ?string, brand_name: string, model_name: string}|null
+     */
+    public function connectingHit(string $rawBrand, ?string $fullRawModel): ?array
+    {
+        $gabungan = trim(preg_replace('/\s+/', ' ', trim($rawBrand).' '.trim((string) $fullRawModel)));
+
+        if ($gabungan === '' || $gabungan === ' ') {
+            return null;
+        }
+
+        $key = preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($gabungan));
+
+        if ($key === '' || $key === null) {
+            return null;
+        }
+
+        $row = VehicleConnecting::query()->where('raw_gabungan_key', $key)->first();
+
+        // Baris CONNECTING yang belum ter-link katalog tidak dihitung hit —
+        // biarkan jalur fallback yang menentukan.
+        if ($row === null || $row->brand_vehicle_id === null || $row->model_vehicle_id === null) {
+            return null;
+        }
+
+        return [
+            'brand_vehicle_id' => $row->brand_vehicle_id,
+            'model_vehicle_id' => $row->model_vehicle_id,
+            'type_vehicle_id' => $row->type_vehicle_id,
+            'type_name' => $row->type_name,
+            'powertrain' => $row->powertrain,
+            'brand_name' => $row->brandVehicle?->name,
+            'model_name' => $row->modelVehicle?->name,
+        ];
+    }
+
+    /**
      * @return array{brand_vehicle_id: int|null, model_vehicle_id: int|null,
      *               brand_created: bool, model_created: bool, battery_kwh: float|null}
      */
     public function match(string $rawBrand, string $rawModel, ?float $batteryKwh = null, ?string $fullRawModel = null): array
     {
+        // LAPISAN 0: CONNECTING (master raw_gabungan) — cocok persis tanpa
+        // pemecah nama maupun tebakan fuzzy.
+        $hit = $this->connectingHit($rawBrand, $fullRawModel ?? $rawModel);
+
+        if ($hit !== null) {
+            return [
+                'brand_vehicle_id' => $hit['brand_vehicle_id'],
+                'model_vehicle_id' => $hit['model_vehicle_id'],
+                'brand_created' => false,
+                'model_created' => false,
+                'battery_kwh' => $batteryKwh,
+                'mapping_used' => false,
+                'connecting_used' => true,
+                'type_vehicle_id' => $hit['type_vehicle_id'],
+                'type_name' => $hit['type_name'],
+                'connecting_powertrain' => $hit['powertrain'],
+            ];
+        }
+
         // LAPISAN 1: mapping eksplisit (keputusan manusia di tabel
         // vehicle_name_mappings) — menang atas alias/fuzzy/auto-create.
         $mapping = $this->lookupMapping($rawBrand, $rawModel, $fullRawModel);
@@ -162,6 +224,23 @@ class VehicleSalesMatcher
      */
     public function preview(string $rawBrand, string $rawModel, ?string $fullRawModel = null): array
     {
+        // LAPISAN 0: CONNECTING — cocok persis, ter-match tanpa tebakan.
+        $hit = $this->connectingHit($rawBrand, $fullRawModel ?? $rawModel);
+
+        if ($hit !== null) {
+            return [
+                'brand_vehicle_id' => $hit['brand_vehicle_id'],
+                'brand_name' => $hit['brand_name'],
+                'model_vehicle_id' => $hit['model_vehicle_id'],
+                'model_name' => $hit['model_name'],
+                'match_score' => 100,
+                'brand_new' => false,
+                'model_new' => false,
+                'mapping_used' => false,
+                'connecting_used' => true,
+            ];
+        }
+
         // LAPISAN 1: mapping eksplisit — ter-match tanpa tebakan.
         $mapping = $this->lookupMapping($rawBrand, $rawModel, $fullRawModel);
 

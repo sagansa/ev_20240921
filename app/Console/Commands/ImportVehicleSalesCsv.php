@@ -96,6 +96,11 @@ class ImportVehicleSalesCsv extends Command
             $unlinked = [];
 
             foreach ($rows as $row) {
+                // LAPISAN 0: sudah ada di CONNECTING → ter-link, lewati cek.
+                if ($matcher->connectingHit($row['brand'], $row['type_model']) !== null) {
+                    continue;
+                }
+
                 $split = $splitter->split($row['brand'], $row['type_model'], $row['fuel']);
 
                 if ($split['flag'] === 'junk' || $split['model'] === '') {
@@ -156,10 +161,13 @@ class ImportVehicleSalesCsv extends Command
                     // Match di level KELUARGA (hasil splitter), bukan varian penuh.
                     $match = $matcher->match($row['brand'], $split['model'], null, $row['type_model']);
 
-                    $typeId = null;
+                    // CONNECTING hit: type & powertrain ikut master, tanpa
+                    // pemecah nama; resolveType hanya untuk baris fallback.
+                    $typeId = $match['type_vehicle_id'] ?? null;
+                    $powertrain = $match['connecting_powertrain'] ?? $split['powertrain'];
 
-                    if ($match['model_vehicle_id'] !== null && $split['type'] !== '') {
-                        $typeId = $this->resolveType($match['model_vehicle_id'], $split['type'], $typesCreated, $split['powertrain']);
+                    if ($typeId === null && $match['model_vehicle_id'] !== null && $split['type'] !== '') {
+                        $typeId = $this->resolveType($match['model_vehicle_id'], $split['type'], $typesCreated, $powertrain);
                     }
 
                     $base = [
@@ -169,7 +177,7 @@ class ImportVehicleSalesCsv extends Command
                         'brand_vehicle_id' => $match['brand_vehicle_id'],
                         'model_vehicle_id' => $match['model_vehicle_id'],
                         'type_vehicle_id' => $typeId,
-                        'powertrain' => $split['powertrain'],
+                        'powertrain' => $powertrain,
                         'year' => $year,
                     ];
 

@@ -37,16 +37,34 @@ class VehicleSalesPreviewService
         $skippedRows = $junkRows;
 
         foreach ($rows as $row) {
+            // LAPISAN 0: CONNECTING (master raw_gabungan) — cocok persis
+            // tanpa pemecah nama. Ini jalur utama.
+            if ($this->matcher->connectingHit($row['brand'], $row['type_model']) !== null) {
+                $matched++;
+
+                continue;
+            }
+
             $split = $this->splitter->split($row['brand'], $row['type_model'], $row['fuel']);
 
             if ($split['flag'] === 'junk' || $split['model'] === '') {
+                // Fallback legacy tetap boleh menyelamatkan baris ini via
+                // mapping/fuzzy — cek dulu sebelum menjatuhkan junk.
+                $probe = $this->matcher->preview($row['brand'], $row['type_model'], $row['type_model']);
+
+                if (! $probe['brand_new'] && ! $probe['model_new']) {
+                    $matched++;
+
+                    continue;
+                }
+
                 $skipped++;
                 $skippedRows[] = [
                     'brand' => $row['brand'],
                     'type_model' => $row['type_model'],
                     'reason' => $split['flag'] === 'junk'
-                        ? 'Terbaca junk oleh pemecah nama'
-                        : 'Nama model tidak terbaca (hanya kata spesifikasi)',
+                        ? 'Belum ada di CONNECTING & tak terbaca pemecah nama'
+                        : 'Belum ada di CONNECTING & nama model tak terbaca',
                 ];
 
                 continue;
@@ -66,11 +84,13 @@ class VehicleSalesPreviewService
                 ? ($row['units'] ?? $row['cells'][$month] ?? 0)
                 : array_sum($row['cells']);
 
+            // Nama BARU ditandai mentah apa adanya (brand + type model
+            // utuh) — tanpa pemecah nama, siap digabung ke CONNECTING.
             if (! isset($new[$key])) {
                 $new[$key] = [
                     'brand' => $row['brand'],
-                    'model' => $split['model'],
-                    'type' => $split['type'],
+                    'model' => $row['type_model'],
+                    'type' => '',
                     'powertrain' => $split['powertrain'],
                     'units' => 0,
                     'brand_name' => $preview['brand_name'],
