@@ -430,58 +430,34 @@ class VehicleConnectingSyncService
                 ->orWhere('raw_gabungan', ''))
             ->chunkById(500, function ($rows) use (&$filled) {
                 foreach ($rows as $r) {
-                    if (trim((string) $r->raw_gabungan) !== '') {
-                        try {
-                            $r->save();
-                            $filled++;
-                        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
-                            $r->raw_gabungan_key = null;
-                            VehicleConnecting::withoutEvents(fn () => $r->save());
-                        }
+                    if (trim((string) $r->raw_gabungan) === '') {
+                        // Raw kosong (baris kode lama): rekonstruksi dari
+                        // nama tersimpan, bentuk pertama yang tidak kosong.
+                        $brand = trim((string) $r->brand_name);
+                        $model = trim((string) $r->model_name);
+                        $type = trim((string) $r->type_name);
 
+                        $r->raw_gabungan = trim(preg_replace('/\s+/', ' ',
+                            collect([$brand, $type ?: $model])->implode(' '),
+                        ));
+                    }
+
+                    $k = preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper((string) $r->raw_gabungan));
+
+                    if ($k === '' || $k === null) {
                         continue;
                     }
 
-                    // Raw kosong (baris kode lama): coba beberapa bentuk
-                    // gabungan sesuai konvensi file CONNECTING — brand+type,
-                    // brand+model+type, brand+model — pakai yang pertama
-                    // dengan key bebas (tidak bentrok unique index).
-                    $brand = trim((string) $r->brand_name);
-                    $model = trim((string) $r->model_name);
-                    $type = trim((string) $r->type_name);
-
-                    $candidates = array_values(array_unique(array_filter([
-                        trim($brand.' '.$type),
-                        trim($brand.' '.$model.' '.$type),
-                        trim($brand.' '.$model),
-                    ], fn ($c) => $c !== '')));
-
-                    if ($candidates === []) {
-                        continue;
-                    }
-
-                    $chosen = $candidates[0];
-                    $keyFree = false;
-
-                    foreach ($candidates as $candidate) {
-                        $k = preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($candidate));
-                        $taken = $k === '' || $k === null
-                            || VehicleConnecting::where('raw_gabungan_key', $k)->whereKeyNot($r->getKey())->exists()
-                            || VehicleConnecting::where('raw_gabungan', $candidate)->whereKeyNot($r->getKey())->exists();
-
-                        if (! $taken) {
-                            $chosen = $candidate;
-                            $keyFree = true;
-                            break;
-                        }
-                    }
-
-                    $r->raw_gabungan = $chosen;
-
-                    if (! $keyFree) {
-                        // Semua bentuk bentrok — simpan raw tanpa key; matcher
-                        // mencocokkan lewat fallback raw teks.
-                        VehicleConnecting::withoutEvents(fn () => $r->save());
+                    // Kembar ejaan ("ZY-HR" vs "ZY - HR", "CRV" vs "CR-V")
+                    // berbagi squash key yang sama; unique index hanya
+                    // mengizinkan satu pemegang. Baris tanpa key yang
+                    // key-nya sudah dipegang baris lain DIHAPUS — aman:
+                    // squash mengabaikan tanda baca/spasi/kapital sehingga
+                    // ejaan manapun tetap cocok ke baris tersisa, dan tabel
+                    // ini tidak punya relasi anak.
+                    if (VehicleConnecting::where('raw_gabungan_key', $k)->whereKeyNot($r->getKey())->exists()) {
+                        $r->delete();
+                        $filled++;
 
                         continue;
                     }
@@ -490,8 +466,8 @@ class VehicleConnectingSyncService
                         $r->save();
                         $filled++;
                     } catch (\Illuminate\Database\UniqueConstraintViolationException) {
-                        $r->raw_gabungan_key = null;
-                        VehicleConnecting::withoutEvents(fn () => $r->save());
+                        $r->delete();
+                        $filled++;
                     }
                 }
             });
