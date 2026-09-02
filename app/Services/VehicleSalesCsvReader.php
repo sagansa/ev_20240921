@@ -130,6 +130,11 @@ class VehicleSalesCsvReader
             $rows[] = [
                 'brand' => $brand,
                 'type_model' => $typeModel,
+                // Teks mentah utuh baris ini — kunci perbandingan langsung
+                // ke CONNECTING (raw_gabungan), tanpa pemecah nama.
+                'raw_full' => $combinedI !== null && ($brandI === null || $typeModelI === null)
+                    ? trim((string) ($row[$combinedI] ?? ''))
+                    : trim($brand.' '.$typeModel),
                 'fuel' => $fuel,
                 'cells' => $cells,
                 'units' => $unitsI === null ? null : $this->parseUnits($row[$unitsI] ?? null),

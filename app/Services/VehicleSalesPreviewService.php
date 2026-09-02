@@ -36,64 +36,35 @@ class VehicleSalesPreviewService
         /** @var list<array{brand: string, type_model: string, reason: string}> $skippedRows */
         $skippedRows = $junkRows;
 
+        // FUEL → powertrain untuk baris baru (satu-satunya inferensi yang
+        // tersisa; selebihnya murni perbandingan nama ke CONNECTING).
+        $fuelPt = ['EV' => 'BEV', 'HEV' => 'HEV', 'PHEV' => 'PHEV'];
+
         foreach ($rows as $row) {
-            // LAPISAN 0: CONNECTING (master raw_gabungan) — cocok persis
-            // tanpa pemecah nama. Ini jalur utama.
-            if ($this->matcher->connectingHit($row['brand'], $row['type_model']) !== null) {
+            $gabungan = trim(preg_replace('/\s+/', ' ', $row['raw_full']));
+
+            // SATU perbandingan: teks utuh baris ↔ raw_gabungan CONNECTING.
+            // Ketemu = match; tidak ketemu = BARU, ditampilkan mentah apa
+            // adanya — tidak ada pemecah nama, tidak ada tebakan.
+            if ($gabungan !== '' && $this->matcher->connectingHitRaw($gabungan) !== null) {
                 $matched++;
 
                 continue;
             }
 
-            $split = $this->splitter->split($row['brand'], $row['type_model'], $row['fuel']);
-
-            if ($split['flag'] === 'junk' || $split['model'] === '') {
-                // Fallback legacy tetap boleh menyelamatkan baris ini via
-                // mapping/fuzzy — cek dulu sebelum menjatuhkan junk.
-                $probe = $this->matcher->preview($row['brand'], $row['type_model'], $row['type_model']);
-
-                if (! $probe['brand_new'] && ! $probe['model_new']) {
-                    $matched++;
-
-                    continue;
-                }
-
-                $skipped++;
-                $skippedRows[] = [
-                    'brand' => $row['brand'],
-                    'type_model' => $row['type_model'],
-                    'reason' => $split['flag'] === 'junk'
-                        ? 'Belum ada di CONNECTING & tak terbaca pemecah nama'
-                        : 'Belum ada di CONNECTING & nama model tak terbaca',
-                ];
-
-                continue;
-            }
-
-            // Semua powertrain dicek terhadap katalog (BEV/HEV/PHEV/ICE).
-            $preview = $this->matcher->preview($row['brand'], $split['model'], $row['type_model']);
-
-            if (! $preview['brand_new'] && ! $preview['model_new']) {
-                $matched++;
-
-                continue;
-            }
-
-            $key = strtoupper($row['brand']).'|'.strtoupper($split['model']);
+            $key = mb_strtoupper(preg_replace('/[^A-Z0-9]/u', '', $gabungan));
             $units = $month !== null
                 ? ($row['units'] ?? $row['cells'][$month] ?? 0)
                 : array_sum($row['cells']);
 
-            // Nama BARU ditandai mentah apa adanya (brand + type model
-            // utuh) — tanpa pemecah nama, siap digabung ke CONNECTING.
             if (! isset($new[$key])) {
                 $new[$key] = [
-                    'brand' => $row['brand'],
-                    'model' => $row['type_model'],
+                    'brand' => $gabungan,
+                    'model' => '',
                     'type' => '',
-                    'powertrain' => $split['powertrain'],
+                    'powertrain' => $fuelPt[strtoupper((string) $row['fuel'])] ?? '',
                     'units' => 0,
-                    'brand_name' => $preview['brand_name'],
+                    'brand_name' => null,
                 ];
             }
 

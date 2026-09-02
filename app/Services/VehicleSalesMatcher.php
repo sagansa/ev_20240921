@@ -129,6 +129,18 @@ class VehicleSalesMatcher
             return null;
         }
 
+        return $this->connectingHitRaw($gabungan);
+    }
+
+    /**
+     * Lookup CONNECTING dari teks gabungan utuh (sudah dirapikan) — bentuk
+     * paling murni: tidak ada pemecah nama, tidak ada tebakan.
+     *
+     * @return array{brand_vehicle_id: int, model_vehicle_id: int, type_vehicle_id: int|null,
+     *               type_name: ?string, powertrain: ?string, brand_name: string, model_name: string}|null
+     */
+    public function connectingHitRaw(string $gabungan): ?array
+    {
         $key = preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($gabungan));
 
         if ($key === '' || $key === null) {

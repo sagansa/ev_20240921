@@ -274,9 +274,7 @@
                         <table style="width: 100%; font-size: 13px; text-align: left; border-collapse: collapse;">
                             <thead>
                                 <tr style="border-bottom: 1px solid var(--vsp-border); color: var(--vsp-text-muted);">
-                                    <th style="padding: 8px 12px; font-weight: 600;">Brand (Laporan)</th>
-                                    <th style="padding: 8px 12px; font-weight: 600;">Model</th>
-                                    <th style="padding: 8px 12px; font-weight: 600;">Type</th>
+                                    <th style="padding: 8px 12px; font-weight: 600;">Nama di Laporan (utuh)</th>
                                     <th style="padding: 8px 12px; text-align: right;">Unit</th>
                                     <th style="padding: 8px 12px; font-weight: 600;">Status Katalog</th>
                                     <th style="padding: 8px 12px; font-weight: 600;">Powertrain</th>
@@ -293,8 +291,6 @@
                                     @endphp
                                     <tr style="border-bottom: 1px solid var(--vsp-border-sub); {{ $saved ? 'opacity: 0.55;' : '' }} background: {{ str_starts_with($row['powertrain'], 'BEV') ? 'transparent' : 'rgba(156, 163, 175, 0.05)' }};">
                                         <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: var(--vsp-text-title);">{{ $row['brand'] }}</td>
-                                        <td style="padding: 8px 12px; font-weight: 600; color: var(--vsp-text-title);">{{ $row['model'] }}</td>
-                                        <td style="padding: 8px 12px; color: var(--vsp-text-muted);">{{ $row['type'] ?: '—' }}</td>
                                         <td style="padding: 8px 12px; text-align: right; font-family: monospace; font-weight: 700; color: var(--vsp-text-title);">
                                             {{ number_format($row['units']) }}
                                         </td>
@@ -302,15 +298,24 @@
                                             @if ($row['brand_name'])
                                                 <span class="vsp-badge vsp-badge-warn">model baru di {{ $row['brand_name'] }}</span>
                                             @else
-                                                <span class="vsp-badge vsp-badge-danger">brand baru</span>
+                                                <span class="vsp-badge vsp-badge-warn">belum ada di CONNECTING</span>
                                             @endif
                                         </td>
                                         <td style="padding: 8px 12px;">
-                                            <select wire:model="newRowForms.{{ $i }}.powertrain" class="vsp-input-control" style="padding: 4px 8px; min-width: 90px;">
-                                                @foreach (['BEV', 'HEV', 'PHEV', 'ICE'] as $pt)
-                                                    <option value="{{ $pt }}" @selected(($form['powertrain'] ?? $row['powertrain']) === $pt)>{{ $pt }}</option>
-                                                @endforeach
-                                            </select>
+                                            @if (in_array($row['powertrain'], ['BEV', 'HEV', 'PHEV']))
+                                                <select wire:model="newRowForms.{{ $i }}.powertrain" class="vsp-input-control" style="padding: 4px 8px; min-width: 90px;">
+                                                    @foreach (['BEV', 'HEV', 'PHEV', 'ICE'] as $pt)
+                                                        <option value="{{ $pt }}" @selected(($form['powertrain'] ?? $row['powertrain']) === $pt)>{{ $pt }}</option>
+                                                    @endforeach
+                                                </select>
+                                            @else
+                                                <select wire:model="newRowForms.{{ $i }}.powertrain" class="vsp-input-control" style="padding: 4px 8px; min-width: 90px;">
+                                                    <option value="">— pilih —</option>
+                                                    @foreach (['BEV', 'HEV', 'PHEV', 'ICE'] as $pt)
+                                                        <option value="{{ $pt }}" @selected(($form['powertrain'] ?? '') === $pt)>{{ $pt }}</option>
+                                                    @endforeach
+                                                </select>
+                                            @endif
                                         </td>
                                         <td style="padding: 8px 12px;">
                                             <select wire:model="newRowForms.{{ $i }}.category" class="vsp-input-control" style="padding: 4px 8px; min-width: 120px;">
