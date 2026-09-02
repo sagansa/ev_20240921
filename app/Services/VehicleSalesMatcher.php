@@ -147,7 +147,16 @@ class VehicleSalesMatcher
             return null;
         }
 
-        $row = VehicleConnecting::query()->where('raw_gabungan_key', $key)->first();
+        // Jalur utama: raw_gabungan_key. Fallback: bandingkan raw_gabungan
+        // tanpa spasi (case-insensitive) — baris yang diimpor lewat jalur
+        // lama/GUI bisa belum punya raw_gabungan_key terisi.
+        $compact = mb_strtoupper(str_replace(' ', '', trim((string) $gabungan)));
+        $row = VehicleConnecting::query()
+            ->where(function ($q) use ($key, $compact) {
+                $q->where('raw_gabungan_key', $key)
+                    ->orWhereRaw('UPPER(REPLACE(raw_gabungan, \' \', \'\')) = ?', [$compact]);
+            })
+            ->first();
 
         // Baris CONNECTING yang belum ter-link katalog tidak dihitung hit —
         // biarkan jalur fallback yang menentukan.

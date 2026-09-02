@@ -235,6 +235,19 @@ class VehicleConnectingSyncService
             $i('TYPE'), $i('POWERTRAIN'), $i('CATEGORY'), $i('SIZE'),
         ];
 
+        // Pulihkan raw_gabungan_key baris lama yang masih kosong (diimpor
+        // sebelum kolom ini ada / lewat jalur yang tidak mengisinya) —
+        // tanpa ini, pencocokan berbasis key meleset total.
+        VehicleConnecting::query()->whereNull('raw_gabungan_key')
+            ->chunkById(500, function ($rows) {
+                foreach ($rows as $r) {
+                    $k = preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper((string) $r->raw_gabungan));
+                    if ($k !== '' && $k !== null) {
+                        $r->forceFill(['raw_gabungan_key' => $k])->save();
+                    }
+                }
+            });
+
         $matcher = app(VehicleSalesMatcher::class);
         $brandsByKey = BrandVehicle::all()->keyBy(
             fn (BrandVehicle $b) => $matcher->normalize($matcher->canonicalBrandName($b->name)),
@@ -273,8 +286,9 @@ class VehicleConnectingSyncService
             $size = trim((string) $r[$iS]);
 
             VehicleConnecting::updateOrCreate(
-                ['raw_gabungan' => $gabungan],
+                ['raw_gabungan_key' => preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($gabungan))],
                 [
+                    'raw_gabungan' => $gabungan,
                     'fuel' => $fuel !== '' ? $fuel : null,
                     'brand_name' => $brand,
                     'model_name' => $model,
