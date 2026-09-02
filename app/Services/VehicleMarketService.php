@@ -147,20 +147,26 @@ class VehicleMarketService
         return (int) ($query->max('year') ?: now()->year);
     }
 
-    public function top(?int $year = null, ?string $powertrain = null, ?string $brand = null, int $limit = 10): array
+    public function top(int|string|null $year = null, ?string $powertrain = null, ?string $brand = null, int $limit = 10): array
     {
+        $isAll = $year === 'all';
         // Default: tahun terbaru yang punya baris LEVEL MODEL — tahun yang
         // hanya berisi rekap nasional menghasilkan ranking kosong.
-        $year ??= $this->latestModelYear($brand);
+        if (! $isAll) {
+            $year ??= $this->latestModelYear($brand);
+        }
         $powertrain = strtoupper($powertrain ?? 'BEV');
-        $key = "top:v2:{$year}:{$powertrain}:" . ($brand ?? '-') . ":{$limit}";
+        $cacheYear = $isAll ? 'all' : $year;
+        $key = "top:v2:{$cacheYear}:{$powertrain}:" . ($brand ?? '-') . ":{$limit}";
 
-        return $this->cached($key, function () use ($year, $powertrain, $brand, $limit) {
+        return $this->cached($key, function () use ($year, $isAll, $powertrain, $brand, $limit) {
             $base = VehicleSalesStat::query()
                 ->latestImports()
                 ->whereNull('month')
-                ->where('year', $year)
                 ->powertrain($powertrain);
+            if (! $isAll) {
+                $base->where('year', $year);
+            }
             if ($brand !== null) {
                 $base->where('raw_brand', $brand);
             }
@@ -178,14 +184,17 @@ class VehicleMarketService
             // (nama keluarga, bukan varian/type). Belum ter-link → per raw.
             // Query terpisah dgn kolom powertrain TERKUALIFIKASI — setelah
             // join, kolom itu ada di dua tabel (ambiguous).
-            $linkedModels = VehicleSalesStat::query()
+            $linkedQuery = VehicleSalesStat::query()
                 ->latestImports()
                 ->whereNull('month')
-                ->where('year', $year)
                 ->where('vehicle_sales_stats.powertrain', $powertrain)
                 ->whereNotNull('vehicle_sales_stats.model_vehicle_id')
                 ->join('model_vehicles', 'model_vehicles.id', '=', 'vehicle_sales_stats.model_vehicle_id')
-                ->join('brand_vehicles', 'brand_vehicles.id', '=', 'model_vehicles.brand_vehicle_id')
+                ->join('brand_vehicles', 'brand_vehicles.id', '=', 'model_vehicles.brand_vehicle_id');
+            if (! $isAll) {
+                $linkedQuery->where('vehicle_sales_stats.year', $year);
+            }
+            $linkedModels = $linkedQuery
                 ->selectRaw('model_vehicles.id as model_id, model_vehicles.name as model, brand_vehicles.name as brand, SUM(vehicle_sales_stats.units) as units')
                 ->groupBy('model_vehicles.id', 'model_vehicles.name', 'brand_vehicles.name')
                 ->orderByDesc('units')
@@ -220,7 +229,7 @@ class VehicleMarketService
                 ->take($limit)
                 ->values();
 
-            return ['year' => $year, 'powertrain' => $powertrain, 'brands' => $brands, 'models' => $models];
+            return ['year' => $isAll ? null : $year, 'powertrain' => $powertrain, 'brands' => $brands, 'models' => $models];
         });
     }
 
@@ -242,32 +251,40 @@ class VehicleMarketService
     /**
      * Peta brand → model khusus kendaraan listrik (BEV / PHEV) untuk filter & katalog.
      * Brand diurutkan berdasarkan penjualan EV tahun sebelumnya (fallback tahun berjalan).
+     * year=all → agregasi lintas tahun, urutkan by Σ units desc (abaikan prev_year).
      */
-    public function catalog(?int $year = null): array
+    public function catalog(int|string|null $year = null): array
     {
-        $year ??= (int) VehicleSalesStat::query()->latestImports()->whereNull('month')->max('year');
-        $prevYear = $year - 1;
+        $isAll = $year === 'all';
+        if (! $isAll) {
+            $year ??= (int) VehicleSalesStat::query()->latestImports()->whereNull('month')->max('year');
+        }
+        $cacheYear = $isAll ? 'all' : $year;
+        $prevYear = $isAll ? null : $year - 1;
 
-        return $this->cached("catalog:v5:{$year}", function () use ($year, $prevYear) {
+        return $this->cached("catalog:v5:{$cacheYear}", function () use ($year, $isAll, $prevYear) {
             // Level KELUARGA MODEL (bukan varian/type): baris ter-link ke
             // katalog digroup per model_vehicle; yang belum ter-link tetap
             // ditampilkan per raw_model (agar data tidak hilang).
-            $linked = VehicleSalesStat::query()
+            $linkedQuery = VehicleSalesStat::query()
                 ->latestImports()
                 ->whereNull('month')
-                ->where('year', $year)
                 ->whereIn('powertrain', ['BEV', 'PHEV'])
-                ->whereNotNull('model_vehicle_id')
+                ->whereNotNull('model_vehicle_id');
+            $unlinkedQuery = VehicleSalesStat::query()
+                ->latestImports()
+                ->whereNull('month')
+                ->whereIn('powertrain', ['BEV', 'PHEV'])
+                ->whereNull('model_vehicle_id');
+            if (! $isAll) {
+                $linkedQuery->where('year', $year);
+                $unlinkedQuery->where('year', $year);
+            }
+            $linked = $linkedQuery
                 ->selectRaw('model_vehicle_id, SUM(units) as units')
                 ->groupBy('model_vehicle_id')
                 ->get();
-
-            $unlinked = VehicleSalesStat::query()
-                ->latestImports()
-                ->whereNull('month')
-                ->where('year', $year)
-                ->whereIn('powertrain', ['BEV', 'PHEV'])
-                ->whereNull('model_vehicle_id')
+            $unlinked = $unlinkedQuery
                 ->selectRaw('raw_brand, raw_model, SUM(units) as units')
                 ->groupBy('raw_brand', 'raw_model')
                 ->get();
@@ -280,17 +297,20 @@ class VehicleMarketService
                 ->get(['id', 'name', 'category', 'size_class', 'brand_vehicle_id'])
                 ->keyBy('id');
 
-            // Ambil penjualan tahun sebelumnya untuk pengurutan
-            $prevYearSales = VehicleSalesStat::query()
-                ->latestImports()
-                ->whereNull('month')
-                ->where('year', $prevYear)
-                ->whereIn('powertrain', ['BEV', 'PHEV'])
-                ->selectRaw('raw_brand, SUM(units) as units')
-                ->groupBy('raw_brand')
-                ->pluck('units', 'raw_brand')
-                ->map(fn ($u) => (int) $u)
-                ->all();
+            // Ambil penjualan tahun sebelumnya untuk pengurutan (skip saat all)
+            $prevYearSales = [];
+            if (! $isAll && $prevYear !== null) {
+                $prevYearSales = VehicleSalesStat::query()
+                    ->latestImports()
+                    ->whereNull('month')
+                    ->where('year', $prevYear)
+                    ->whereIn('powertrain', ['BEV', 'PHEV'])
+                    ->selectRaw('raw_brand, SUM(units) as units')
+                    ->groupBy('raw_brand')
+                    ->pluck('units', 'raw_brand')
+                    ->map(fn ($u) => (int) $u)
+                    ->all();
+            }
 
             $brands = [];
             $addModel = function (string $brandName, string $modelName, int $units, ?string $category, ?string $sizeClass) use (&$brands, &$prevYearSales) {
@@ -324,19 +344,26 @@ class VehicleMarketService
                 $addModel($row->raw_brand, $row->raw_model, (int) $row->units, null, null);
             }
 
-            // Urutkan brand berdasarkan penjualan tahun sebelumnya desc (fallback penjualan tahun ini)
-            $sortedBrands = collect($brands)
-                ->sort(function ($a, $b) {
-                    if ($b['prev_units'] !== $a['prev_units']) {
-                        return $b['prev_units'] <=> $a['prev_units'];
-                    }
-                    return $b['units'] <=> $a['units'];
-                })
-                ->values()
-                ->all();
+            // Urutkan brand: saat all → Σ units desc; else prev_units desc fallback units
+            if ($isAll) {
+                $sortedBrands = collect($brands)
+                    ->sort(fn ($a, $b) => $b['units'] <=> $a['units'])
+                    ->values()
+                    ->all();
+            } else {
+                $sortedBrands = collect($brands)
+                    ->sort(function ($a, $b) {
+                        if ($b['prev_units'] !== $a['prev_units']) {
+                            return $b['prev_units'] <=> $a['prev_units'];
+                        }
+                        return $b['units'] <=> $a['units'];
+                    })
+                    ->values()
+                    ->all();
+            }
 
             return [
-                'year' => $year,
+                'year' => $isAll ? null : $year,
                 'brands' => $sortedBrands,
             ];
         });

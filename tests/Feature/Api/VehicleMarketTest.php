@@ -231,4 +231,43 @@ class VehicleMarketTest extends TestCase
         $this->assertArrayNotHasKey('TOYOTA', $brands);
         $this->assertArrayNotHasKey('WULING', $brands);
     }
+
+    public function test_top_all_years_mengagregasikan_unit_dan_kembalikan_year_null(): void
+    {
+        $res = $this->getJson('/api/v1/vehicle-market/top?year=all');
+        $res->assertOk();
+        $this->assertNull($res->json('data.year'));
+        $this->assertSame('BEV', $res->json('data.powertrain'));
+
+        $brands = collect($res->json('data.brands'))->keyBy('brand');
+        $this->assertEquals(12000, $brands['BYD']['units']);
+        $this->assertEquals(6000, $brands['WULING']['units']);
+
+        $models = collect($res->json('data.models'))->keyBy('model');
+        $this->assertEquals(12000, $models['Atto 1']['units']);
+        $this->assertEquals(6000, $models['Binguo']['units']);
+    }
+
+    public function test_catalog_all_years_mengagregasikan_unit_dan_mengurutkan_brand_desc(): void
+    {
+        $res = $this->getJson('/api/v1/vehicle-market/catalog?year=all');
+        $res->assertOk();
+        $this->assertNull($res->json('data.year'));
+
+        $brands = collect($res->json('data.brands'));
+        $this->assertCount(2, $brands);
+        // BYD (12000) harus sebelum Wuling (6000)
+        $this->assertSame('BYD', $brands[0]['brand']);
+        $this->assertEquals(12000, $brands[0]['units']);
+        $this->assertSame('Wuling', $brands[1]['brand']);
+        $this->assertEquals(6000, $brands[1]['units']);
+    }
+
+    public function test_top_year_invalid_fallback_ke_tahun_terbaru(): void
+    {
+        $res = $this->getJson('/api/v1/vehicle-market/top?year=foo');
+        $res->assertOk();
+        $this->assertEquals(2026, $res->json('data.year'));
+    }
 }
+
