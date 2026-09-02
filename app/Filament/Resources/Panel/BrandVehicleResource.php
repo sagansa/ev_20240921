@@ -7,6 +7,7 @@ use App\Filament\Resources\Panel\BrandVehicleResource\Pages;
 use App\Filament\Resources\Panel\BrandVehicleResource\RelationManagers;
 use App\Models\BrandVehicle;
 use Filament\Actions;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
@@ -70,6 +71,13 @@ class BrandVehicleResource extends Resource
                             ->label('Nama Brand')
                             ->placeholder('cth. Wuling, BYD, Hyundai, Chery, MG')
                             ->autofocus(),
+
+                        Select::make('brand_group_id')
+                            ->label('Induk Perusahaan (Grup)')
+                            ->relationship('brandGroup', 'name')
+                            ->searchable()
+                            ->nullable()
+                            ->helperText('Klaster industri lintas brand (mis. SAIC = MG + Wuling). Kosongkan bila brand mandiri.'),
                     ]),
                 ]),
         ]);
@@ -91,6 +99,13 @@ class BrandVehicleResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
+
+                TextColumn::make('brandGroup.name')
+                    ->label('Grup Induk')
+                    ->badge()
+                    ->color('success')
+                    ->placeholder('—')
+                    ->toggleable(),
 
                 TextColumn::make('model_vehicles_count')
                     ->counts('modelVehicles')

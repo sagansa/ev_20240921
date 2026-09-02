@@ -171,16 +171,21 @@ class VehicleMarketService
             $hev = (int) $byMonth->where('powertrain', 'HEV')->sum('units');
             $ice = (int) $byMonth->where('powertrain', 'ICE')->sum('units');
 
-            // Share dihitung hanya dari tahun yang punya total bulanan > 0.
+            // Satu (year, month) bisa punya beberapa baris powertrain —
+            // agregasi per TAHUN dulu, baru share per tahun dirata-ratakan.
+            $unitsByYear = [];
+            foreach ($byMonth as $row) {
+                $unitsByYear[$row->year] = ($unitsByYear[$row->year] ?? 0) + (int) $row->units;
+            }
             $shares = [];
             $unitsSum = 0;
-            foreach ($byMonth as $row) {
-                $total = $yearlyTotals[$row->year] ?? 0;
+            foreach ($unitsByYear as $y => $units) {
+                $total = $yearlyTotals[$y] ?? 0;
                 if ($total <= 0) {
                     continue;
                 }
-                $shares[] = ((int) $row->units) / $total;
-                $unitsSum += (int) $row->units;
+                $shares[] = $units / $total;
+                $unitsSum += $units;
             }
 
             $months[] = [
@@ -415,12 +420,7 @@ class VehicleMarketService
             // grup bisa kehilangan anggota di luar top-10) lalu map ke grup
             // via katalog. Brand tanpa grup katalog = grup mandiri atas
             // nama raw-nya sendiri (tidak pernah dibuang).
-            $groupByName = \App\Models\BrandVehicle::query()
-                ->whereNotNull('brand_group_id')
-                ->with('brandGroup:id,name')
-                ->get(['id', 'name', 'brand_group_id'])
-                ->keyBy(fn ($b) => mb_strtolower(trim($b->name)))
-                ->map(fn ($b) => $b->brandGroup?->name);
+            $groupByName = $this->rawBrandGroupMap();
 
             $grouped = [];
             foreach (
@@ -526,13 +526,9 @@ class VehicleMarketService
                 ->get(['id', 'name', 'category', 'size_class', 'brand_vehicle_id'])
                 ->keyBy('id');
 
-            // Peta nama brand katalog → nama grup induk (untuk badge katalog).
-            $groupByName = \App\Models\BrandVehicle::query()
-                ->whereNotNull('brand_group_id')
-                ->with('brandGroup:id,name')
-                ->get(['id', 'name', 'brand_group_id'])
-                ->keyBy(fn ($b) => mb_strtolower(trim($b->name)))
-                ->map(fn ($b) => $b->brandGroup?->name);
+            // Peta nama brand → nama grup induk (untuk badge katalog) —
+            // termasuk raw alias via jalur link model.
+            $groupByName = $this->rawBrandGroupMap();
 
             // Ambil penjualan tahun sebelumnya untuk pengurutan (skip saat all)
             $prevYearSales = [];
@@ -746,6 +742,59 @@ class VehicleMarketService
     public function flush(): void
     {
         Cache::increment($this->versionKey()) || Cache::put($this->versionKey(), (int) (Cache::get($this->versionKey()) ?: 1) + 1, now()->addYear());
+    }
+
+    /**
+     * Peta raw_brand / nama brand katalog → nama grup induk, dua jalur:
+     * (1) nama brand katalog yang punya grup; (2) raw alias yang tidak
+     * cocok nama katalog (MORRIS GARAGE → MG, MITSUBUSHI → MITSUBISHI)
+     * diikuti lewat brand katalog tempat mayoritas unitnya ter-link model.
+     *
+     * @return array<string, string> key = strtolower(trim(nama raw))
+     */
+    protected function rawBrandGroupMap(): array
+    {
+        $idToGroup = [];
+        $map = [];
+        foreach (
+            \App\Models\BrandVehicle::query()
+                ->whereNotNull('brand_group_id')
+                ->with('brandGroup:id,name')
+                ->get(['id', 'name', 'brand_group_id'])
+            as $brand
+        ) {
+            $group = $brand->brandGroup?->name;
+            if ($group === null) {
+                continue;
+            }
+            $map[mb_strtolower(trim($brand->name))] = $group;
+            $idToGroup[$brand->id] = $group;
+        }
+
+        if ($idToGroup === []) {
+            return $map;
+        }
+
+        // Jalur (2): raw_brand → brand katalog dominan menurut Σ unit
+        // baris ter-link (urut desc → entri pertama yang menang).
+        $votes = VehicleSalesStat::query()
+            ->latestImports()
+            ->whereNull('month')
+            ->join('model_vehicles', 'model_vehicles.id', '=', 'vehicle_sales_stats.model_vehicle_id')
+            ->whereIn('model_vehicles.brand_vehicle_id', array_keys($idToGroup))
+            ->selectRaw('vehicle_sales_stats.raw_brand as raw_brand, model_vehicles.brand_vehicle_id as brand_id, SUM(vehicle_sales_stats.units) as units')
+            ->groupBy('vehicle_sales_stats.raw_brand', 'model_vehicles.brand_vehicle_id')
+            ->orderByDesc('units')
+            ->get();
+
+        foreach ($votes as $vote) {
+            $key = mb_strtolower(trim((string) $vote->raw_brand));
+            if (! isset($map[$key])) {
+                $map[$key] = $idToGroup[$vote->brand_id];
+            }
+        }
+
+        return $map;
     }
 
     /** @return array<int, array{total: int, months: array<int, int>}> */

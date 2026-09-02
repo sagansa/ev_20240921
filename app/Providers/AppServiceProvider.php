@@ -3,11 +3,14 @@
 namespace App\Providers;
 
 use App\Models\ChargerLocation;
+use App\Models\BrandGroup;
+use App\Models\BrandVehicle;
 use App\Models\LocationReport;
 use App\Models\PersonalAccessToken;
 use App\Models\Tester;
 use App\Observers\ChargerLocationObserver;
 use App\Observers\LocationReportObserver;
+use App\Observers\MarketCacheObserver;
 use App\Observers\TesterObserver;
 use Filament\Forms\Components\DatePicker;
 use Filament\Schemas\Components\Section;
@@ -59,6 +62,9 @@ class AppServiceProvider extends ServiceProvider
         ChargerLocation::observe(ChargerLocationObserver::class);
         LocationReport::observe(LocationReportObserver::class);
         Tester::observe(TesterObserver::class);
+        // Klaster brand memengaruhi payload Pasar EV yang ter-cache 24 jam.
+        BrandGroup::observe(MarketCacheObserver::class);
+        BrandVehicle::observe(MarketCacheObserver::class);
 
         // Share App Download Setting with views
         View::composer(['layouts.main', 'layouts.ev.*'], function ($view) {
