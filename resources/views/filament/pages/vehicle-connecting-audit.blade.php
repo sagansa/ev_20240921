@@ -1,275 +1,95 @@
 <x-filament-panels::page>
     <style>
-        :root {
-            --vca-bg-card: #ffffff;
-            --vca-bg-sub: rgba(0, 0, 0, 0.02);
-            --vca-bg-header: rgba(0, 0, 0, 0.015);
-            --vca-border: rgba(156, 163, 175, 0.24);
-            --vca-border-sub: rgba(156, 163, 175, 0.14);
-            --vca-text-title: #0f172a;
-            --vca-text-body: #334155;
-            --vca-text-muted: #64748b;
-            --vca-input-bg: #ffffff;
-            --vca-input-border: rgba(156, 163, 175, 0.35);
-            --vca-table-hover: rgba(15, 23, 42, 0.03);
-            --vca-table-head-bg: #f8fafc;
-        }
+    :root {
+        --vau-bg-card: #ffffff;
+        --vau-border: rgba(156, 163, 175, 0.25);
+        --vau-title: #111827;
+        --vau-body: #374151;
+        --vau-muted: #6b7280;
+        --vau-th-bg: #f9fafb;
+        --vau-row-hover: rgba(156, 163, 175, 0.08);
+    }
 
-        .dark, [data-theme="dark"] {
-            --vca-bg-card: rgba(30, 41, 59, 0.45);
-            --vca-bg-sub: rgba(255, 255, 255, 0.02);
-            --vca-bg-header: rgba(255, 255, 255, 0.02);
-            --vca-border: rgba(255, 255, 255, 0.08);
-            --vca-border-sub: rgba(255, 255, 255, 0.05);
-            --vca-text-title: #f8fafc;
-            --vca-text-body: #cbd5e1;
-            --vca-text-muted: #94a3b8;
-            --vca-input-bg: rgba(15, 23, 42, 0.6);
-            --vca-input-border: rgba(255, 255, 255, 0.12);
-            --vca-table-hover: rgba(255, 255, 255, 0.03);
-            --vca-table-head-bg: #0f172a;
-        }
+    .dark, [data-theme="dark"] {
+        --vau-bg-card: rgba(255, 255, 255, 0.04);
+        --vau-border: rgba(255, 255, 255, 0.1);
+        --vau-title: #f9fafb;
+        --vau-body: #e5e7eb;
+        --vau-muted: #9ca3af;
+        --vau-th-bg: #111827;
+        --vau-row-hover: rgba(156, 163, 175, 0.06);
+    }
 
-        .vca-glass {
-            background: var(--vca-bg-card);
-            border: 1px solid var(--vca-border);
-            border-radius: 14px;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .vca-glass:hover {
-            border-color: rgba(16, 185, 129, 0.3);
-        }
-
-        .vca-kpi-card {
-            background: var(--vca-bg-card);
-            border: 1px solid var(--vca-border);
-            border-radius: 12px;
-            padding: 14px 16px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            transition: all 0.18s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .vca-kpi-card:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        .vca-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 3px 8px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 600;
-            line-height: 1.25;
-            letter-spacing: 0.2px;
-            white-space: nowrap;
-        }
-
-        .vca-badge-emerald {
-            background: rgba(16, 185, 129, 0.12);
-            color: #059669;
-            border: 1px solid rgba(16, 185, 129, 0.25);
-        }
-        .dark .vca-badge-emerald, [data-theme="dark"] .vca-badge-emerald {
-            background: rgba(16, 185, 129, 0.2);
-            color: #34d399;
-            border-color: rgba(16, 185, 129, 0.35);
-        }
-
-        .vca-badge-amber {
-            background: rgba(245, 158, 11, 0.12);
-            color: #d97706;
-            border: 1px solid rgba(245, 158, 11, 0.25);
-        }
-        .dark .vca-badge-amber, [data-theme="dark"] .vca-badge-amber {
-            background: rgba(245, 158, 11, 0.2);
-            color: #fbbf24;
-            border-color: rgba(245, 158, 11, 0.35);
-        }
-
-        .vca-badge-rose {
-            background: rgba(244, 63, 94, 0.12);
-            color: #e11d48;
-            border: 1px solid rgba(244, 63, 94, 0.25);
-        }
-        .dark .vca-badge-rose, [data-theme="dark"] .vca-badge-rose {
-            background: rgba(244, 63, 94, 0.2);
-            color: #fb7185;
-            border-color: rgba(244, 63, 94, 0.35);
-        }
-
-        .vca-badge-sky {
-            background: rgba(14, 165, 233, 0.12);
-            color: #0284c7;
-            border: 1px solid rgba(14, 165, 233, 0.25);
-        }
-        .dark .vca-badge-sky, [data-theme="dark"] .vca-badge-sky {
-            background: rgba(14, 165, 233, 0.2);
-            color: #38bdf8;
-            border-color: rgba(14, 165, 233, 0.35);
-        }
-
-        .vca-badge-indigo {
-            background: rgba(99, 102, 241, 0.12);
-            color: #4f46e5;
-            border: 1px solid rgba(99, 102, 241, 0.25);
-        }
-        .dark .vca-badge-indigo, [data-theme="dark"] .vca-badge-indigo {
-            background: rgba(99, 102, 241, 0.2);
-            color: #818cf8;
-            border-color: rgba(99, 102, 241, 0.35);
-        }
-
-        .vca-badge-slate {
-            background: rgba(100, 116, 139, 0.12);
-            color: #475569;
-            border: 1px solid rgba(100, 116, 139, 0.2);
-        }
-        .dark .vca-badge-slate, [data-theme="dark"] .vca-badge-slate {
-            background: rgba(255, 255, 255, 0.08);
-            color: #94a3b8;
-            border-color: rgba(255, 255, 255, 0.12);
-        }
-
-        .vca-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 9px;
-            font-size: 12.5px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.18s ease;
-            text-decoration: none;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            white-space: nowrap;
-        }
-
-        .vca-btn-primary {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: #ffffff !important;
-            border: none;
-        }
-        .vca-btn-primary:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-            filter: brightness(1.05);
-        }
-
-        .vca-btn-secondary {
-            background: var(--vca-input-bg);
-            color: var(--vca-text-title);
-            border: 1px solid var(--vca-input-border);
-        }
-        .vca-btn-secondary:hover:not(:disabled) {
-            background: rgba(16, 185, 129, 0.08);
-            border-color: #10b981;
-            color: #10b981;
-        }
-
-        .vca-chip {
-            padding: 6px 12px;
-            border-radius: 9999px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            border: 1px solid var(--vca-border);
-            background: var(--vca-input-bg);
-            color: var(--vca-text-body);
-            transition: all 0.15s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            white-space: nowrap;
-        }
-
-        .vca-chip:hover {
-            border-color: rgba(16, 185, 129, 0.5);
-            color: var(--vca-text-title);
-        }
-
-        .vca-chip-active {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-            color: #ffffff !important;
-            border-color: transparent !important;
-            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
-        }
-
-        .vca-input-control {
-            background: var(--vca-input-bg);
-            color: var(--vca-text-title);
-            border: 1px solid var(--vca-input-border);
-            border-radius: 9px;
-            padding: 7px 12px;
-            font-size: 13px;
-            outline: none;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .vca-input-control:focus {
-            border-color: #10b981;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
-        }
-
-        .vca-table {
-            width: 100%;
-            font-size: 12.5px;
-            text-align: left;
-            border-collapse: collapse;
-        }
-
-        .vca-table th {
-            padding: 10px 12px;
-            font-size: 11.5px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            color: var(--vca-text-muted);
-            border-bottom: 1px solid var(--vca-border);
-            white-space: nowrap;
-            position: sticky;
-            top: 0;
-            background: var(--vca-table-head-bg);
-            z-index: 2;
-        }
-
-        .vca-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--vca-border-sub);
-            vertical-align: top;
-            color: var(--vca-text-body);
-        }
-
-        .vca-table tr:hover td {
-            background: var(--vca-table-hover);
-        }
-
-        .vca-progress-container {
-            height: 6px;
-            border-radius: 9999px;
-            background: rgba(156, 163, 175, 0.2);
-            overflow: hidden;
-            width: 100%;
-            margin-top: 8px;
-        }
-
-        .vca-progress-fill {
-            height: 100%;
-            border-radius: 9999px;
-            transition: width 0.3s ease;
-        }
-    </style>
+    .vau-card {
+        border: 1px solid var(--vau-border);
+        border-radius: 12px;
+        padding: 12px 16px;
+        background: var(--vau-bg-card);
+    }
+    .vau-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.3;
+        white-space: nowrap;
+    }
+    .vau-badge-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .vau-badge-warn { background: rgba(245, 158, 11, 0.18); color: #b45309; }
+    .vau-badge-ok { background: rgba(16, 185, 129, 0.15); color: #059669; }
+    .vau-badge-gray { background: rgba(156, 163, 175, 0.15); color: #4b5563; }
+    .dark .vau-badge-warn { color: #fbbf24; }
+    .dark .vau-badge-ok { color: #34d399; }
+    .dark .vau-badge-gray { color: #d1d5db; }
+    .vau-input {
+        background: transparent;
+        color: var(--vau-title);
+        border: 1px solid var(--vau-border);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        outline: none;
+    }
+    .vau-input:focus { border-color: #10b981; }
+    .vau-chip {
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid var(--vau-border);
+        background: transparent;
+        color: var(--vau-body);
+        white-space: nowrap;
+    }
+    .vau-chip:hover { background: rgba(156, 163, 175, 0.12); }
+    .vau-chip-active {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #ffffff;
+        border-color: transparent;
+    }
+    .vau-table { width: 100%; font-size: 12.5px; text-align: left; border-collapse: collapse; }
+    .vau-table th {
+        padding: 8px 10px;
+        font-weight: 600;
+        color: var(--vau-muted);
+        border-bottom: 1px solid var(--vau-border);
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        background: var(--vau-th-bg);
+        z-index: 1;
+    }
+    .vau-table td {
+        padding: 7px 10px;
+        border-bottom: 1px solid rgba(156, 163, 175, 0.12);
+        vertical-align: top;
+        color: var(--vau-body);
+    }
+    .vau-table tr:hover td { background: var(--vau-row-hover); }
+</style>
 
     <div style="display: flex; flex-direction: column; gap: 20px;">
 
@@ -689,8 +509,49 @@
         </div>
 
         {{-- 5. PAGINATION CONTROLS --}}
-        <div style="margin-top: 4px;">
-            {{ $rows->links() }}
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+            <div style="font-size: 12.5px; color: var(--vau-muted);">
+                Menampilkan <strong style="color: #e5e7eb;">{{ number_format($rows->firstItem() ?? 0) }}–{{ number_format($rows->lastItem() ?? 0) }}</strong>
+                dari <strong style="color: #e5e7eb;">{{ number_format($rows->total()) }}</strong> baris
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                @if ($rows->onFirstPage())
+                    <span class="vau-chip" style="opacity: 0.4; cursor: default;">‹ Prev</span>
+                @else
+                    <button type="button" class="vau-chip" wire:click="gotoPage({{ $rows->currentPage() - 1 }})">‹ Prev</button>
+                @endif
+
+                @php
+                    $current = $rows->currentPage();
+                    $last = $rows->lastPage();
+                    $window = range(max(1, $current - 2), min($last, $current + 2));
+                @endphp
+
+                @if ($window[0] > 1)
+                    <button type="button" class="vau-chip" wire:click="gotoPage(1)">1</button>
+                    @if ($window[0] > 2) <span style="color: var(--vau-muted);">…</span> @endif
+                @endif
+
+                @foreach ($window as $page)
+                    @if ($page === $current)
+                        <span class="vau-chip vau-chip-active" style="cursor: default;">{{ $page }}</span>
+                    @else
+                        <button type="button" class="vau-chip" wire:click="gotoPage({{ $page }})">{{ $page }}</button>
+                    @endif
+                @endforeach
+
+                @if ($window[count($window) - 1] < $last)
+                    @if ($window[count($window) - 1] < $last - 1) <span style="color: var(--vau-muted);">…</span> @endif
+                    <button type="button" class="vau-chip" wire:click="gotoPage({{ $last }})">{{ $last }}</button>
+                @endif
+
+                @if ($rows->hasMorePages())
+                    <button type="button" class="vau-chip" wire:click="gotoPage({{ $rows->currentPage() + 1 }})">Next ›</button>
+                @else
+                    <span class="vau-chip" style="opacity: 0.4; cursor: default;">Next ›</span>
+                @endif
+            </div>
         </div>
     </div>
 </x-filament-panels::page>
