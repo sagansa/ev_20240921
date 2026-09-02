@@ -103,15 +103,22 @@ class VehicleConnectingSync extends Page
         }
     }
 
+    /** Hapus baris master yang tidak ada di CSV saat import connecting. */
+    public bool $pruneConnecting = false;
+
     /** Langkah 2: CSV → tabel vehicle_connectings (master). */
     public function importConnecting(): void
     {
         $this->validate(['csvFile' => ['required', 'file', 'mimes:csv,txt', 'max:20480']]);
 
         try {
-            $res = app(VehicleConnectingSyncService::class)->importConnectingTable($this->csvFile->getRealPath());
+            $res = app(VehicleConnectingSyncService::class)->importConnectingTable(
+                $this->csvFile->getRealPath(),
+                $this->pruneConnecting,
+            );
             $time = now()->format('H:i:s');
-            $this->log[] = "[{$time}] 💾 Master Connecting: {$res['saved']} baris berhasil disimpan".
+            $this->log[] = "[{$time}] 💾 Master Connecting: {$res['saved']} baris disimpan".
+                (($res['pruned'] ?? 0) > 0 ? " | {$res['pruned']} baris sisa dihapus (prune)" : '').
                 (count($res['unresolved']) > 0
                     ? ' | link katalog belum lengkap: '.implode('; ', array_slice($res['unresolved'], 0, 5))
                     : ' | semua ter-link ke katalog');

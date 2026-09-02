@@ -411,6 +411,10 @@
                         <p style="margin: 0; font-size: 12px; color: var(--vcs-text-muted); line-height: 1.4;">
                             Simpan data CSV ke tabel master <code>vehicle_connectings</code> (upsert kunci unik <code>raw_gabungan</code>).
                         </p>
+                        <label style="display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--vcs-text-body); cursor: pointer;">
+                            <input type="checkbox" wire:model="pruneConnecting" />
+                            Hapus baris master yang tidak ada di CSV ini (bersihkan sisa nama lama/typo)
+                        </label>
                     </div>
                     <button type="button" wire:click="importConnecting" wire:loading.attr="disabled" wire:target="importConnecting"
                             wire:confirm="Simpan CSV ke tabel master Vehicle Connecting?"

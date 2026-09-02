@@ -274,10 +274,21 @@ class VehicleConnectingSyncService
             $category = trim((string) $r[$iC]);
             $size = trim((string) $r[$iS]);
 
-            VehicleConnecting::updateOrCreate(
-                ['raw_gabungan_key' => preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($gabungan))],
-                [
-                    'raw_gabungan' => $gabungan,
+            // Klaim baris lama by key ATAU by raw — baris warisan kode lama
+            // yang belum punya key (mis. varian ejaan) ikut terpulihkan
+            // saat re-import, tidak tertinggal tanpa kunci selamanya.
+            $existing = VehicleConnecting::query()
+                ->where(function ($q) use ($gabungan) {
+                    $q->where('raw_gabungan_key', preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($gabungan)))
+                        ->orWhere('raw_gabungan', $gabungan);
+                })
+                ->first();
+
+            // raw_gabungan existing TIDAK ditimpa (kembar ejaan seperti
+            // "ZY-HR" vs "ZY - HR" berbagi key; menimpa raw memicu bentrok
+            // unique dgn kembarannya). Raw baru hanya utk baris segar.
+            $payload = [
+                    'raw_gabungan_key' => preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper($gabungan)),
                     'fuel' => $fuel !== '' ? $fuel : null,
                     'brand_name' => $brand,
                     'model_name' => $model,
@@ -288,8 +299,37 @@ class VehicleConnectingSyncService
                     'powertrain' => $pt !== '' ? $pt : null,
                     'category' => $category !== '' ? $category : null,
                     'size_class' => $size !== '' ? $size : null,
-                ],
-            );
+            ];
+
+            if ($existing !== null) {
+                // Unique(raw_gabungan_key/raw_gabungan): baris kembar ejaan
+                // (mis. "ZY-HR" vs "ZY - HR") hanya satu yang boleh pegang
+                // key — bila bentrok, perbarui tanpa key (matcher tetap
+                // menemukannya lewat kembarannya).
+                try {
+                    $existing->fill($payload)->save();
+                } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                    unset($payload['raw_gabungan_key']);
+                    $existing->fill($payload)->save();
+                }
+            } else {
+                $newPayload = ['raw_gabungan' => $gabungan] + $payload;
+
+                try {
+                    VehicleConnecting::create($newPayload);
+                } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                    $existing = VehicleConnecting::where('raw_gabungan', $gabungan)->first()
+                        ?? VehicleConnecting::where('raw_gabungan_key', $payload['raw_gabungan_key'])->first();
+                    if ($existing !== null) {
+                        try {
+                            $existing->fill($payload)->save();
+                        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                            unset($payload['raw_gabungan_key']);
+                            $existing->fill($payload)->save();
+                        }
+                    }
+                }
+            }
 
             if ($brandVehicle === null || $modelVehicle === null) {
                 $unresolved[] = "$brand | $model";
