@@ -9,6 +9,7 @@ use App\Models\SalesImport;
 use App\Models\VehicleSalesStat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -24,6 +25,8 @@ class VehicleMarketGrupTest extends TestCase
     {
         parent::setUp();
         Cache::flush();
+        // Revisi 2, poin 4: endpoint vehicle-market auth required.
+        Sanctum::actingAs(\App\Models\User::factory()->create(), abilities: ['*']);
 
         $saic = BrandGroup::create(['name' => 'SAIC']);
         $mg = BrandVehicle::create(['name' => 'MG', 'brand_group_id' => $saic->id]);
@@ -84,14 +87,14 @@ class VehicleMarketGrupTest extends TestCase
         $this->assertSame(200, $data['groups'][0]['units']);
         $this->assertSame(2, $data['groups'][0]['models']);
         $this->assertSame([
-            ['brand' => 'MG', 'units' => 120],
-            ['brand' => 'Wuling', 'units' => 80],
+            ['brand' => 'MG', 'units' => 120, 'logo_url' => null],
+            ['brand' => 'Wuling', 'units' => 80, 'logo_url' => null],
         ], $data['groups'][0]['brands']);
 
         // Brand tanpa grup = grup mandiri atas nama raw-nya.
         $this->assertSame('Tesla', $data['groups'][1]['group']);
         $this->assertSame(30, $data['groups'][1]['units']);
-        $this->assertSame([['brand' => 'Tesla', 'units' => 30]], $data['groups'][1]['brands']);
+        $this->assertSame([['brand' => 'Tesla', 'units' => 30, 'logo_url' => null]], $data['groups'][1]['brands']);
     }
 
     public function test_top_per_tahun_groups_hanya_tahun_tersebut(): void

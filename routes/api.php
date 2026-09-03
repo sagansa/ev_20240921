@@ -50,13 +50,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/spklu/{id}', [SpkluLocationController::class, 'show']);
     Route::get('/meta/filters', [SpkluLocationController::class, 'metaFilters']);
 
-    // Data pasar kendaraan (sumber: import GAIKINDO) — publik, cache 24 jam
-    Route::get('/vehicle-market/summary', [VehicleMarketController::class, 'summary']);
-    Route::get('/vehicle-market/trend', [VehicleMarketController::class, 'trend']);
-    Route::get('/vehicle-market/top', [VehicleMarketController::class, 'top']);
-    Route::get('/vehicle-market/catalog', [VehicleMarketController::class, 'catalog']);
-    Route::get('/vehicle-market/composition', [VehicleMarketController::class, 'composition']);
-    Route::get('/vehicle-market/model-history', [VehicleMarketController::class, 'modelHistory']);
+    // Data pasar kendaraan (sumber: import GAIKINDO) — dipindah ke auth:sanctum (Revisi 2, poin 4)
 
     // Station reviews (Fase 1) — list & summary publik; eligibility/store/delete auth
     Route::get('/stations/{station}/reviews', [StationReviewController::class, 'index']);
@@ -173,6 +167,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/stations/{station}/save', [SavedStationController::class, 'toggle']);
         Route::get('/stations/{station}/save', [SavedStationController::class, 'check']);
         Route::get('/me/saved-stations', [SavedStationController::class, 'index']);
+
+        // Data pasar kendaraan (sumber: import GAIKINDO) — auth required (Revisi 2, poin 4)
+        Route::get('/vehicle-market/meta', [VehicleMarketController::class, 'meta']);
+        Route::get('/vehicle-market/summary', [VehicleMarketController::class, 'summary']);
+        Route::get('/vehicle-market/trend', [VehicleMarketController::class, 'trend']);
+        Route::get('/vehicle-market/top', [VehicleMarketController::class, 'top']);
+        Route::get('/vehicle-market/catalog', [VehicleMarketController::class, 'catalog']);
+        Route::get('/vehicle-market/composition', [VehicleMarketController::class, 'composition']);
+        Route::get('/vehicle-market/model-history', [VehicleMarketController::class, 'modelHistory']);
 
         // Testing funnel — register tester (auth)
         Route::post('/testers/register', [TesterController::class, 'register'])->middleware('throttle:10,1');

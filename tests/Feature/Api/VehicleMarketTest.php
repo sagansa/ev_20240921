@@ -6,16 +6,20 @@ use App\Models\BrandVehicle;
 use App\Models\ModelVehicle;
 use App\Models\SalesImport;
 use App\Models\VehicleSalesStat;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class VehicleMarketTest extends TestCase
 {
-    use RefreshDatabase;
+    use \Illuminate\Foundation\Testing\RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Revisi 2, poin 4: semua endpoint auth required
+        $user = \App\Models\User::factory()->create();
+        Sanctum::actingAs($user, abilities: ['*']);
 
         $byd = BrandVehicle::create(['name' => 'BYD']);
         $wuling = BrandVehicle::create(['name' => 'Wuling']);
@@ -268,6 +272,105 @@ class VehicleMarketTest extends TestCase
         $res = $this->getJson('/api/v1/vehicle-market/top?year=foo');
         $res->assertOk();
         $this->assertEquals(2026, $res->json('data.year'));
+    }
+
+    public function test_top_dan_catalog_menyertakan_logo_url_brand(): void
+    {
+        // Set logo pada BrandVehicle BYD
+        $byd = \App\Models\BrandVehicle::where('name', 'BYD')->first();
+        if ($byd) {
+            $byd->update(['image' => 'images/brand/byd.png']);
+            app(\App\Services\VehicleMarketService::class)->flush();
+        }
+
+        $topRes = $this->getJson('/api/v1/vehicle-market/top?year=2025&powertrain=BEV');
+        $topRes->assertOk();
+        $bydTop = collect($topRes->json('data.brands'))->firstWhere('brand', 'BYD');
+        $this->assertNotNull($bydTop);
+        $this->assertSame('/storage/images/brand/byd.png', $bydTop['logo_url']);
+
+        $bydModel = collect($topRes->json('data.models'))->firstWhere('brand', 'BYD');
+        $this->assertNotNull($bydModel);
+        $this->assertSame('/storage/images/brand/byd.png', $bydModel['brand_logo_url']);
+
+        $catRes = $this->getJson('/api/v1/vehicle-market/catalog?year=2025');
+        $catRes->assertOk();
+        $bydCat = collect($catRes->json('data.brands'))->firstWhere('brand', 'BYD');
+        $this->assertNotNull($bydCat);
+        $this->assertSame('/storage/images/brand/byd.png', $bydCat['logo_url']);
+
+        $histRes = $this->getJson('/api/v1/vehicle-market/model-history?brand=BYD&model=Atto%201');
+        $histRes->assertOk();
+        $this->assertSame('/storage/images/brand/byd.png', $histRes->json('data.brand_logo_url'));
+    }
+
+    /**
+     * Revisi 2, poin 1: model dengan >1 powertrain tampil terpisah per
+     * powertrain, masing-masing dengan image dari type_vehicles dominan.
+     */
+    public function test_model_terpisah_per_powertrain_dengan_image_per_tipe(): void
+    {
+        $toyota = \App\Models\BrandVehicle::create(['name' => 'Toyota']);
+        $alphard = \App\Models\ModelVehicle::create(['brand_vehicle_id' => $toyota->id, 'name' => 'Alphard']);
+        $hevType = \App\Models\TypeVehicle::create([
+            'model_vehicle_id' => $alphard->id, 'name' => 'Alphard 2.5 HEV', 'type_charger' => [], 'image' => 'images/type/alphard-hev.webp',
+        ]);
+        $iceType = \App\Models\TypeVehicle::create([
+            'model_vehicle_id' => $alphard->id, 'name' => 'Alphard 2.4 G', 'type_charger' => [], 'image' => 'images/type/alphard-ice.webp',
+        ]);
+        $import = SalesImport::create([
+            'file_name' => '2026-hev.xlsx', 'source' => 'gaikindo', 'year' => 2026, 'status' => 'processed', 'meta' => [],
+        ]);
+        foreach ([[$hevType, 'HEV', 300], [$iceType, 'ICE', 200]] as [$type, $pt, $units]) {
+            VehicleSalesStat::create([
+                'sales_import_id' => $import->id, 'raw_brand' => 'TOYOTA', 'raw_model' => 'Alphard',
+                'brand_vehicle_id' => $toyota->id, 'model_vehicle_id' => $alphard->id,
+                'type_vehicle_id' => $type->id, 'powertrain' => $pt, 'year' => 2026, 'month' => null, 'units' => $units,
+            ]);
+        }
+        app(\App\Services\VehicleMarketService::class)->flush();
+
+        $models = collect($this->getJson('/api/v1/vehicle-market/top?year=2026&powertrain=ALL')->json('data.models'))
+            ->filter(fn ($m) => $m['model'] === 'Alphard')->values();
+
+        $this->assertCount(2, $models); // HEV dan ICE terpisah, tidak tergabung
+        $hev = $models->firstWhere('powertrain', 'HEV');
+        $ice = $models->firstWhere('powertrain', 'ICE');
+        $this->assertNotNull($hev);
+        $this->assertNotNull($ice);
+        $this->assertEquals(300, $hev['units']);
+        $this->assertEquals(200, $ice['units']);
+        $this->assertSame('/storage/images/type/alphard-hev.webp', $hev['image_url']);
+        $this->assertSame('/storage/images/type/alphard-ice.webp', $ice['image_url']);
+    }
+
+    /** Revisi 2, poin 7: forecast default scope BEV; param powertrain mengubah scope. */
+    public function test_forecast_default_bev_dan_ikut_param_powertrain(): void
+    {
+        // Tambah HEV bulanan 100×3 ke import 2026 yang SAMA (import baru akan
+        // menggeser latestImports dan membuang baris BEV bulanannya).
+        $import2026 = SalesImport::where('year', 2026)->first();
+        foreach (range(1, 3) as $m) {
+            VehicleSalesStat::create([
+                'sales_import_id' => $import2026->id, 'raw_brand' => 'TOYOTA', 'raw_model' => 'Alphard',
+                'powertrain' => 'HEV', 'year' => 2026, 'month' => $m, 'units' => 100,
+            ]);
+        }
+        app(\App\Services\VehicleMarketService::class)->flush();
+
+        // Default: BEV. YTD BEV = 2000×3, satu-satunya tahun penuh (2025, BEV
+        // 1000×12) memberi w_m = 1/12 → Σw(Jan-Mar) = 0.25 → 6000/0.25 = 24000.
+        $res = $this->getJson('/api/v1/vehicle-market/trend?year=2026');
+        $res->assertOk();
+        $fc = $res->json('data.forecast');
+        $this->assertSame('BEV', $fc['powertrain']);
+        $this->assertSame('seasonal', $fc['method']);
+        $this->assertEquals(24000, $fc['projected_total']);
+
+        // Param powertrain=ALL: YTD = 6300 (BEV 2000×3 + HEV 100×3) → 6300/0.25 = 25200.
+        $fcAll = $this->getJson('/api/v1/vehicle-market/trend?year=2026&powertrain=ALL')->json('data.forecast');
+        $this->assertSame('ALL', $fcAll['powertrain']);
+        $this->assertEquals(25200, $fcAll['projected_total']);
     }
 }
 

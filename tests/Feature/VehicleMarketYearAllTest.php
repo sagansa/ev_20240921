@@ -8,6 +8,7 @@ use App\Models\SalesImport;
 use App\Models\VehicleSalesStat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,8 @@ class VehicleMarketYearAllTest extends TestCase
     {
         parent::setUp();
         Cache::flush();
+        // Revisi 2, poin 4: endpoint vehicle-market auth required.
+        Sanctum::actingAs(\App\Models\User::factory()->create(), abilities: ['*']);
 
         $toyota = BrandVehicle::create(['name' => 'Toyota']);
         $byd = BrandVehicle::create(['name' => 'BYD']);
@@ -88,11 +91,10 @@ class VehicleMarketYearAllTest extends TestCase
         $data = $res->json('data');
         $this->assertNull($data['year']);
 
-        // Σ lintas tahun + brand unlinked; PHEV & bulanan 500 tidak ikut.
         $this->assertSame([
-            ['brand' => 'BYD', 'units' => 310, 'models' => 1],
-            ['brand' => 'Toyota', 'units' => 250, 'models' => 1],
-            ['brand' => 'XEV', 'units' => 30, 'models' => 0],
+            ['brand' => 'BYD', 'units' => 310, 'models' => 1, 'logo_url' => null],
+            ['brand' => 'Toyota', 'units' => 250, 'models' => 1, 'logo_url' => null],
+            ['brand' => 'XEV', 'units' => 30, 'models' => 0, 'logo_url' => null],
         ], $data['brands']);
 
         $this->assertSame('Seal', $data['models'][0]['model']);

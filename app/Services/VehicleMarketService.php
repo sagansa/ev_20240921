@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\SalesImport;
 use App\Models\VehicleSalesStat;
 use App\Models\TypeVehicle;
+use App\Models\ModelVehicle;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -16,6 +17,39 @@ use Illuminate\Support\Facades\Cache;
 class VehicleMarketService
 {
     public const TTL = 86400;
+
+    /**
+     * Meta data untuk klien cek apakah ada data baru (Revisi 2, poin 5).
+     * Query murah: 2 agregat + version counter cache.
+     */
+    public function meta(): array
+    {
+        $latestImport = SalesImport::query()
+            ->selectRaw('MAX(created_at) as last_import_at, MAX(id) as latest_import_id, MAX(year) as latest_year')
+            ->first();
+
+        $latestMonth = VehicleSalesStat::query()
+            ->latestImports()
+            ->monthly()
+            ->where('year', $latestImport->latest_year ?? now()->year)
+            ->max('month');
+
+        $dataVersion = Cache::rememberForever($this->versionKey(), fn () => 1);
+
+        // MAX(created_at) hasil agregat SQL berupa STRING (tanpa cast model) —
+        // bungkus Carbon manual agar ISO8601 konsisten.
+        $lastImportAt = $latestImport->last_import_at !== null
+            ? \Illuminate\Support\Carbon::parse($latestImport->last_import_at)->toISOString()
+            : null;
+
+        return [
+            'last_import_at' => $lastImportAt,
+            'latest_import_id' => $latestImport->latest_import_id ? (int) $latestImport->latest_import_id : null,
+            'data_version' => (int) $dataVersion,
+            'latest_year' => $latestImport->latest_year ? (int) $latestImport->latest_year : null,
+            'latest_month' => $latestMonth ? (int) $latestMonth : null,
+        ];
+    }
 
     public function summary(): array
     {
@@ -80,22 +114,25 @@ class VehicleMarketService
         });
     }
 
-    public function trend(int|string|null $year = null, ?string $brand = null, ?string $model = null): array
+    public function trend(int|string|null $year = null, ?string $brand = null, ?string $model = null, ?string $powertrain = null): array
     {
+        // Revisi 2, poin 7: powertrain default BEV untuk scope forecast
+        $powertrain = strtoupper($powertrain ?? 'BEV');
+
         // Mode "Semua Tahun" → pola musiman: rata-rata share tiap bulan
         // kalender lintas tahun (bukan akumulasi mentah yang bias ke tahun besar).
         if ($year === 'all') {
-            $key = "trend:v2:all:" . ($brand ?? '-') . ':' . ($model ?? '-');
+            $key = "trend:v3:all:" . ($brand ?? '-') . ':' . ($model ?? '-') . ":{$powertrain}";
 
-            return $this->cached($key, fn () => $this->seasonalTrend($brand, $model));
+            return $this->cached($key, fn () => $this->seasonalTrend($brand, $model, $powertrain));
         }
 
         // Default: tahun terbaru yang BENAR-BENAR punya baris bulanan (di
         // scope filter bila ada) — bukan now()->year yang bisa kosong.
         $year ??= $this->latestMonthlyYear($brand, $model);
-        $key = "trend:v2:{$year}:" . ($brand ?? '-') . ':' . ($model ?? '-');
+        $key = "trend:v3:{$year}:" . ($brand ?? '-') . ':' . ($model ?? '-') . ":{$powertrain}";
 
-        return $this->cached($key, function () use ($year, $brand, $model) {
+        return $this->cached($key, function () use ($year, $brand, $model, $powertrain) {
             $query = VehicleSalesStat::query()
                 ->latestImports()
                 ->monthly()
@@ -137,11 +174,16 @@ class VehicleMarketService
                 ];
             }
 
+            // Revisi 2, poin 7: forecast scope = powertrain (default BEV)
+            $forecast = $this->forecastFor($months, $brand, $model, $powertrain);
+            if ($forecast !== null) {
+                $forecast['powertrain'] = $powertrain;
+            }
+
             return [
                 'year' => $year,
                 'months' => $months,
-                // Prediksi bulan sisa utk tahun berjalan (null bila penuh/tak cukup data).
-                'forecast' => $this->forecastFor($months, $brand, $model),
+                'forecast' => $forecast,
             ];
         });
     }
@@ -151,7 +193,7 @@ class VehicleMarketService
      * avg_share = rata-rata (units bulan / total tahun yang sama) — total
      * tahun diambil dari baris BULANAN agar share konsisten dgn pembilang.
      */
-    protected function seasonalTrend(?string $brand, ?string $model): array
+    protected function seasonalTrend(?string $brand, ?string $model, string $powertrain = 'BEV'): array
     {
         $rows = $this->monthlyRows($brand, $model)
             ->selectRaw('year, month, powertrain, SUM(units) as units')
@@ -210,14 +252,25 @@ class VehicleMarketService
      * fallback run-rate bila histori tak memadai/guard bobot gagal.
      * Null bila tahun penuh atau tidak ada data bulanan.
      *
+     * Revisi 2, poin 7: scope forecast = powertrain (default BEV).
+     *
      * @param array<int, array{month: int, bev_units: int, phev_units: int, hev_units: int, ice_units: int, market_total: int}> $months
      */
-    protected function forecastFor(array $months, ?string $brand = null, ?string $model = null): ?array
+    protected function forecastFor(array $months, ?string $brand = null, ?string $model = null, string $powertrain = 'BEV'): ?array
     {
         $dataMonths = [];
         $ytd = 0;
         foreach ($months as $m) {
-            $units = $m['bev_units'] + $m['phev_units'] + $m['hev_units'] + $m['ice_units'];
+            // Revisi 2, poin 7: hitung YTD berdasarkan powertrain scope
+            $units = match ($powertrain) {
+                'BEV' => $m['bev_units'],
+                'PHEV' => $m['phev_units'],
+                'HEV' => $m['hev_units'],
+                'ICE' => $m['ice_units'],
+                'ALL' => $m['bev_units'] + $m['phev_units'] + $m['hev_units'] + $m['ice_units'],
+                'EV' => $m['bev_units'] + $m['phev_units'],
+                default => $m['bev_units'],
+            };
             if ($units > 0) {
                 $dataMonths[$m['month']] = $units;
                 $ytd += $units;
@@ -231,7 +284,7 @@ class VehicleMarketService
             return null; // tahun penuh — tidak ada yang perlu diprediksi
         }
 
-        $weights = $this->seasonalWeights($brand, $model);
+        $weights = $this->seasonalWeights($brand, $model, $powertrain);
         if ($weights !== null) {
             $wYtd = 0.0;
             for ($m = 1; $m <= $lastMonth; $m++) {
@@ -269,11 +322,13 @@ class VehicleMarketService
     /**
      * Bobot musiman w_m (Σ ≈ 1) dari tahun-tahun PENUH (12 bulan berisi)
      * dalam scope filter yang sama; null bila tidak ada tahun penuh.
+     * Revisi 2, poin 7: scope = powertrain (default BEV).
      * @return array<int, float>|null
      */
-    protected function seasonalWeights(?string $brand = null, ?string $model = null): ?array
+    protected function seasonalWeights(?string $brand = null, ?string $model = null, string $powertrain = 'BEV'): ?array
     {
         $rows = $this->monthlyRows($brand, $model)
+            ->where('powertrain', $powertrain)
             ->selectRaw('year, month, SUM(units) as units')
             ->groupBy('year', 'month')
             ->get();
@@ -344,9 +399,11 @@ class VehicleMarketService
         }
         $powertrain = strtoupper($powertrain ?? 'BEV');
         $cacheYear = $isAll ? 'all' : $year;
-        $key = "top:v3:{$cacheYear}:{$powertrain}:" . ($brand ?? '-') . ":{$limit}";
+        $key = "top:v5:{$cacheYear}:{$powertrain}:" . ($brand ?? '-') . ":{$limit}";
 
         return $this->cached($key, function () use ($year, $isAll, $powertrain, $brand, $limit) {
+            $brandLogoMap = $this->rawBrandLogoMap();
+
             $base = VehicleSalesStat::query()
                 ->latestImports()
                 ->whereNull('month')
@@ -364,17 +421,23 @@ class VehicleMarketService
                 ->orderByDesc('units')
                 ->limit($limit)
                 ->get()
-                ->map(fn ($r) => ['brand' => $r->brand, 'units' => (int) $r->units, 'models' => (int) $r->models])
+                ->map(fn ($r) => [
+                    'brand' => $r->brand,
+                    'units' => (int) $r->units,
+                    'models' => (int) $r->models,
+                    'logo_url' => $brandLogoMap[mb_strtolower(trim((string) $r->brand))] ?? null,
+                ])
                 ->values();
 
             // Level keluarga model: baris ter-link digroup per katalog model
             // (nama keluarga, bukan varian/type). Belum ter-link → per raw.
-            // Query terpisah dgn kolom powertrain TERKUALIFIKASI — setelah
-            // join, kolom itu ada di dua tabel (ambiguous).
+            // Scope powertrain via scope bawaan (satu-satunya kolom powertrain
+            // setelah join — kolom di model_vehicles sudah di-drop) sehingga
+            // ALL/EV juga benar, bukan where `= 'ALL'` yang selalu kosong.
             $linkedQuery = VehicleSalesStat::query()
                 ->latestImports()
                 ->whereNull('month')
-                ->where('vehicle_sales_stats.powertrain', $powertrain)
+                ->powertrain($powertrain)
                 ->whereNotNull('vehicle_sales_stats.model_vehicle_id')
                 ->join('model_vehicles', 'model_vehicles.id', '=', 'vehicle_sales_stats.model_vehicle_id')
                 ->join('brand_vehicles', 'brand_vehicles.id', '=', 'model_vehicles.brand_vehicle_id');
@@ -382,8 +445,8 @@ class VehicleMarketService
                 $linkedQuery->where('vehicle_sales_stats.year', $year);
             }
             $linkedModels = $linkedQuery
-                ->selectRaw('model_vehicles.id as model_id, model_vehicles.name as model, brand_vehicles.name as brand, SUM(vehicle_sales_stats.units) as units')
-                ->groupBy('model_vehicles.id', 'model_vehicles.name', 'brand_vehicles.name')
+                ->selectRaw('model_vehicles.id as model_id, model_vehicles.name as model, brand_vehicles.name as brand, vehicle_sales_stats.powertrain as powertrain, SUM(vehicle_sales_stats.units) as units')
+                ->groupBy('model_vehicles.id', 'model_vehicles.name', 'brand_vehicles.name', 'vehicle_sales_stats.powertrain')
                 ->orderByDesc('units')
                 ->limit($limit)
                 ->get()
@@ -391,14 +454,15 @@ class VehicleMarketService
                     'brand' => $r->brand,
                     'model' => $r->model,
                     'model_vehicle_id' => $r->model_id,
+                    'powertrain' => $r->powertrain,
                     'units' => (int) $r->units,
                 ])
                 ->values();
 
             $unlinkedModels = (clone $base)
                 ->whereNull('model_vehicle_id')
-                ->selectRaw('raw_brand as brand, raw_model as model, SUM(units) as units')
-                ->groupBy('raw_brand', 'raw_model')
+                ->selectRaw('raw_brand as brand, raw_model as model, powertrain, SUM(units) as units')
+                ->groupBy('raw_brand', 'raw_model', 'powertrain')
                 ->orderByDesc('units')
                 ->limit($limit)
                 ->get()
@@ -406,6 +470,7 @@ class VehicleMarketService
                     'brand' => $r->brand,
                     'model' => $r->model,
                     'model_vehicle_id' => null,
+                    'powertrain' => $r->powertrain,
                     'units' => (int) $r->units,
                 ])
                 ->values();
@@ -414,6 +479,10 @@ class VehicleMarketService
                 ->concat($unlinkedModels)
                 ->sortByDesc('units')
                 ->take($limit)
+                ->map(fn ($m) => array_merge($m, [
+                    'brand_logo_url' => $brandLogoMap[mb_strtolower(trim((string) $m['brand']))] ?? null,
+                    'image_url' => $this->resolveModelImageUrl($m['model_vehicle_id'], $m['powertrain']),
+                ]))
                 ->values();
 
             // Klaster induk perusahaan: agregasi SEMUA brand (TANPA limit —
@@ -437,7 +506,11 @@ class VehicleMarketService
                 }
                 $grouped[$key]['units'] += (int) $row->units;
                 $grouped[$key]['models'] += (int) $row->models;
-                $grouped[$key]['brands'][] = ['brand' => $row->brand, 'units' => (int) $row->units];
+                $grouped[$key]['brands'][] = [
+                    'brand' => $row->brand,
+                    'units' => (int) $row->units,
+                    'logo_url' => $brandLogoMap[mb_strtolower(trim((string) $row->brand))] ?? null,
+                ];
             }
 
             $groups = collect($grouped)
@@ -491,7 +564,9 @@ class VehicleMarketService
         $cacheYear = $isAll ? 'all' : $year;
         $prevYear = $isAll ? null : $year - 1;
 
-        return $this->cached("catalog:v6:{$cacheYear}", function () use ($year, $isAll, $prevYear) {
+        return $this->cached("catalog:v8:{$cacheYear}", function () use ($year, $isAll, $prevYear) {
+            $brandLogoMap = $this->rawBrandLogoMap();
+
             // Level KELUARGA MODEL (bukan varian/type): baris ter-link ke
             // katalog digroup per model_vehicle; yang belum ter-link tetap
             // ditampilkan per raw_model (agar data tidak hilang).
@@ -510,8 +585,8 @@ class VehicleMarketService
                 $unlinkedQuery->where('year', $year);
             }
             $linked = $linkedQuery
-                ->selectRaw('model_vehicle_id, SUM(units) as units')
-                ->groupBy('model_vehicle_id')
+                ->selectRaw('model_vehicle_id, powertrain, SUM(units) as units')
+                ->groupBy('model_vehicle_id', 'powertrain')
                 ->get();
             $unlinked = $unlinkedQuery
                 ->selectRaw('raw_brand, raw_model, SUM(units) as units')
@@ -546,12 +621,13 @@ class VehicleMarketService
             }
 
             $brands = [];
-            $addModel = function (string $brandName, string $modelName, int $units, ?string $category, ?string $sizeClass) use (&$brands, &$prevYearSales, $groupByName) {
+            $addModel = function (string $brandName, string $modelName, int $units, ?string $category, ?string $sizeClass, ?string $powertrain, ?int $modelVehicleId) use (&$brands, &$prevYearSales, $groupByName, $brandLogoMap) {
                 if (! isset($brands[$brandName])) {
                     $brands[$brandName] = [
                         'brand' => $brandName,
                         'units' => 0,
                         'group' => $groupByName[mb_strtolower(trim($brandName))] ?? null,
+                        'logo_url' => $brandLogoMap[mb_strtolower(trim($brandName))] ?? null,
                         'prev_units' => $prevYearSales[$brandName] ?? 0,
                         'models' => [],
                     ];
@@ -562,6 +638,8 @@ class VehicleMarketService
                     'units' => $units,
                     'category' => $category,
                     'size_class' => $sizeClass,
+                    'powertrain' => $powertrain,
+                    'image_url' => $this->resolveModelImageUrl($modelVehicleId, $powertrain),
                 ];
             };
 
@@ -571,11 +649,11 @@ class VehicleMarketService
                     continue;
                 }
                 $brandName = $model->brandVehicle?->name ?? $model->name;
-                $addModel($brandName, $model->name, (int) $row->units, $model->category, $model->size_class);
+                $addModel($brandName, $model->name, (int) $row->units, $model->category, $model->size_class, $row->powertrain, (int) $row->model_vehicle_id);
             }
 
             foreach ($unlinked as $row) {
-                $addModel($row->raw_brand, $row->raw_model, (int) $row->units, null, null);
+                $addModel($row->raw_brand, $row->raw_model, (int) $row->units, null, null, $row->powertrain, null);
             }
 
             // Urutkan brand: saat all → Σ units desc; else prev_units desc fallback units
@@ -672,9 +750,11 @@ class VehicleMarketService
      */
     public function modelHistory(string $brand, string $model): array
     {
-        $key = 'model-history:v3:' . rawurlencode($brand) . ':' . rawurlencode($model);
+        $key = 'model-history:v4:' . rawurlencode($brand) . ':' . rawurlencode($model);
 
         return $this->cached($key, function () use ($brand, $model) {
+            $brandLogoMap = $this->rawBrandLogoMap();
+
             // Level keluarga: cocokkan ke katalog model (brand+nama model,
             // case-insensitive). Fallback: raw exact utk baris tak ter-link.
             $catalogModel = \App\Models\ModelVehicle::query()
@@ -720,11 +800,16 @@ class VehicleMarketService
                 $types = TypeVehicle::query()
                     ->where('model_vehicle_id', $catalogModel->id)
                     ->orderBy('name')
-                    ->get(['id', 'name', 'battery_capacity'])
+                    ->get(['id', 'name', 'battery_capacity', 'image'])
                     ->map(fn ($t) => [
                         'name' => $t->name,
                         'battery_capacity' => $t->battery_capacity,
                         'units' => (int) ($typeUnits[$t->id] ?? 0),
+                        'image_url' => ! empty($t->image)
+                            ? (str_starts_with($t->image, 'http') || str_starts_with($t->image, '//')
+                                ? $t->image
+                                : '/storage/' . ltrim($t->image, '/'))
+                            : null,
                     ])
                     ->values()
                     ->all();
@@ -734,6 +819,7 @@ class VehicleMarketService
                 'brand' => $brand,
                 'model' => $model,
                 'model_vehicle_id' => $catalogModel?->id,
+                'brand_logo_url' => $brandLogoMap[mb_strtolower(trim($brand))] ?? null,
                 'total_units' => (int) $rows->sum('units'),
                 'years' => $years,
                 'types' => $types,
@@ -741,10 +827,110 @@ class VehicleMarketService
         });
     }
 
+    /**
+     * Peta raw_brand / nama brand katalog → URL logo publik (/storage/images/brand/...).
+     * Mendukung alias raw_brand via join model_vehicles bila nama raw berbeda dari nama katalog.
+     *
+     * @return array<string, string> key = strtolower(trim(nama brand))
+     */
+    protected function rawBrandLogoMap(): array
+    {
+        $idToLogo = [];
+        $map = [];
+
+        foreach (
+            \App\Models\BrandVehicle::query()
+                ->whereNotNull('image')
+                ->where('image', '!=', '')
+                ->get(['id', 'name', 'image'])
+            as $brand
+        ) {
+            $logoUrl = $brand->logo_url;
+            if ($logoUrl === null) {
+                continue;
+            }
+            $map[mb_strtolower(trim($brand->name))] = $logoUrl;
+            $idToLogo[$brand->id] = $logoUrl;
+        }
+
+        if ($idToLogo === []) {
+            return $map;
+        }
+
+        // Jalur raw alias via model_vehicles
+        $votes = VehicleSalesStat::query()
+            ->latestImports()
+            ->whereNull('month')
+            ->join('model_vehicles', 'model_vehicles.id', '=', 'vehicle_sales_stats.model_vehicle_id')
+            ->whereIn('model_vehicles.brand_vehicle_id', array_keys($idToLogo))
+            ->selectRaw('vehicle_sales_stats.raw_brand as raw_brand, model_vehicles.brand_vehicle_id as brand_id, SUM(vehicle_sales_stats.units) as units')
+            ->groupBy('vehicle_sales_stats.raw_brand', 'model_vehicles.brand_vehicle_id')
+            ->orderByDesc('units')
+            ->get();
+
+        foreach ($votes as $vote) {
+            $key = mb_strtolower(trim((string) $vote->raw_brand));
+            if (! isset($map[$key])) {
+                $map[$key] = $idToLogo[$vote->brand_id];
+            }
+        }
+
+        return $map;
+    }
+
     /** Naikkan versi cache — dipanggil importer setelah import baru. */
     public function flush(): void
     {
         Cache::increment($this->versionKey()) || Cache::put($this->versionKey(), (int) (Cache::get($this->versionKey()) ?: 1) + 1, now()->addYear());
+    }
+
+    /**
+     * Resolusi image_url untuk model+powertrain: type_vehicles dengan unit
+     * terbanyak dalam scope → fallback model_vehicles.image → null.
+     * URL absolut via accessor (pola Provider::image).
+     *
+     * Revisi 2, poin 1.
+     */
+    protected function resolveModelImageUrl(?int $modelVehicleId, ?string $powertrain): ?string
+    {
+        if ($modelVehicleId === null || $powertrain === null) {
+            return null;
+        }
+
+        // Cari type_vehicle dengan unit terbanyak untuk model+powertrain ini
+        $bestType = VehicleSalesStat::query()
+            ->latestImports()
+            ->whereNull('month')
+            ->where('vehicle_sales_stats.model_vehicle_id', $modelVehicleId)
+            ->where('vehicle_sales_stats.powertrain', $powertrain)
+            ->whereNotNull('vehicle_sales_stats.type_vehicle_id')
+            ->join('type_vehicles', 'type_vehicles.id', '=', 'vehicle_sales_stats.type_vehicle_id')
+            ->selectRaw('type_vehicles.id, type_vehicles.image, SUM(vehicle_sales_stats.units) as units')
+            ->groupBy('type_vehicles.id', 'type_vehicles.image')
+            ->orderByDesc('units')
+            ->first();
+
+        if ($bestType !== null && ! empty($bestType->image)) {
+            $path = $bestType->image;
+            if (str_starts_with($path, 'http') || str_starts_with($path, '//')) {
+                return $path;
+            }
+
+            return '/storage/' . ltrim($path, '/');
+        }
+
+        // Fallback: model_vehicles.image
+        $model = ModelVehicle::query()->find($modelVehicleId);
+        if ($model !== null && ! empty($model->image)) {
+            $path = $model->image;
+            if (str_starts_with($path, 'http') || str_starts_with($path, '//')) {
+                return $path;
+            }
+
+            return '/storage/' . ltrim($path, '/');
+        }
+
+        return null;
     }
 
     /**

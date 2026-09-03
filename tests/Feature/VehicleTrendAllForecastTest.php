@@ -6,6 +6,7 @@ use App\Models\SalesImport;
 use App\Models\VehicleSalesStat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -27,6 +28,8 @@ class VehicleTrendAllForecastTest extends TestCase
     {
         parent::setUp();
         Cache::flush();
+        // Revisi 2, poin 4: endpoint vehicle-market auth required.
+        Sanctum::actingAs(\App\Models\User::factory()->create(), abilities: ['*']);
 
         $mk = fn (string $file, int $year) => SalesImport::create([
             'file_name' => $file, 'source' => 'gaikindo',

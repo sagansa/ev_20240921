@@ -7,13 +7,23 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Endpoint publik data pasar kendaraan (sumber: import GAIKINDO).
+ * Endpoint data pasar kendaraan (sumber: import GAIKINDO).
  * Di-cache 24 jam; otomatis segar setelah import baru.
+ * Auth required (Revisi 2, poin 4).
  */
 class VehicleMarketController extends Controller
 {
     public function __construct(protected VehicleMarketService $market)
     {
+    }
+
+    /** GET /vehicle-market/meta — metadata untuk klien cek data baru (Revisi 2, poin 5). */
+    public function meta(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $this->market->meta(),
+        ]);
     }
 
     /** GET /vehicle-market/summary — penetrasi BEV per tahun + ringkasan terbaru. */
@@ -25,13 +35,14 @@ class VehicleMarketController extends Controller
         ]);
     }
 
-    /** GET /vehicle-market/trend?year=&brand=&model= — unit bulanan per powertrain; year=all → pola musiman. */
+    /** GET /vehicle-market/trend?year=&brand=&model=&powertrain= — unit bulanan per powertrain; year=all → pola musiman. */
     public function trend(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'year' => ['nullable', 'string', 'max:10'],
             'brand' => ['nullable', 'string', 'max:100'],
             'model' => ['nullable', 'string', 'max:100'],
+            'powertrain' => ['nullable', 'string', 'in:BEV,PHEV,HEV,ICE,ALL,EV'],
         ]);
 
         return response()->json([
@@ -40,6 +51,7 @@ class VehicleMarketController extends Controller
                 $this->normalizeYear($validated['year'] ?? null),
                 $validated['brand'] ?? null,
                 $validated['model'] ?? null,
+                $validated['powertrain'] ?? null,
             ),
         ]);
     }

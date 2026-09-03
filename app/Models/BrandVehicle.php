@@ -40,4 +40,26 @@ class BrandVehicle extends Model
     {
         return $this->hasManyThrough(Vehicle::class, ModelVehicle::class, 'brand_vehicle_id', 'model_vehicle_id');
     }
+
+    /**
+     * URL publik untuk logo brand (mis. /storage/images/brand/byd.png).
+     */
+    public function getLogoUrlAttribute(): ?string
+    {
+        if (empty($this->image)) {
+            return null;
+        }
+
+        $trimmed = trim($this->image);
+        if (str_starts_with($trimmed, 'http://') || str_starts_with($trimmed, 'https://') || str_starts_with($trimmed, '//')) {
+            return $trimmed;
+        }
+
+        $clean = ltrim($trimmed, '/');
+        if (! str_starts_with($clean, 'storage/')) {
+            $clean = 'storage/' . $clean;
+        }
+
+        return '/' . $clean;
+    }
 }

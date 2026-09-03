@@ -8,6 +8,7 @@ use App\Models\SalesImport;
 use App\Models\VehicleSalesStat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,8 @@ class VehicleCompositionTest extends TestCase
     {
         parent::setUp();
         Cache::flush();
+        // Revisi 2, poin 4: endpoint vehicle-market auth required.
+        Sanctum::actingAs(\App\Models\User::factory()->create(), abilities: ['*']);
 
         $brand = BrandVehicle::create(['name' => 'Daihatsu']);
         $suv = ModelVehicle::create(['name' => 'Terano', 'brand_vehicle_id' => $brand->id, 'category' => 'SUV']);
