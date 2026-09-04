@@ -304,10 +304,6 @@ class VehicleMarketTest extends TestCase
         $this->assertSame('/storage/images/brand/byd.png', $histRes->json('data.brand_logo_url'));
     }
 
-    /**
-     * Revisi 2, poin 1: model dengan >1 powertrain tampil terpisah per
-     * powertrain, masing-masing dengan image dari type_vehicles dominan.
-     */
     public function test_model_terpisah_per_powertrain_dengan_image_per_tipe(): void
     {
         $toyota = \App\Models\BrandVehicle::create(['name' => 'Toyota']);
@@ -371,6 +367,43 @@ class VehicleMarketTest extends TestCase
         $fcAll = $this->getJson('/api/v1/vehicle-market/trend?year=2026&powertrain=ALL')->json('data.forecast');
         $this->assertSame('ALL', $fcAll['powertrain']);
         $this->assertEquals(25200, $fcAll['projected_total']);
+    }
+
+    /**
+     * Revisi lanjutan: model-history menyertakan rincian BULANAN tahun
+     * terakhir yang berdata (chart "Bulanan" di detail model).
+     */
+    public function test_model_history_menyertakan_rincian_bulanan(): void
+    {
+        $toyota = \App\Models\BrandVehicle::create(['name' => 'Toyota']);
+        $alphard = \App\Models\ModelVehicle::create(['brand_vehicle_id' => $toyota->id, 'name' => 'Alphard']);
+        $import = SalesImport::create([
+            'file_name' => '2026-bulanan.xlsx', 'source' => 'gaikindo', 'year' => 2026, 'status' => 'processed', 'meta' => [],
+        ]);
+        foreach ([[1, 'BEV', 100], [2, 'BEV', 150], [3, 'BEV', 200], [3, 'PHEV', 50]] as [$m, $pt, $units]) {
+            VehicleSalesStat::create([
+                'sales_import_id' => $import->id, 'raw_brand' => 'TOYOTA', 'raw_model' => 'Alphard',
+                'brand_vehicle_id' => $toyota->id, 'model_vehicle_id' => $alphard->id,
+                'powertrain' => $pt, 'year' => 2026, 'month' => $m, 'units' => $units,
+            ]);
+        }
+        VehicleSalesStat::create([
+            'sales_import_id' => $import->id, 'raw_brand' => 'TOYOTA', 'raw_model' => 'Alphard',
+            'brand_vehicle_id' => $toyota->id, 'model_vehicle_id' => $alphard->id,
+            'powertrain' => 'BEV', 'year' => 2026, 'month' => null, 'units' => 450,
+        ]);
+        app(\App\Services\VehicleMarketService::class)->flush();
+
+        $res = $this->getJson('/api/v1/vehicle-market/model-history?brand=Toyota&model=Alphard');
+        $res->assertOk();
+        $this->assertSame(2026, $res->json('data.monthly_year'));
+
+        $months = collect($res->json('data.months'));
+        $this->assertCount(4, $months); // 3 bulan BEV + 1 baris PHEV bulan 3
+        $this->assertEquals(150, $months->firstWhere('month', 2)['units']);
+        $phevMar = $months->first(fn ($r) => (int) $r['month'] === 3 && $r['powertrain'] === 'PHEV');
+        $this->assertNotNull($phevMar);
+        $this->assertEquals(50, $phevMar['units']);
     }
 }
 

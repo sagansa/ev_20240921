@@ -750,7 +750,7 @@ class VehicleMarketService
      */
     public function modelHistory(string $brand, string $model): array
     {
-        $key = 'model-history:v4:' . rawurlencode($brand) . ':' . rawurlencode($model);
+        $key = 'model-history:v5:' . rawurlencode($brand) . ':' . rawurlencode($model);
 
         return $this->cached($key, function () use ($brand, $model) {
             $brandLogoMap = $this->rawBrandLogoMap();
@@ -788,6 +788,39 @@ class VehicleMarketService
                 ];
             }
 
+            // Revisi lanjutan: rincian BULANAN utk tahun terakhir yang punya
+            // baris bulanan di scope model ini (chart "Bulanan" di detail).
+            // Base terpisah — $base sudah whereNull(month) utk agregat tahunan.
+            $monthlyBase = VehicleSalesStat::query()
+                ->latestImports()
+                ->whereIn('powertrain', ['BEV', 'PHEV']);
+            if ($catalogModel !== null) {
+                $monthlyBase->where('model_vehicle_id', $catalogModel->id);
+            } else {
+                $monthlyBase->where('raw_brand', $brand)->where('raw_model', $model);
+            }
+
+            $monthlyYear = (int) ((clone $monthlyBase)
+                ->whereNotNull('month')
+                ->max('year') ?: 0);
+            $months = [];
+            if ($monthlyYear > 0) {
+                $monthRows = (clone $monthlyBase)
+                    ->whereNotNull('month')
+                    ->where('year', $monthlyYear)
+                    ->selectRaw('month, powertrain, SUM(units) as units')
+                    ->groupBy('month', 'powertrain')
+                    ->orderBy('month')
+                    ->get();
+                foreach ($monthRows as $row) {
+                    $months[] = [
+                        'month' => (int) $row->month,
+                        'powertrain' => $row->powertrain,
+                        'units' => (int) $row->units,
+                    ];
+                }
+            }
+
             // Daftar TYPE milik model ini ("tipe ada di detail") + total unit.
             $types = [];
             if ($catalogModel !== null) {
@@ -822,6 +855,8 @@ class VehicleMarketService
                 'brand_logo_url' => $brandLogoMap[mb_strtolower(trim($brand))] ?? null,
                 'total_units' => (int) $rows->sum('units'),
                 'years' => $years,
+                'monthly_year' => $monthlyYear > 0 ? $monthlyYear : null,
+                'months' => $months,
                 'types' => $types,
             ];
         });
